@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Guru</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #b9fbc0 0%, #70e000 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #1C1C1E;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        header {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 10px;
+        }
+
+        .icon-badge {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            border: 4px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 10px 25px rgba(0, 100, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            color: #1b5e20;
+        }
+
+        .icon-badge svg {
+            width: 34px;
+            height: 34px;
+            stroke-width: 1.8;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 8px;
+            color: #0f172a;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            font-size: 14px;
+            color: #334155;
+            line-height: 1.4;
+            max-width: 90%;
+        }
+
+        .form-card {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            padding: 24px 20px;
+            box-shadow: 0 8px 32px rgba(0, 100, 0, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #14532d;
+            margin-bottom: 6px;
+        }
+
+        .field input {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.75);
+            font-size: 16px;
+            color: #0f172a;
+            outline: none;
+        }
+
+        .field input:focus {
+            border-color: #1b5e20;
+            background: #ffffff;
+        }
+
+        .btn-masuk {
+            margin-top: 4px;
+            padding: 15px 16px;
+            border: none;
+            border-radius: 14px;
+            background: #1b5e20;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+
+        .btn-masuk:active {
+            transform: scale(0.97);
+            background: #14532d;
+        }
+
+        .btn-masuk[disabled] {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .pesan-error {
+            display: none;
+            font-size: 13px;
+            color: #b91c1c;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(185, 28, 28, 0.3);
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+
+        .pesan-error.tampil {
+            display: block;
+        }
+
+        /* --- POPUP BERHASIL LOGIN --- */
+        .popup-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .popup-overlay.tampil {
+            display: flex;
+            opacity: 1;
+        }
+
+        .popup-box {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            border-radius: 24px;
+            padding: 28px 22px 22px;
+            width: 100%;
+            max-width: 340px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 60, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+            transform: scale(0.85);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1.4);
+        }
+
+        .popup-overlay.tampil .popup-box {
+            transform: scale(1);
+        }
+
+        .popup-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #b9fbc0, #70e000);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 16px;
+            color: #ffffff;
+            box-shadow: 0 8px 20px rgba(27, 94, 32, 0.3);
+        }
+
+        .popup-icon svg {
+            width: 38px;
+            height: 38px;
+            stroke-width: 3;
+        }
+
+        .popup-title {
+            font-size: 19px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 10px;
+            line-height: 1.3;
+            letter-spacing: -0.3px;
+        }
+
+        .popup-title span {
+            color: #1b5e20;
+        }
+
+        .popup-message {
+            font-size: 14px;
+            color: #475569;
+            line-height: 1.5;
+            margin-bottom: 22px;
+            padding: 0 4px;
+        }
+
+        .btn-ok {
+            width: 100%;
+            padding: 14px 16px;
+            border: none;
+            border-radius: 14px;
+            background: #1b5e20;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+
+        .btn-ok:active {
+            transform: scale(0.97);
+            background: #14532d;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container" id="layar-login">
+        <header>
+            <div class="icon-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </div>
+            <h1>Masuk Guru</h1>
+            <p>Isi nama lengkap dan password akun Anda.</p>
+        </header>
+
+        <form class="form-card" id="form-login" onsubmit="return prosesLogin(event)">
+            <div class="field">
+                <label for="nama">Nama Lengkap</label>
+                <input type="text" id="nama" placeholder="Contoh: Devi Olimpia" autocomplete="off" required>
+            </div>
+
+            <div class="field">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Password guru" autocomplete="off" required>
+            </div>
+
+            <div class="pesan-error" id="pesan-error"></div>
+
+            <button type="submit" class="btn-masuk" id="btn-masuk">Masuk</button>
+        </form>
+    </div>
+
+    <!-- POPUP BERHASIL LOGIN -->
+    <div class="popup-overlay" id="popup-berhasil">
+        <div class="popup-box">
+            <div class="popup-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            </div>
+            <h2 class="popup-title">Selamat, <span id="popup-nama"></span>!<br>Anda Telah Berhasil Login</h2>
+            
+            <p class="popup-message" id="popup-pesan">
+                Anda login sebagai <strong>Guru</strong>. Klik tombol <strong>OK</strong> untuk masuk ke halaman pengelolaan soal.
+            </p>
+
+            <button class="btn-ok" onclick="lanjutKeGuru()">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================================
+        // GANTI dengan URL Firebase Anda (URL yang muncul di browser
+        // saat Anda buka Realtime Database, TANPA tanda "/" di akhir)
+        // ==========================================================
+        const FIREBASE_URL = "https://admin-ffded-default-rtdb.firebaseio.com";
+
+        function tampilkanError(pesan) {
+            const kotak = document.getElementById('pesan-error');
+            kotak.textContent = pesan;
+            kotak.classList.add('tampil');
+        }
+
+        function sembunyikanError() {
+            document.getElementById('pesan-error').classList.remove('tampil');
+        }
+
+        function kirimKeAppInventor(teks) {
+            if (window.AppInventor) {
+                window.AppInventor.setWebViewString(teks);
+            } else {
+                console.log("Kirim ke App Inventor:", teks);
+            }
+        }
+
+        async function prosesLogin(event) {
+            event.preventDefault();
+            sembunyikanError();
+
+            const nama = document.getElementById('nama').value.trim();
+            const password = document.getElementById('password').value;
+            const tombol = document.getElementById('btn-masuk');
+
+            if (!nama || !password) {
+                tampilkanError("Nama dan password wajib diisi.");
+                return false;
+            }
+
+            tombol.disabled = true;
+            tombol.textContent = "Memeriksa...";
+
+            try {
+                // Ambil SEMUA data guru_akun (karena kita cari berdasarkan nama)
+                const response = await fetch(`${FIREBASE_URL}/guru_akun.json`);
+                const semuaGuru = await response.json();
+
+                if (!semuaGuru) {
+                    tampilkanError("Data guru belum tersedia di server.");
+                    tombol.disabled = false;
+                    tombol.textContent = "Masuk";
+                    return false;
+                }
+
+                // Cari guru yang nama & password-nya cocok
+                let guruDitemukan = null;
+                let guruKey = null;
+                const namaInput = nama.toLowerCase();
+
+                for (const key in semuaGuru) {
+                    const g = semuaGuru[key];
+                    if (!g || !g.nama || !g.password) continue;
+
+                    const namaCocok = g.nama.trim().toLowerCase() === namaInput;
+                    const passwordCocok = g.password === password;
+
+                    if (namaCocok && passwordCocok) {
+                        guruDitemukan = g;
+                        guruKey = key;
+                        break;
+                    }
+                }
+
+                // Kasus: nama tidak ada / password salah
+                if (!guruDitemukan) {
+                    // Cek dulu apakah nama-nya ada (untuk pesan error yang lebih jelas)
+                    let namaAda = false;
+                    for (const key in semuaGuru) {
+                        const g = semuaGuru[key];
+                        if (g && g.nama && g.nama.trim().toLowerCase() === namaInput) {
+                            namaAda = true;
+                            break;
+                        }
+                    }
+
+                    if (!namaAda) {
+                        tampilkanError("Nama guru tidak ditemukan.");
+                    } else {
+                        tampilkanError("Password salah. Periksa kembali.");
+                    }
+
+                    tombol.disabled = false;
+                    tombol.textContent = "Masuk";
+                    return false;
+                }
+
+                // ============================================
+                // LOGIN BERHASIL → Tampilkan POPUP
+                // ============================================
+                document.getElementById('popup-nama').textContent = guruDitemukan.nama;
+                document.getElementById('popup-berhasil').classList.add('tampil');
+
+                // Simpan data guru untuk dikirim nanti saat klik OK
+                window.dataGuruTersimpan = {
+                    username: guruKey,
+                    nama: guruDitemukan.nama,
+                    mapel: guruDitemukan.mapel || ""
+                };
+
+            } catch (err) {
+                tampilkanError("Gagal terhubung ke server. Periksa koneksi internet.");
+                tombol.disabled = false;
+                tombol.textContent = "Masuk";
+            }
+
+            return false;
+        }
+
+        // ============================================
+        // Fungsi saat tombol OK di popup ditekan
+        // ============================================
+        function lanjutKeGuru() {
+            document.getElementById('popup-berhasil').classList.remove('tampil');
+
+            kirimKeAppInventor(JSON.stringify({
+                status: "ok",
+                peran: "guru",
+                username: window.dataGuruTersimpan.username,
+                nama: window.dataGuruTersimpan.nama,
+                mapel: window.dataGuruTersimpan.mapel
+            }));
+        }
+    </script>
+</body>
+</html>

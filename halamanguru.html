@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Halaman Guru</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #b9fbc0 0%, #70e000 100%); min-height: 100vh; color: #1C1C1E; padding: 16px; }
+    .app-container { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    header { text-align: center; padding: 8px 0 4px; }
+    header h1 { font-size: 22px; font-weight: 700; color: #0f172a; }
+    header p { font-size: 13px; color: #14532d; margin-top: 4px; }
+    .card { background: rgba(255, 255, 255, 0.55); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.8); border-radius: 18px; padding: 16px; box-shadow: 0 8px 32px rgba(0, 100, 0, 0.1); display: flex; flex-direction: column; gap: 10px; }
+    .badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .badge-aktif { background: #dcfce7; color: #166534; }
+    .badge-nonaktif { background: #fee2e2; color: #991b1b; }
+    .badge-info { background: #dbeafe; color: #1e40af; }
+    .btn-utama, .btn-sekunder, .btn-bahaya { padding: 12px 14px; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-utama { background: #1b5e20; color: #fff; }
+    .btn-sekunder { background: rgba(255,255,255,0.85); color: #1b5e20; border: 1px solid #1b5e20; }
+    .btn-bahaya { background: #fff; color: #b91c1c; border: 1px solid rgba(185,28,28,0.4); }
+    .kosong { text-align: center; font-size: 13px; color: #475569; padding: 20px 0; }
+    .pesan-status { display: none; font-size: 13px; padding: 10px 12px; border-radius: 10px; text-align: center; }
+    .pesan-status.tampil { display: block; }
+    .pesan-status.sukses { background: rgba(220,252,231,0.9); color: #166534; }
+    .pesan-status.gagal { background: rgba(254,226,226,0.9); color: #991b1b; }
+    .pesan-status.info { background: rgba(219,234,254,0.9); color: #1e40af; }
+    .field { margin-bottom: 8px; }
+    .field label { display: block; font-size: 13px; font-weight: 600; color: #14532d; margin-bottom: 6px; }
+    .field input, .field textarea, .field select { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.9); background: rgba(255,255,255,0.8); font-size: 15px; color: #0f172a; outline: none; font-family: inherit; }
+    .field textarea { resize: vertical; min-height: 60px; }
+    .field textarea.mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; min-height: 200px; white-space: pre; }
+    .baris-tombol { display: flex; gap: 8px; flex-wrap: wrap; }
+    .baris-tombol > * { flex: 1; min-width: 110px; }
+    .item-mapel { background: rgba(255,255,255,0.6); border-radius: 14px; padding: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .item-mapel-info { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 150px; }
+    .item-mapel-info b { font-size: 15px; color: #0f172a; }
+    .item-mapel-info span { font-size: 12px; color: #475569; }
+    .item-soal { background: rgba(255,255,255,0.6); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .item-soal p { font-size: 14px; color: #0f172a; line-height: 1.4; }
+    .item-soal .baris-tombol button { padding: 8px 10px; font-size: 13px; }
+    .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; padding: 20px; z-index: 999; }
+    .popup-overlay.tampil { display: flex; }
+    .popup-box { background: #fff; border-radius: 20px; padding: 20px; width: 100%; max-width: 440px; max-height: 88vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    .popup-box h3 { font-size: 17px; color: #0f172a; }
+    .opsi-jawaban { display: flex; align-items: center; gap: 8px; }
+    .opsi-jawaban input[type="text"] { flex: 1; }
+    .opsi-jawaban input[type="radio"] { width: 18px; height: 18px; accent-color: #1b5e20; }
+    .tag-tipe { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+    .tag-pg { background: #dbeafe; color: #1e40af; }
+    .tag-essay { background: #fef3c7; color: #92400e; }
+    .ringkasan-soal { display:flex; gap:8px; font-size:12px; color:#14532d; flex-wrap:wrap; }
+    .ringkasan-soal span { background:rgba(255,255,255,0.7); padding:3px 8px; border-radius:8px; }
+    .petunjuk-csv { font-size: 12px; color: #475569; line-height: 1.5; background: rgba(219,234,254,0.5); border-radius: 10px; padding: 10px 12px; }
+    .petunjuk-csv ol { margin-left: 18px; }
+    .petunjuk-csv code { background: #fff; padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+    .tab-nav { display: flex; gap: 6px; background: rgba(255,255,255,0.55); padding: 6px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.8); }
+    .tab-nav button { padding: 10px; border: none; border-radius: 10px; font-weight: 600; font-size: 13px; background: transparent; color: #14532d; cursor: pointer; flex: 1; }
+    .tab-nav button.aktif { background: #1b5e20; color: #fff; }
+    .kelas-checkbox { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(255,255,255,0.6); border-radius: 10px; margin-bottom: 6px; cursor: pointer; }
+    .kelas-checkbox input { width: 18px; height: 18px; accent-color: #1b5e20; }
+    .peringatan-kunci { background: rgba(254,243,199,0.9); border: 1px solid #f59e0b; color: #7c4a03; padding: 12px; border-radius: 12px; font-size: 13px; line-height: 1.5; }
+    .item-nilai { background: rgba(241,245,249,0.9); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+    .item-nilai b { font-size: 13px; color: #0f172a; }
+    .item-nilai span { font-size: 11px; color: #475569; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <h1>Dashboard Guru</h1>
+        <p id="info-guru">Selamat datang</p>
+    </header>
+
+    <div class="pesan-status" id="pesan-status"></div>
+
+    <!-- LAYAR 1 -->
+    <div id="layar-daftar-mapel" style="display:flex;flex-direction:column;gap:16px;">
+        <div class="card">
+            <div class="field"><label>Nama Mapel</label><input type="text" id="input-nama-mapel" placeholder="Contoh: Matematika"></div>
+            <div class="field"><label>Kelas (bisa pilih lebih dari satu)</label><div id="kelas-checkbox-container"></div></div>
+            <button class="btn-utama" onclick="tambahMapel()">+ Tambah Mapel</button>
+        </div>
+        <div id="daftar-mapel"></div>
+    </div>
+
+    <!-- LAYAR 2 -->
+    <div id="layar-kelola-soal" style="display:none;flex-direction:column;gap:16px;">
+        <button class="btn-sekunder" onclick="kembaliKeDaftarMapel()">← Kembali</button>
+
+        <div class="card">
+            <h3 id="judul-mapel-aktif" style="color:#0f172a;"></h3>
+            <div style="font-size:12px;color:#475569;" id="info-kelas-mapel"></div>
+            <div class="ringkasan-soal" id="ringkasan-soal"></div>
+        </div>
+
+        <div class="tab-nav">
+            <button id="tab-btn-soal" class="aktif" onclick="gantiTabGuru('soal')">📝 Soal</button>
+            <button id="tab-btn-nilai" onclick="gantiTabGuru('nilai')">📊 Nilai</button>
+            <button id="tab-btn-kelas" onclick="gantiTabGuru('kelas')">🏫 Edit Kelas</button>
+        </div>
+
+        <!-- TAB SOAL -->
+        <div id="tab-soal" style="display:flex;flex-direction:column;gap:16px;">
+            <div id="peringatan-aktif" style="display:none;">
+                <div class="peringatan-kunci">
+                    ⚠️ <b>Mapel sedang aktif / sedang diujikan.</b> Soal tidak bisa diedit sampai admin menonaktifkannya.
+                </div>
+            </div>
+
+            <div class="card" id="aksi-soal">
+                <div class="baris-tombol">
+                    <button class="btn-utama" onclick="bukaFormSoal()">+ Soal Manual</button>
+                    <button class="btn-sekunder" onclick="bukaImportCSV()">📋 Import CSV</button>
+                </div>
+                <div class="baris-tombol">
+                    <button class="btn-sekunder" onclick="lihatTemplateCSV()">📄 Template</button>
+                    <button class="btn-utama" onclick="rilisSoal()" style="background:#0f6b0f;">🚀 Rilis Soal</button>
+                </div>
+                <p style="font-size:11px;color:#475569;text-align:center;">
+                    ⓘ Draft tersimpan otomatis di server. Tidak akan hilang meski keluar aplikasi.
+                </p>
+            </div>
+
+            <div id="daftar-soal"></div>
+        </div>
+
+        <!-- TAB NILAI -->
+        <div id="tab-nilai" style="display:none;flex-direction:column;gap:12px;">
+            <div class="card">
+                <b style="font-size:14px;color:#0f172a;">Nilai Siswa</b>
+                <span style="font-size:12px;color:#475569;">Periksa jawaban essay siswa, isi nilai, lalu klik Kirim Nilai.</span>
+            </div>
+            <div id="daftar-nilai-siswa"></div>
+        </div>
+
+        <!-- TAB KELAS -->
+        <div id="tab-kelas" style="display:none;flex-direction:column;gap:12px;">
+            <div class="card">
+                <b style="font-size:14px;color:#0f172a;">Kelas untuk Mapel Ini</b>
+                <span style="font-size:12px;color:#475569;">Centang kelas yang akan mengerjakan mapel ini.</span>
+                <div id="kelas-edit-container" style="margin-top:10px;"></div>
+                <button class="btn-utama" onclick="simpanKelasMapel()">Simpan Perubahan Kelas</button>
+            </div>
+        </div>
+
+        <!-- Tombol Hasil per kelas -->
+        <button class="btn-sekunder" onclick="lihatHasilPerKelas()">📸 Hasil Ujian per Kelas (untuk screenshot)</button>
+    </div>
+</div>
+
+<!-- POPUP FORM SOAL -->
+<div class="popup-overlay" id="popup-form-soal">
+    <div class="popup-box">
+        <h3 id="judul-popup-soal">Tambah Soal</h3>
+        <div class="field">
+            <label>Tipe Soal</label>
+            <select id="input-tipe" onchange="ubahTipeSoal()">
+                <option value="pg">Pilihan Ganda</option>
+                <option value="essay">Essay / Uraian</option>
+            </select>
+        </div>
+        <div class="field"><label>Pertanyaan</label><textarea id="input-pertanyaan"></textarea></div>
+        <div id="blok-pg">
+            <div class="field"><label>Pilihan A</label><div class="opsi-jawaban"><input type="radio" name="jawaban-benar" value="A"><input type="text" id="input-pilihan-a"></div></div>
+            <div class="field"><label>Pilihan B</label><div class="opsi-jawaban"><input type="radio" name="jawaban-benar" value="B"><input type="text" id="input-pilihan-b"></div></div>
+            <div class="field"><label>Pilihan C</label><div class="opsi-jawaban"><input type="radio" name="jawaban-benar" value="C"><input type="text" id="input-pilihan-c"></div></div>
+            <div class="field"><label>Pilihan D</label><div class="opsi-jawaban"><input type="radio" name="jawaban-benar" value="D"><input type="text" id="input-pilihan-d"></div></div>
+            <div class="field"><label>Pilihan E</label><div class="opsi-jawaban"><input type="radio" name="jawaban-benar" value="E"><input type="text" id="input-pilihan-e"></div></div>
+            <p style="font-size:12px;color:#475569;">Pilih radio di samping jawaban benar. E boleh kosong bila cukup A–D.</p>
+        </div>
+        <div id="blok-essay" style="display:none;">
+            <div class="field"><label>Kunci / Panduan Jawaban (opsional)</label><textarea id="input-kunci-essay"></textarea></div>
+        </div>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupPopup('popup-form-soal')">Batal</button>
+            <button class="btn-utama" onclick="simpanSoalLokal()">Simpan</button>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP IMPORT CSV -->
+<div class="popup-overlay" id="popup-import">
+    <div class="popup-box">
+        <h3>Import Soal dari Excel / CSV</h3>
+        <div class="petunjuk-csv">
+            <b>Cara pakai:</b>
+            <ol>
+                <li>Klik <b>Template</b>, copy isi, paste ke Excel, isi soal.</li>
+                <li>Di Excel: <b>select semua → copy</b>.</li>
+                <li>Paste ke kotak di bawah, klik Import.</li>
+            </ol>
+            Kolom: <code>Tipe, Pertanyaan, A, B, C, D, E, Jawaban Benar, Kunci Essay</code>
+        </div>
+        <div class="field"><textarea id="input-csv-import" class="mono" placeholder="Tipe,Pertanyaan,A,B,C,D,E,Jawaban Benar,Kunci Essay&#10;PG,Ibu kota Indonesia?,Bandung,Jakarta,...,B,"></textarea></div>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupPopup('popup-import')">Batal</button>
+            <button class="btn-utama" onclick="prosesImportCSV()">Import</button>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP TEMPLATE -->
+<div class="popup-overlay" id="popup-template">
+    <div class="popup-box">
+        <h3>Template CSV</h3>
+        <div class="field"><textarea id="isi-template-csv" class="mono" readonly></textarea></div>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupPopup('popup-template')">Tutup</button>
+            <button class="btn-utama" onclick="copyTemplate()">📋 Copy</button>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP NILAI ESSAY -->
+<div class="popup-overlay" id="popup-nilai-essay">
+    <div class="popup-box">
+        <h3 id="judul-nilai-essay">Periksa Essay</h3>
+        <div id="isi-nilai-essay-guru"></div>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupPopup('popup-nilai-essay')">Batal</button>
+            <button class="btn-utama" onclick="kirimNilaiEssayKeAdmin()">📤 Kirim Nilai ke Admin</button>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP HASIL PER KELAS -->
+<div class="popup-overlay" id="popup-hasil-kelas">
+    <div class="popup-box" style="background:#fff;">
+        <h3 id="judul-hasil-kelas">Hasil Ujian</h3>
+        <div class="field">
+            <label>Pilih Kelas</label>
+            <select id="pilih-kelas-hasil" onchange="renderHasilPerKelas()"><option value="">Semua</option></select>
+        </div>
+        <div id="isi-hasil-kelas"></div>
+        <button class="btn-sekunder" onclick="tutupPopup('popup-hasil-kelas')">Tutup</button>
+    </div>
+</div>
+
+<!-- POPUP KONFIRMASI -->
+<div class="popup-overlay" id="popup-konfirmasi">
+    <div class="popup-box" style="text-align:center;">
+        <h3 id="judul-konfirmasi">Konfirmasi</h3>
+        <p id="pesan-konfirmasi" style="font-size:14px;color:#475569;line-height:1.5;"></p>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupKonfirmasi(false)">Batal</button>
+            <button class="btn-utama" id="btn-ok-konfirmasi" onclick="tutupKonfirmasi(true)">Ya</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const FIREBASE_URL = "https://admin-ffded-default-rtdb.firebaseio.com";
+
+    // ============================================================
+    // SOAL disimpan terpisah di "soal/{idMapel}" supaya daftar mapel ringan.
+    // Kalau belum dimigrasi, otomatis membaca lokasi lama "mapel/{idMapel}/soal".
+    // ============================================================
+    async function ambilSoalMapel(id) {
+        const r = await fetch(`${FIREBASE_URL}/soal/${id}.json`);
+        const baru = await r.json();
+        if (baru) return baru;
+        const r2 = await fetch(`${FIREBASE_URL}/mapel/${id}/soal.json`);
+        return (await r2.json()) || null;
+    }
+    let usernameGuru = "", namaGuru = "";
+    let daftarMapel = [], daftarKelas = [], daftarSoal = [], daftarNilaiMapel = [];
+    let mapelAktifId = null, namaMapelAktif = "", mapelAktifStatus = false;
+    let soalSedangDiedit = null;
+    let nilaiEssayKonteks = { mapelId: null, nisn: null };
+
+    let resolveKonfirmasi = null;
+    function konfirmasi(pesan, judul, labelOk) {
+        judul = judul || 'Konfirmasi'; labelOk = labelOk || 'Ya';
+        return new Promise(resolve => {
+            document.getElementById('judul-konfirmasi').textContent = judul;
+            document.getElementById('pesan-konfirmasi').textContent = pesan;
+            document.getElementById('btn-ok-konfirmasi').textContent = labelOk;
+            document.getElementById('popup-konfirmasi').classList.add('tampil');
+            resolveKonfirmasi = resolve;
+        });
+    }
+    function tutupKonfirmasi(h) { document.getElementById('popup-konfirmasi').classList.remove('tampil'); if (resolveKonfirmasi) { resolveKonfirmasi(h); resolveKonfirmasi = null; } }
+    function tutupPopup(id) { document.getElementById(id).classList.remove('tampil'); }
+    function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+    function escapeCSV(v) { const s = String(v == null ? '' : v); if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\t') || s.includes(';')) return '"' + s.replace(/"/g,'""') + '"'; return s; }
+    function copyTextarea(id) { const ta = document.getElementById(id); ta.focus(); ta.select(); if (ta.setSelectionRange) ta.setSelectionRange(0, 99999); let ok = false; try { ok = document.execCommand('copy'); } catch(e) {} if (!ok && navigator.clipboard) { try { navigator.clipboard.writeText(ta.value); ok = true; } catch(e){} } return ok; }
+    function detectDelimiter(t) { const l = t.split('\n')[0] || ''; if (l.includes('\t')) return '\t'; if (l.includes(';')) return ';'; return ','; }
+    function parseBarisCSV(line, delim) {
+        const out = []; let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+            const c = line[i];
+            if (inQ) { if (c === '"') { if (line[i+1] === '"') { cur += '"'; i++; } else inQ = false; } else cur += c; }
+            else { if (c === '"') inQ = true; else if (c === delim) { out.push(cur); cur = ''; } else cur += c; }
+        }
+        out.push(cur); return out.map(s => s.replace(/\r$/,''));
+    }
+    function parseKelasList(k) {
+        if (!k) return [];
+        if (Array.isArray(k)) return k.filter(x => x && typeof x === 'string');
+        if (typeof k === 'string') return k.split(',').map(s => s.trim()).filter(s => s);
+        if (typeof k === 'object') return Object.values(k).filter(x => typeof x === 'string');
+        return [];
+    }
+
+    function ambilParamAtauTanya() {
+        const p = new URLSearchParams(window.location.search);
+        usernameGuru = (p.get('username') || '').trim().toLowerCase();
+        namaGuru = p.get('nama') || '';
+        if (!usernameGuru) { usernameGuru = (prompt('Testing: username guru') || '').trim().toLowerCase(); namaGuru = usernameGuru; }
+        document.getElementById('info-guru').textContent = 'Selamat datang, ' + (namaGuru || usernameGuru);
+    }
+    function tampilkanStatus(p, j) {
+        j = j || 'info';
+        const k = document.getElementById('pesan-status');
+        k.textContent = p; k.className = 'pesan-status tampil ' + j;
+        setTimeout(() => k.classList.remove('tampil'), 3500);
+    }
+
+    // ============ MUAT KELAS & MAPEL ============
+    async function muatDaftarKelas() {
+        try {
+            const r = await fetch(`${FIREBASE_URL}/daftar_kelas.json`);
+            const data = await r.json();
+            daftarKelas = [];
+            if (data) for (const id in data) daftarKelas.push({ id, ...data[id] });
+            daftarKelas.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
+            renderCheckboxKelas();
+        } catch (e) {}
+    }
+
+    function renderCheckboxKelas() {
+        const c = document.getElementById('kelas-checkbox-container');
+        if (daftarKelas.length === 0) { c.innerHTML = '<p style="font-size:12px;color:#b91c1c;">Belum ada kelas. Minta admin menambahkan di halaman admin.</p>'; return; }
+        c.innerHTML = daftarKelas.map(k => `
+            <label class="kelas-checkbox">
+                <input type="checkbox" value="${escapeHtml(k.nama)}" class="kelas-cb-baru">
+                <span>${escapeHtml(k.nama)}</span>
+            </label>`).join('');
+    }
+
+    async function muatDaftarMapel() {
+        try {
+            const r = await fetch(`${FIREBASE_URL}/mapel.json`);
+            const data = await r.json();
+            daftarMapel = [];
+            if (data) for (const id in data) if (data[id].guru === usernameGuru) daftarMapel.push({ id, ...data[id] });
+            renderDaftarMapel();
+        } catch (e) { tampilkanStatus('Gagal memuat mapel.', 'gagal'); }
+    }
+
+    function renderDaftarMapel() {
+        const k = document.getElementById('daftar-mapel');
+        if (daftarMapel.length === 0) { k.innerHTML = '<p class="kosong">Belum ada mapel.</p>'; return; }
+        k.innerHTML = daftarMapel.map(m => {
+            const kelasList = parseKelasList(m.kelas);
+            return `
+            <div class="item-mapel">
+                <div class="item-mapel-info">
+                    <b>${escapeHtml(m.nama_mapel)}</b>
+                    <span>Kelas: ${kelasList.length ? kelasList.map(escapeHtml).join(', ') : '-'}</span>
+                    <span class="badge ${m.status_aktif ? 'badge-aktif' : 'badge-nonaktif'}">
+                        ${m.status_aktif ? 'Aktif' : 'Nonaktif'}
+                    </span>
+                    <span style="font-size:11px;color:#475569;">${m.jumlah_pg || 0} PG · ${m.jumlah_essay || 0} Essay</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <button class="btn-sekunder" onclick="bukaKelolaSoal('${m.id}', '${escapeHtml(m.nama_mapel)}')">Kelola</button>
+                    <button class="btn-bahaya" onclick="hapusMapel('${m.id}', '${escapeHtml(m.nama_mapel)}')">Hapus</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    async function tambahMapel() {
+        const nama = document.getElementById('input-nama-mapel').value.trim();
+        const kelasChecked = Array.from(document.querySelectorAll('.kelas-cb-baru:checked')).map(cb => cb.value);
+        if (!nama) { tampilkanStatus('Nama mapel wajib diisi.', 'gagal'); return; }
+        if (kelasChecked.length === 0) { tampilkanStatus('Pilih minimal satu kelas.', 'gagal'); return; }
+        try {
+            await fetch(`${FIREBASE_URL}/mapel.json`, {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({
+                    nama_mapel: nama, kelas: kelasChecked, guru: usernameGuru,
+                    status_aktif: false, token: "", jumlah_pg: 0, jumlah_essay: 0
+                })
+            });
+            document.getElementById('input-nama-mapel').value = '';
+            document.querySelectorAll('.kelas-cb-baru').forEach(cb => cb.checked = false);
+            tampilkanStatus('Mapel ditambahkan.', 'sukses');
+            muatDaftarMapel();
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+
+    async function hapusMapel(id, nama) {
+        const ya = await konfirmasi(`Hapus mapel "${nama}"?`, 'Hapus', 'Ya, Hapus');
+        if (!ya) return;
+        try {
+            // Hapus satu-satu, jangan sampai satu 404 batalkan yang lain
+            const urls = [
+                `${FIREBASE_URL}/mapel/${id}.json`,
+                `${FIREBASE_URL}/hasil_ujian/${id}.json`,
+                `${FIREBASE_URL}/pengajuan_ulang/${id}.json`,
+                `${FIREBASE_URL}/draft_soal/${id}.json`,
+                `${FIREBASE_URL}/soal/${id}.json`
+            ];
+            await Promise.allSettled(urls.map(u => fetch(u, { method: 'DELETE' })));
+            tampilkanStatus('Mapel dihapus.', 'sukses');
+            muatDaftarMapel();
+        } catch (e) { tampilkanStatus('Gagal menghapus.', 'gagal'); }
+    }
+
+    // ============ KELOLA SOAL ============
+    async function bukaKelolaSoal(mapelId, namaMapel) {
+        mapelAktifId = mapelId; namaMapelAktif = namaMapel;
+        document.getElementById('judul-mapel-aktif').textContent = namaMapel;
+        document.getElementById('layar-daftar-mapel').style.display = 'none';
+        document.getElementById('layar-kelola-soal').style.display = 'flex';
+
+        // Load info mapel terbaru
+        let mapelData = null;
+        try {
+            const r = await fetch(`${FIREBASE_URL}/mapel/${mapelId}.json`);
+            mapelData = await r.json();
+        } catch (e) {}
+
+        mapelAktifStatus = !!(mapelData && mapelData.status_aktif);
+        const kelasList = parseKelasList(mapelData ? mapelData.kelas : []);
+        document.getElementById('info-kelas-mapel').textContent = 'Kelas: ' + (kelasList.join(', ') || '-');
+
+        // Load draft dari server
+        let draftServer = null;
+        try {
+            const r = await fetch(`${FIREBASE_URL}/draft_soal/${mapelId}.json`);
+            draftServer = await r.json();
+        } catch (e) {}
+
+        let soalServer = {};
+        try {
+            soalServer = await ambilSoalMapel(mapelId) || {};
+        } catch (e) {}
+
+        const draftArr = [];
+        if (draftServer && typeof draftServer === 'object') {
+            for (const sid in draftServer) draftArr.push({ id: sid, ...draftServer[sid] });
+        }
+        const soalArr = [];
+        if (soalServer && typeof soalServer === 'object') {
+            for (const sid in soalServer) soalArr.push({ id: sid, ...soalServer[sid] });
+        }
+
+        // Prioritas: draft server kalau ada isi, kalau tidak pakai soal server
+        daftarSoal = draftArr.length > 0 ? draftArr : soalArr;
+        renderDaftarSoal();
+
+        gantiTabGuru('soal');
+        // Load data nilai
+        muatNilaiMapel();
+        // Render checkbox kelas edit
+        renderCheckboxKelasEdit(kelasList);
+    }
+
+    function renderCheckboxKelasEdit(kelasTerpilih) {
+        const c = document.getElementById('kelas-edit-container');
+        if (daftarKelas.length === 0) { c.innerHTML = '<p style="font-size:12px;color:#b91c1c;">Belum ada kelas.</p>'; return; }
+        c.innerHTML = daftarKelas.map(k => `
+            <label class="kelas-checkbox">
+                <input type="checkbox" value="${escapeHtml(k.nama)}" class="kelas-cb-edit" ${kelasTerpilih.includes(k.nama) ? 'checked' : ''}>
+                <span>${escapeHtml(k.nama)}</span>
+            </label>`).join('');
+    }
+
+    async function simpanKelasMapel() {
+        const pilih = Array.from(document.querySelectorAll('.kelas-cb-edit:checked')).map(cb => cb.value);
+        if (pilih.length === 0) { alert('Pilih minimal satu kelas.'); return; }
+        try {
+            await fetch(`${FIREBASE_URL}/mapel/${mapelAktifId}.json`, {
+                method: 'PATCH', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ kelas: pilih })
+            });
+            document.getElementById('info-kelas-mapel').textContent = 'Kelas: ' + pilih.join(', ');
+            tampilkanStatus('Kelas diperbarui.', 'sukses');
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+
+    function gantiTabGuru(tab) {
+        ['soal','nilai','kelas'].forEach(t => {
+            document.getElementById('tab-btn-' + t).classList.toggle('aktif', t === tab);
+            document.getElementById('tab-' + t).style.display = t === tab ? 'flex' : 'none';
+        });
+        document.getElementById('tab-soal').style.flexDirection = 'column';
+    }
+
+    function simpanDraftKeServer() {
+        if (!mapelAktifId) return Promise.resolve();
+        const obj = {};
+        daftarSoal.forEach(s => {
+            if (s.tipe === 'essay') obj[s.id] = { tipe: 'essay', pertanyaan: s.pertanyaan, kunci_essay: s.kunci_essay || '' };
+            else obj[s.id] = { tipe: 'pg', pertanyaan: s.pertanyaan, pilihan: s.pilihan, jawaban_benar: s.jawaban_benar };
+        });
+        return fetch(`${FIREBASE_URL}/draft_soal/${mapelAktifId}.json`, {
+            method: 'PUT', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(obj)
+        }).catch(() => {});
+    }
+
+    function kembaliKeDaftarMapel() {
+        mapelAktifId = null; daftarSoal = [];
+        document.getElementById('layar-kelola-soal').style.display = 'none';
+        document.getElementById('layar-daftar-mapel').style.display = 'flex';
+        muatDaftarMapel();
+    }
+
+    function hitungJumlahSoal() {
+        return {
+            pg: daftarSoal.filter(s => s.tipe !== 'essay').length,
+            essay: daftarSoal.filter(s => s.tipe === 'essay').length
+        };
+    }
+
+    function renderDaftarSoal() {
+        const k = document.getElementById('daftar-soal');
+        const { pg, essay } = hitungJumlahSoal();
+        document.getElementById('ringkasan-soal').innerHTML = `<span>Total: ${daftarSoal.length}</span><span>PG: ${pg}</span><span>Essay: ${essay}</span>`;
+
+        // Kunci edit kalau mapel aktif
+        const formAksi = document.getElementById('aksi-soal');
+        if (mapelAktifStatus) {
+            document.getElementById('peringatan-aktif').style.display = 'block';
+            formAksi.style.opacity = '0.5';
+            formAksi.style.pointerEvents = 'none';
+        } else {
+            document.getElementById('peringatan-aktif').style.display = 'none';
+            formAksi.style.opacity = '1';
+            formAksi.style.pointerEvents = 'auto';
+        }
+
+        if (daftarSoal.length === 0) { k.innerHTML = '<p class="kosong">Belum ada soal.</p>'; return; }
+        k.innerHTML = daftarSoal.map((s, i) => {
+            const tipe = s.tipe === 'essay' ? 'essay' : 'pg';
+            const label = tipe === 'essay' ? '<span class="tag-tipe tag-essay">Essay</span>' : '<span class="tag-tipe tag-pg">PG</span>';
+            const info = tipe === 'essay'
+                ? (s.kunci_essay ? `Kunci: ${escapeHtml(s.kunci_essay)}` : 'Tanpa kunci')
+                : `Jawaban: ${s.jawaban_benar}`;
+            const aksi = mapelAktifStatus ? '' : `
+                <div class="baris-tombol">
+                    <button class="btn-sekunder" onclick="editSoalLokal('${s.id}')">Edit</button>
+                    <button class="btn-bahaya" onclick="hapusSoalLokal('${s.id}')">Hapus</button>
+                </div>`;
+            return `<div class="item-soal">
+                <p>${label} <b>${i+1}.</b> ${escapeHtml(s.pertanyaan)}</p>
+                <p style="font-size:12px;color:#166534;">${info}</p>
+                ${aksi}
+            </div>`;
+        }).join('');
+    }
+
+    function ubahTipeSoal() {
+        const t = document.getElementById('input-tipe').value;
+        document.getElementById('blok-pg').style.display = t === 'pg' ? 'block' : 'none';
+        document.getElementById('blok-essay').style.display = t === 'essay' ? 'block' : 'none';
+    }
+
+    function bukaFormSoal() {
+        soalSedangDiedit = null;
+        document.getElementById('judul-popup-soal').textContent = 'Tambah Soal';
+        document.getElementById('input-tipe').value = 'pg';
+        document.getElementById('input-pertanyaan').value = '';
+        ['a','b','c','d','e'].forEach(h => document.getElementById('input-pilihan-' + h).value = '');
+        document.getElementById('input-kunci-essay').value = '';
+        document.querySelectorAll('input[name="jawaban-benar"]').forEach(r => r.checked = false);
+        ubahTipeSoal();
+        document.getElementById('popup-form-soal').classList.add('tampil');
+    }
+
+    function editSoalLokal(id) {
+        const s = daftarSoal.find(x => x.id === id); if (!s) return;
+        soalSedangDiedit = id;
+        document.getElementById('judul-popup-soal').textContent = 'Edit Soal';
+        const t = s.tipe === 'essay' ? 'essay' : 'pg';
+        document.getElementById('input-tipe').value = t;
+        document.getElementById('input-pertanyaan').value = s.pertanyaan || '';
+        ['a','b','c','d','e'].forEach((h, i) => document.getElementById('input-pilihan-' + h).value = (s.pilihan && s.pilihan[i]) || '');
+        document.getElementById('input-kunci-essay').value = s.kunci_essay || '';
+        document.querySelectorAll('input[name="jawaban-benar"]').forEach(r => r.checked = (r.value === s.jawaban_benar));
+        ubahTipeSoal();
+        document.getElementById('popup-form-soal').classList.add('tampil');
+    }
+
+    async function simpanSoalLokal() {
+        const tipe = document.getElementById('input-tipe').value;
+        const pertanyaan = document.getElementById('input-pertanyaan').value.trim();
+        if (!pertanyaan) { alert('Pertanyaan wajib.'); return; }
+        let dataSoal = { tipe, pertanyaan };
+        if (tipe === 'essay') {
+            dataSoal.kunci_essay = document.getElementById('input-kunci-essay').value.trim();
+        } else {
+            const pilihan = ['a','b','c','d','e'].map(h => document.getElementById('input-pilihan-' + h).value.trim());
+            const radio = document.querySelector('input[name="jawaban-benar"]:checked');
+            if (pilihan.filter(p => p).length < 2) { alert('Minimal 2 pilihan.'); return; }
+            if (!radio) { alert('Pilih jawaban benar.'); return; }
+            const idx = ['A','B','C','D','E'].indexOf(radio.value);
+            if (!pilihan[idx]) { alert('Jawaban benar kosong.'); return; }
+            dataSoal.pilihan = pilihan.filter(p => p);
+            dataSoal.jawaban_benar = radio.value;
+        }
+        if (soalSedangDiedit) {
+            const i = daftarSoal.findIndex(x => x.id === soalSedangDiedit);
+            daftarSoal[i] = { id: soalSedangDiedit, ...dataSoal };
+        } else {
+            daftarSoal.push({ id: 'soal_' + Date.now() + '_' + Math.floor(Math.random()*1000), ...dataSoal });
+        }
+        await simpanDraftKeServer();
+        renderDaftarSoal();
+        tutupPopup('popup-form-soal');
+    }
+
+    async function hapusSoalLokal(id) {
+        const ya = await konfirmasi('Hapus soal ini?', 'Hapus', 'Ya');
+        if (!ya) return;
+        daftarSoal = daftarSoal.filter(s => s.id !== id);
+        await simpanDraftKeServer();
+        renderDaftarSoal();
+    }
+
+    // ============ TEMPLATE & IMPORT ============
+    function lihatTemplateCSV() {
+        const c = [
+            ['Tipe','Pertanyaan','Pilihan A','Pilihan B','Pilihan C','Pilihan D','Pilihan E','Jawaban Benar','Kunci Essay'],
+            ['PG','Ibu kota Indonesia?','Bandung','Jakarta','Surabaya','Medan','','B',''],
+            ['PG','2 + 3 x 4 = ?','20','14','24','9','','B',''],
+            ['Essay','Jelaskan fotosintesis.','','','','','','','Proses tumbuhan mengubah cahaya matahari menjadi energi']
+        ];
+        document.getElementById('isi-template-csv').value = c.map(r => r.map(escapeCSV).join(',')).join('\n');
+        document.getElementById('popup-template').classList.add('tampil');
+    }
+    function copyTemplate() {
+        const ok = copyTextarea('isi-template-csv');
+        if (ok) tampilkanStatus('Copy berhasil.', 'sukses'); else alert('Tekan lama lalu copy manual.');
+    }
+    function bukaImportCSV() { document.getElementById('input-csv-import').value = ''; document.getElementById('popup-import').classList.add('tampil'); }
+
+    async function prosesImportCSV() {
+        const teks = document.getElementById('input-csv-import').value.trim();
+        if (!teks) { alert('Paste data dulu.'); return; }
+        const delim = detectDelimiter(teks);
+        const baris = teks.split(/\r?\n/).filter(b => b.trim() !== '');
+        if (baris.length < 2) { alert('Minimal header + 1 soal.'); return; }
+        let ok = 0, skip = 0;
+        for (let i = 1; i < baris.length; i++) {
+            const b = parseBarisCSV(baris[i], delim);
+            if (!b || !b[1]) { skip++; continue; }
+            const tipe = String(b[0]||'PG').trim().toLowerCase() === 'essay' ? 'essay' : 'pg';
+            const pertanyaan = String(b[1]).trim();
+            if (tipe === 'essay') {
+                daftarSoal.push({ id: 'soal_' + Date.now() + '_' + i, tipe: 'essay', pertanyaan, kunci_essay: String(b[8]||'').trim() });
+                ok++;
+            } else {
+                const pilihan = [b[2],b[3],b[4],b[5],b[6]].map(x => String(x||'').trim()).filter(x => x);
+                const jwb = String(b[7]||'').trim().toUpperCase();
+                if (pilihan.length < 2 || !['A','B','C','D','E'].includes(jwb)) { skip++; continue; }
+                daftarSoal.push({ id: 'soal_' + Date.now() + '_' + i, tipe: 'pg', pertanyaan, pilihan, jawaban_benar: jwb });
+                ok++;
+            }
+        }
+        await simpanDraftKeServer();
+        renderDaftarSoal();
+        tutupPopup('popup-import');
+        if (ok === 0) alert('Tidak ada soal berhasil diimport.');
+        else tampilkanStatus(`${ok} soal diimport${skip ? `, ${skip} dilewati` : ''}.`, 'sukses');
+    }
+
+    // ============ RILIS ============
+    async function rilisSoal() {
+        if (!mapelAktifId) return;
+        if (mapelAktifStatus) { alert('Mapel aktif. Minta admin menonaktifkan dulu.'); return; }
+        if (daftarSoal.length === 0) {
+            const ya = await konfirmasi('Soal kosong. Rilis tetap?', 'Rilis', 'Ya');
+            if (!ya) return;
+        }
+        const obj = {};
+        daftarSoal.forEach(s => {
+            if (s.tipe === 'essay') obj[s.id] = { tipe: 'essay', pertanyaan: s.pertanyaan, kunci_essay: s.kunci_essay || '' };
+            else obj[s.id] = { tipe: 'pg', pertanyaan: s.pertanyaan, pilihan: s.pilihan, jawaban_benar: s.jawaban_benar };
+        });
+        const { pg, essay } = hitungJumlahSoal();
+
+        let suksesSoal = false, suksesMeta = false;
+        try {
+            // Soal disimpan di lokasi baru: soal/{idMapel}
+            const r1 = await fetch(`${FIREBASE_URL}/soal/${mapelAktifId}.json`, {
+                method: 'PUT', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(obj)
+            });
+            if (r1.ok) {
+                suksesSoal = true;
+                // Bersihkan salinan lama (kalau ada) supaya daftar mapel tetap ringan
+                try { await fetch(`${FIREBASE_URL}/mapel/${mapelAktifId}/soal.json`, { method: 'DELETE' }); } catch (e) {}
+            }
+        } catch (e) {}
+        try {
+            const r2 = await fetch(`${FIREBASE_URL}/mapel/${mapelAktifId}.json`, {
+                method: 'PATCH', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ jumlah_pg: pg, jumlah_essay: essay })
+            });
+            if (r2.ok) suksesMeta = true;
+        } catch (e) {}
+        try {
+            await fetch(`${FIREBASE_URL}/draft_soal/${mapelAktifId}.json`, { method: 'DELETE' });
+        } catch (e) {}
+
+        if (suksesSoal) {
+            tampilkanStatus(`✅ ${pg} PG + ${essay} Essay berhasil dirilis.`, 'sukses');
+        } else {
+            tampilkanStatus('❌ Gagal merilis. Coba lagi.', 'gagal');
+        }
+    }
+
+    // ============ NILAI SISWA ============
+    async function muatNilaiMapel() {
+        const k = document.getElementById('daftar-nilai-siswa');
+        k.innerHTML = '<p class="kosong">Memuat nilai...</p>';
+        try {
+            const r = await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelAktifId}.json`);
+            const data = await r.json();
+            if (!data || Object.keys(data).length === 0) {
+                k.innerHTML = '<p class="kosong">Belum ada siswa yang mengumpulkan.</p>';
+                daftarNilaiMapel = [];
+                return;
+            }
+            daftarNilaiMapel = Object.keys(data).map(nis => ({ nis, ...data[nis] }));
+            daftarNilaiMapel.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
+            renderNilaiMapel();
+        } catch (e) { k.innerHTML = '<p class="kosong">Gagal memuat.</p>'; }
+    }
+
+    function renderNilaiMapel() {
+        const k = document.getElementById('daftar-nilai-siswa');
+        if (daftarNilaiMapel.length === 0) { k.innerHTML = '<p class="kosong">Belum ada nilai.</p>'; return; }
+        k.innerHTML = daftarNilaiMapel.map(h => {
+            const status = h.status === 'dinilai_guru' ? '<span class="badge badge-aktif">Sudah Dikirim ke Admin</span>'
+                : (h.status === 'selesai' ? '<span class="badge badge-aktif">Selesai</span>'
+                : '<span class="badge badge-info">Menunggu Nilai Essay</span>');
+            const perluNilai = h.total_essay > 0 && h.nilai_essay == null;
+            return `
+                <div class="item-nilai">
+                    <b>${escapeHtml(h.nama || '-')}</b> ${status}
+                    <span>NISN: ${escapeHtml(h.nisn||h.nis||'-')} · ${escapeHtml(h.kelas||'-')}</span>
+                    <div class="statistik">
+                        <span>Benar: ${h.benar_pg||0}/${h.total_pg||0}</span>
+                        <span>Nilai PG: ${h.nilai_pg||0}</span>
+                        <span>Essay: ${h.nilai_essay != null ? h.nilai_essay : '-'}</span>
+                        <span>Akhir: ${h.nilai_akhir != null ? h.nilai_akhir : '-'}</span>
+                    </div>
+                    <div class="baris-tombol">
+                        <button class="btn-sekunder" onclick="lihatJawabanEssay('${escapeHtml(h.nisn||h.nis)}')">
+                            ${perluNilai ? '✍️ Periksa & Nilai Essay' : '👁️ Lihat Essay'}
+                        </button>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    async function lihatJawabanEssay(nisn) {
+        nilaiEssayKonteks = { mapelId: mapelAktifId, nisn };
+        document.getElementById('judul-nilai-essay').textContent = 'Essay — ' + nisn;
+        const k = document.getElementById('isi-nilai-essay-guru');
+        k.innerHTML = '<p class="kosong">Memuat...</p>';
+        document.getElementById('popup-nilai-essay').classList.add('tampil');
+        try {
+            const [r1, r2] = await Promise.all([
+                ambilSoalMapel(mapelAktifId),
+                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelAktifId}/${nisn}.json`)
+            ]);
+            const soal = r1 || {};
+            const hasil = await r2.json() || {};
+            const je = hasil.jawaban_essay || {};
+            let html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+            let ada = 0;
+            for (const sid in soal) {
+                if (soal[sid].tipe !== 'essay') continue;
+                ada++;
+                html += `<div class="item-nilai">
+                    <b>${escapeHtml(soal[sid].pertanyaan)}</b>
+                    ${soal[sid].kunci_essay ? `<span style="color:#166534;">Kunci: ${escapeHtml(soal[sid].kunci_essay)}</span>` : ''}
+                    <div style="background:#fff;border-radius:8px;padding:8px;font-size:13px;">${escapeHtml(je[sid] || '(kosong)')}</div>
+                </div>`;
+            }
+            if (ada === 0) html += '<p class="kosong">Tidak ada soal essay.</p>';
+            html += `<div class="field">
+                <label>Nilai Essay (0-100)</label>
+                <input type="number" id="input-nilai-essay-guru" min="0" max="100" value="${hasil.nilai_essay != null ? hasil.nilai_essay : ''}" style="text-align:center;font-weight:700;">
+            </div></div>`;
+            k.innerHTML = html;
+        } catch (e) { k.innerHTML = '<p class="kosong">Gagal.</p>'; }
+    }
+
+    async function kirimNilaiEssayKeAdmin() {
+        const { mapelId, nisn } = nilaiEssayKonteks;
+        const nilai = parseInt(document.getElementById('input-nilai-essay-guru').value, 10);
+        if (isNaN(nilai) || nilai < 0 || nilai > 100) { alert('Nilai 0-100.'); return; }
+        try {
+            const r = await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`);
+            const h = await r.json() || {};
+            const tp = h.total_pg || 0, te = h.total_essay || 0, np = h.nilai_pg || 0;
+            const na = (tp + te) === 0 ? 0 : Math.round((np * tp + nilai * te) / (tp + te));
+            await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`, {
+                method: 'PATCH', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ nilai_essay: nilai, nilai_akhir: na, status: 'dinilai_guru', waktu_nilai_guru: new Date().toLocaleString('id-ID') })
+            });
+            tutupPopup('popup-nilai-essay');
+            tampilkanStatus('✅ Nilai terkirim ke admin.', 'sukses');
+            muatNilaiMapel();
+        } catch (e) { alert('Gagal.'); }
+    }
+
+    // ============ HASIL PER KELAS (untuk screenshot) ============
+    async function lihatHasilPerKelas() {
+        const k = document.getElementById('isi-hasil-kelas');
+        k.innerHTML = '<p class="kosong">Memuat...</p>';
+        document.getElementById('popup-hasil-kelas').classList.add('tampil');
+        try {
+            const r = await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelAktifId}.json`);
+            const data = await r.json();
+            if (!data || Object.keys(data).length === 0) {
+                k.innerHTML = '<p class="kosong">Belum ada nilai.</p>';
+                return;
+            }
+            const list = Object.keys(data).map(nis => ({ nis, ...data[nis] }));
+            list.sort((a, b) => (a.kelas || '').localeCompare(b.kelas || '') || (a.nama || '').localeCompare(b.nama || ''));
+            window._dataHasilGuru = list;
+            const kelasUnik = [...new Set(list.map(h => h.kelas).filter(Boolean))].sort();
+            document.getElementById('pilih-kelas-hasil').innerHTML =
+                '<option value="">Semua Kelas</option>' +
+                kelasUnik.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+            renderHasilPerKelas();
+        } catch (e) { k.innerHTML = '<p class="kosong">Gagal.</p>'; }
+    }
+
+    function renderHasilPerKelas() {
+        const kelas = document.getElementById('pilih-kelas-hasil').value;
+        const list = (window._dataHasilGuru || []).filter(h => !kelas || (h.kelas||'') === kelas);
+        const k = document.getElementById('isi-hasil-kelas');
+        if (list.length === 0) { k.innerHTML = '<p class="kosong">Kosong.</p>'; return; }
+        // Header nama mapel untuk screenshot
+        k.innerHTML = `
+            <div style="background:#1b5e20;color:#fff;padding:10px;border-radius:10px;text-align:center;margin-bottom:10px;">
+                <b>${escapeHtml(namaMapelAktif)}</b><br>
+                <span style="font-size:11px;">${kelas ? 'Kelas '+escapeHtml(kelas) : 'Semua Kelas'}</span>
+            </div>
+            ${list.map((h, i) => `
+                <div class="item-nilai" style="background:#f8fafc;">
+                    <b>${i+1}. ${escapeHtml(h.nama || '-')}</b>
+                    <span>${escapeHtml(h.kelas || '-')} · NISN: ${escapeHtml(h.nisn||h.nis||'-')}</span>
+                    <div style="display:flex;gap:12px;font-size:13px;color:#14532d;">
+                        <span>PG: <b>${h.nilai_pg||0}</b></span>
+                        <span>Essay: <b>${h.nilai_essay != null ? h.nilai_essay : '-'}</b></span>
+                        <span>Nilai Akhir: <b>${h.nilai_akhir != null ? h.nilai_akhir : '-'}</b></span>
+                    </div>
+                </div>`).join('')}`;
+    }
+
+    // ============ INIT ============
+    ambilParamAtauTanya();
+    Promise.all([muatDaftarKelas(), muatDaftarMapel()]);
+</script>
+</body>
+</html>

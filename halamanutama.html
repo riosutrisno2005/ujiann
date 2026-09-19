@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Ujian - Pilih Akses</title>
+    <style>
+        /* --- Pengaturan Dasar & Reset --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            /* BACKGROUND DIUBAH: Gradasi hijau soft yang lebih pekat agar efek blur tombol terlihat */
+            background: linear-gradient(135deg, #b9fbc0 0%, #70e000 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #1C1C1E;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* --- Bagian Header --- */
+        header {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 10px;
+        }
+
+        /* LOGO SEKOLAH (Ganti 'logo_sekolah.png' dengan nama file Anda) */
+        .logo-img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 20px;
+            background-color: #ffffff;
+            /* Memberikan efek cincin dan bayangan elegan khas iOS */
+            border: 4px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 10px 25px rgba(0, 100, 0, 0.2);
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 8px;
+            color: #0f172a; /* Warna teks gelap agar terbaca jelas di background hijau */
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            font-size: 14px;
+            color: #334155;
+            line-height: 1.4;
+            max-width: 90%;
+        }
+
+        /* --- Daftar Pilihan (Kartu) --- */
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Gaya Kartu iOS dengan Efek Blur Kaca */
+        .card {
+            display: flex;
+            align-items: center;
+            padding: 18px;
+            
+            /* EFEK BLUR DIPERKUAT: Transparansi dikurangi agar gradasi background terlihat menembus kaca */
+            background: rgba(255, 255, 255, 0.55); 
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            
+            /* Border putih tipis sebagai pemantul cahaya khas kaca */
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            text-decoration: none;
+            color: inherit;
+            
+            /* Bayangan lembut agar tombol terlihat melayang */
+            box-shadow: 0 8px 32px rgba(0, 100, 0, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer;
+        }
+
+        /* Efek saat ditekan (karena di HP tidak ada hover) */
+        .card:active {
+            transform: scale(0.96);
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 12px rgba(0, 100, 0, 0.15);
+        }
+
+        /* Wadah Ikon */
+        .icon-wrapper {
+            width: 54px;
+            height: 54px;
+            border-radius: 14px;
+            background-color: rgba(46, 125, 50, 0.1); /* Hijau transparan */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 16px;
+            flex-shrink: 0;
+            color: #1b5e20; /* Ikon hijau tua */
+        }
+
+        .icon-wrapper svg {
+            width: 26px;
+            height: 26px;
+            stroke-width: 2;
+        }
+
+        /* Konten Teks */
+        .text-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .text-content h3 {
+            font-size: 17px;
+            font-weight: 600;
+            color: #0f172a;
+            letter-spacing: -0.2px;
+        }
+
+        .text-content p {
+            font-size: 13px;
+            color: #475569;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <!-- MASUKKAN NAMA FILE GAMBAR ANDA DI SINI (Ganti logo_sekolah.png) -->
+            <img src="logo_sekolah.png" alt="Logo Sekolah" class="logo-img">
+            
+            <h1>Pilih akses kamu untuk melanjutkan</h1>
+            <p>Halaman ini membuka bagian yang berbeda untuk siswa, guru, dan admin.</p>
+        </header>
+
+        <main class="options-list">
+            
+            <!-- Kartu Ujian (Siswa) -->
+            <a href="javascript:void(0)" class="card" onclick="pindahLayar('Ujian')">
+                <div class="icon-wrapper">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </div>
+                <div class="text-content">
+                    <h3>Ujian</h3>
+                    <p>Masuk dengan nomor dan nomor ujian, lalu kerjakan soal.</p>
+                </div>
+            </a>
+
+            <!-- Kartu Guru -->
+            <a href="javascript:void(0)" class="card" onclick="pindahLayar('Guru')">
+                <div class="icon-wrapper">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </div>
+                <div class="text-content">
+                    <h3>Guru</h3>
+                    <p>Tambah, ubah, dan siapkan soal untuk mapel yang diajar.</p>
+                </div>
+            </a>
+
+            <!-- Kartu Admin -->
+            <a href="javascript:void(0)" class="card" onclick="pindahLayar('Admin')">
+                <div class="icon-wrapper">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </div>
+                <div class="text-content">
+                    <h3>Admin</h3>
+                    <p>Aktifkan soal yang akan diujikan dan lihat hasilnya.</p>
+                </div>
+            </a>
+
+        </main>
+    </div>
+
+    <!-- JAVASCRIPT UNTUK MIT APP INVENTOR -->
+    <script>
+        function pindahLayar(namaHalaman) {
+            // Cek apakah kode ini berjalan di dalam WebViewer App Inventor
+            if (window.AppInventor) {
+                // Kirim nama halaman ke App Inventor
+                window.AppInventor.setWebViewString(namaHalaman);
+            } else {
+                // Ini hanya untuk tes di browser laptop/PC Anda
+                alert("Tombol " + namaHalaman + " ditekan.\nDi App Inventor, ini akan pindah ke Screen " + namaHalaman);
+            }
+        }
+    </script>
+</body>
+</html>

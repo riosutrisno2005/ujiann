@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Halaman Admin</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #b9fbc0 0%, #70e000 100%); min-height: 100vh; color: #1C1C1E; padding: 16px; }
+    .app-container { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    header { text-align: center; padding: 8px 0 4px; }
+    header h1 { font-size: 22px; font-weight: 700; color: #0f172a; }
+    header p { font-size: 13px; color: #14532d; margin-top: 4px; }
+    .card { background: rgba(255,255,255,0.55); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.8); border-radius: 18px; padding: 16px; box-shadow: 0 8px 32px rgba(0,100,0,0.1); display: flex; flex-direction: column; gap: 10px; }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .card-header b { font-size: 15px; color: #0f172a; }
+    .card-header span { font-size: 12px; color: #475569; display: block; margin-top: 2px; }
+    .badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .badge-aktif { background: #dcfce7; color: #166534; }
+    .badge-nonaktif { background: #fee2e2; color: #991b1b; }
+    .badge-info { background: #dbeafe; color: #1e40af; }
+    .badge-siswa { background: #fef3c7; color: #92400e; }
+    .badge-guru { background: #e0e7ff; color: #3730a3; }
+    .badge-admin { background: #fee2e2; color: #991b1b; }
+    .kotak-token { background: rgba(27,94,32,0.08); border: 1px dashed #1b5e20; border-radius: 10px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; }
+    .kotak-token .kode { font-size: 20px; font-weight: 800; letter-spacing: 3px; color: #14532d; }
+    .btn-utama, .btn-sekunder, .btn-bahaya { padding: 12px 14px; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-utama { background: #1b5e20; color: #fff; }
+    .btn-sekunder { background: rgba(255,255,255,0.85); color: #1b5e20; border: 1px solid #1b5e20; }
+    .btn-bahaya { background: #fff; color: #b91c1c; border: 1px solid rgba(185,28,28,0.4); }
+    .kosong { text-align: center; font-size: 13px; color: #475569; padding: 20px 0; }
+    .pesan-status { display: none; font-size: 13px; padding: 10px 12px; border-radius: 10px; text-align: center; }
+    .pesan-status.tampil { display: block; }
+    .pesan-status.sukses { background: rgba(220,252,231,0.9); color: #166534; }
+    .pesan-status.gagal { background: rgba(254,226,226,0.9); color: #991b1b; }
+    .pesan-status.info { background: rgba(219,234,254,0.9); color: #1e40af; }
+    .field { margin-bottom: 8px; }
+    .field label { display: block; font-size: 13px; font-weight: 600; color: #14532d; margin-bottom: 6px; }
+    .field input, .field textarea, .field select { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.9); background: rgba(255,255,255,0.8); font-size: 15px; color: #0f172a; outline: none; font-family: inherit; }
+    .field textarea.mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; min-height: 220px; white-space: pre; }
+    .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; padding: 20px; z-index: 999; }
+    .popup-overlay.tampil { display: flex; }
+    .popup-box { background: #fff; border-radius: 20px; padding: 20px; width: 100%; max-width: 440px; max-height: 88vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    .popup-box h3 { font-size: 17px; color: #0f172a; }
+    .baris-tombol { display: flex; gap: 8px; flex-wrap: wrap; }
+    .baris-tombol > * { flex: 1; min-width: 110px; }
+    .tab-nav { display: flex; gap: 6px; background: rgba(255,255,255,0.55); padding: 6px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.8); flex-wrap: wrap; }
+    .tab-nav button { padding: 10px; border: none; border-radius: 10px; font-weight: 600; font-size: 13px; background: transparent; color: #14532d; cursor: pointer; flex: 1; min-width: 90px; }
+    .tab-nav button.aktif { background: #1b5e20; color: #fff; }
+    .item-siswa { background: rgba(241,245,249,0.9); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+    .item-siswa b { font-size: 14px; color: #0f172a; }
+    .item-siswa span { font-size: 12px; color: #475569; }
+    .statistik { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; color: #14532d; }
+    .statistik span { background: rgba(255,255,255,0.85); padding: 3px 9px; border-radius: 8px; }
+    .kelas-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: rgba(255,255,255,0.6); border-radius: 12px; gap: 8px; }
+    .kelas-item span { font-size: 14px; color: #0f172a; font-weight: 600; flex: 1; }
+    .sub-tab { display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; }
+    .sub-tab button { flex:1; min-width:80px; padding:8px; border:1px solid #1b5e20; background:#fff; color:#1b5e20; border-radius:10px; font-weight:600; font-size:13px; cursor:pointer; }
+    .sub-tab button.aktif { background:#1b5e20; color:#fff; }
+    .petunjuk-csv { font-size: 12px; color: #475569; line-height: 1.5; background: rgba(219,234,254,0.5); border-radius: 10px; padding: 10px 12px; }
+    .petunjuk-csv code { background: #fff; padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+    .info-kecil { font-size:11px; color:#475569; }
+    .peringatan-box { background: rgba(254,243,199,0.85); border: 1px solid #f59e0b; border-radius: 10px; padding: 10px; font-size: 12px; color: #7c4a03; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <h1>Dashboard Admin</h1>
+        <p id="info-admin">Selamat datang</p>
+    </header>
+
+    <div class="pesan-status" id="pesan-status"></div>
+
+    <div class="tab-nav">
+        <button id="tab-btn-mapel" class="aktif" onclick="gantiTab('mapel')">📚 Mapel</button>
+        <button id="tab-btn-kelas" onclick="gantiTab('kelas')">🏫 Kelas</button>
+        <button id="tab-btn-akun" onclick="gantiTab('akun')">👥 Akun</button>
+    </div>
+
+    <!-- TAB MAPEL -->
+    <div id="tab-mapel" style="display:flex;flex-direction:column;gap:16px;">
+        <button class="btn-sekunder" onclick="lihatRekapToken()">🔑 Rekap Token Aktif (share WA)</button>
+        <button class="btn-sekunder" onclick="lihatSemuaPengajuan()">📩 Rekap Semua Pengajuan Ujian Ulang</button>
+        <div id="daftar-mapel"></div>
+    </div>
+
+    <!-- TAB KELAS -->
+    <div id="tab-kelas" style="display:none;flex-direction:column;gap:16px;">
+        <div class="card">
+            <div class="field"><label>Nama Kelas</label><input type="text" id="input-nama-kelas" placeholder="Contoh: X TKJ 1"></div>
+            <button class="btn-utama" onclick="tambahKelas()">+ Tambah Kelas</button>
+        </div>
+        <div id="daftar-kelas"></div>
+    </div>
+
+    <!-- TAB AKUN -->
+    <div id="tab-akun" style="display:none;flex-direction:column;gap:16px;">
+        <div class="sub-tab">
+            <button id="sub-btn-admin" onclick="gantiSubTabAkun('admin')">🔐 Admin</button>
+            <button id="sub-btn-guru" class="aktif" onclick="gantiSubTabAkun('guru')">👨‍🏫 Guru</button>
+            <button id="sub-btn-siswa" onclick="gantiSubTabAkun('siswa')">👨‍🎓 Siswa</button>
+        </div>
+
+        <div class="peringatan-box" id="peringatan-guru" style="display:none;">
+            ⚠️ <b>Penting untuk Guru:</b> Login guru di halaman login mencocokkan <b>Nama Lengkap</b> (bukan username). Pastikan tidak ada dua guru dengan nama yang sama persis.
+        </div>
+        <div class="peringatan-box" id="peringatan-siswa" style="display:none;">
+            ℹ️ <b>Login Siswa:</b> Siswa login dengan <b>NISN + Nama Lengkap</b> (tanpa password). NISN jadi kunci unik di Firebase.
+        </div>
+
+        <div class="card">
+            <h3 id="judul-form-akun" style="color:#0f172a;font-size:16px;">Tambah Akun Guru</h3>
+            <div class="field">
+                <label>Nama Lengkap</label>
+                <input type="text" id="input-nama-akun" placeholder="mis. Budi Santoso, S.Pd.">
+            </div>
+            <div class="field" id="field-username-akun">
+                <label id="label-username-akun">Username (kunci unik di Firebase)</label>
+                <input type="text" id="input-username-akun" placeholder="mis. budi">
+            </div>
+            <div class="field" id="field-password-akun">
+                <label>Password</label>
+                <input type="text" id="input-password-akun" placeholder="password">
+            </div>
+            <div class="field" id="field-kelas-akun" style="display:none;">
+                <label>Kelas</label>
+                <select id="input-kelas-akun"><option value="">-- Pilih Kelas --</option></select>
+            </div>
+            <div class="baris-tombol">
+                <button class="btn-sekunder" onclick="resetFormAkun()">Reset</button>
+                <button class="btn-utama" onclick="simpanAkun()">Simpan</button>
+            </div>
+            <div class="baris-tombol">
+                <button class="btn-sekunder" onclick="bukaImportAkunCSV()">📥 Import CSV</button>
+                <button class="btn-sekunder" onclick="lihatTemplateAkun()">📄 Template</button>
+            </div>
+        </div>
+        <div id="daftar-akun"></div>
+    </div>
+</div>
+
+<!-- POPUP PENGERJAAN -->
+<div class="popup-overlay" id="popup-pengerjaan">
+    <div class="popup-box">
+        <h3 id="judul-pengerjaan">Rekap</h3>
+        <div class="field" id="filter-kelas-box" style="display:none;">
+            <label>Filter Kelas</label>
+            <select id="pilih-filter-kelas" onchange="terapkanFilterKelas()"><option value="">Semua Kelas</option></select>
+        </div>
+        <div id="daftar-pengerjaan"></div>
+        <button class="btn-sekunder" onclick="tutupPopup('popup-pengerjaan')">Tutup</button>
+    </div>
+</div>
+
+<!-- POPUP PENGAJUAN -->
+<div class="popup-overlay" id="popup-pengajuan">
+    <div class="popup-box">
+        <h3 id="judul-pengajuan">Pengajuan Ujian Ulang</h3>
+        <div id="daftar-pengajuan"></div>
+        <button class="btn-sekunder" onclick="tutupPopup('popup-pengajuan')">Tutup</button>
+    </div>
+</div>
+
+<!-- POPUP NILAI ESSAY -->
+<div class="popup-overlay" id="popup-nilai-essay">
+    <div class="popup-box">
+        <h3 id="judul-nilai-essay">Nilai Essay</h3>
+        <div id="isi-nilai-essay"></div>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupPopup('popup-nilai-essay')">Batal</button>
+            <button class="btn-utama" onclick="simpanNilaiEssay()">Simpan</button>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP EXPORT CSV -->
+<div class="popup-overlay" id="popup-export">
+    <div class="popup-box">
+        <h3 id="judul-export">Export CSV</h3>
+        <p style="font-size:12px;color:#475569;">Klik <b>Copy Semua</b> lalu paste ke Excel / Google Sheets / WhatsApp.</p>
+        <div class="field"><textarea id="isi-export-csv" class="mono" readonly></textarea></div>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupPopup('popup-export')">Tutup</button>
+            <button class="btn-utama" onclick="copyExportCSV()">📋 Copy Semua</button>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP IMPORT AKUN CSV -->
+<div class="popup-overlay" id="popup-import-akun">
+    <div class="popup-box">
+        <h3>Import Akun dari CSV</h3>
+        <div class="petunjuk-csv" id="petunjuk-import-akun"></div>
+        <div class="field"><textarea id="input-csv-akun" class="mono" placeholder="Paste data dari Excel di sini..."></textarea></div>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupPopup('popup-import-akun')">Batal</button>
+            <button class="btn-utama" onclick="prosesImportAkunCSV()">Import</button>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP TEMPLATE AKUN -->
+<div class="popup-overlay" id="popup-template-akun">
+    <div class="popup-box">
+        <h3>Template CSV Akun</h3>
+        <div class="field"><textarea id="isi-template-akun" class="mono" readonly></textarea></div>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupPopup('popup-template-akun')">Tutup</button>
+            <button class="btn-utama" onclick="copyTemplateAkun()">📋 Copy</button>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP KONFIRMASI -->
+<div class="popup-overlay" id="popup-konfirmasi">
+    <div class="popup-box" style="text-align:center;">
+        <h3 id="judul-konfirmasi">Konfirmasi</h3>
+        <p id="pesan-konfirmasi" style="font-size:14px;color:#475569;line-height:1.5;"></p>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupKonfirmasi(false)">Batal</button>
+            <button class="btn-utama" id="btn-ok-konfirmasi" onclick="tutupKonfirmasi(true)">Ya</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const FIREBASE_URL = "https://admin-ffded-default-rtdb.firebaseio.com";
+
+    // ============================================================
+    // SOAL disimpan terpisah di "soal/{idMapel}" supaya daftar mapel ringan.
+    // Kalau belum dimigrasi, otomatis membaca lokasi lama "mapel/{idMapel}/soal".
+    // ============================================================
+    async function ambilSoalMapel(id) {
+        const r = await fetch(`${FIREBASE_URL}/soal/${id}.json`);
+        const baru = await r.json();
+        if (baru) return baru;
+        const r2 = await fetch(`${FIREBASE_URL}/mapel/${id}/soal.json`);
+        return (await r2.json()) || null;
+    }
+
+    // Path Firebase SESUAI halaman login Anda
+    const PATH_AKUN = {
+        admin: 'admin_akun',    // loginadmin.html
+        guru:  'guru_akun',     // loginguru.html (cari by nama)
+        siswa: 'peserta_ujian'  // loginsiswa.html (kunci = NISN)
+    };
+
+    let usernameAdmin = "", namaAdmin = "";
+    let daftarMapel = [], daftarKelas = [];
+    let daftarAkun = { admin: [], guru: [], siswa: [] };
+    let konteksNilaiEssay = { mapelId: null, nisn: null };
+    let rekapSekarang = { mapelId: null, semuaData: [] };
+    let subTabAkun = 'guru';
+    let sedangEditAkun = null;
+
+    let resolveKonfirmasi = null;
+    function konfirmasi(pesan, judul, labelOk) {
+        judul = judul || 'Konfirmasi'; labelOk = labelOk || 'Ya';
+        return new Promise(resolve => {
+            document.getElementById('judul-konfirmasi').textContent = judul;
+            document.getElementById('pesan-konfirmasi').textContent = pesan;
+            document.getElementById('btn-ok-konfirmasi').textContent = labelOk;
+            document.getElementById('popup-konfirmasi').classList.add('tampil');
+            resolveKonfirmasi = resolve;
+        });
+    }
+    function tutupKonfirmasi(h) { document.getElementById('popup-konfirmasi').classList.remove('tampil'); if (resolveKonfirmasi) { resolveKonfirmasi(h); resolveKonfirmasi = null; } }
+    function tutupPopup(id) { document.getElementById(id).classList.remove('tampil'); }
+    function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t == null ? '' : t; return d.innerHTML; }
+    function escapeCSV(v) { const s = String(v == null ? '' : v); if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\t') || s.includes(';')) return '"' + s.replace(/"/g,'""') + '"'; return s; }
+    function copyTextarea(id) { const ta = document.getElementById(id); ta.focus(); ta.select(); if (ta.setSelectionRange) ta.setSelectionRange(0, 99999); let ok = false; try { ok = document.execCommand('copy'); } catch(e) {} if (!ok && navigator.clipboard) { try { navigator.clipboard.writeText(ta.value); ok = true; } catch(e){} } return ok; }
+    function detectDelimiter(t) { const l = t.split('\n')[0] || ''; if (l.includes('\t')) return '\t'; if (l.includes(';')) return ';'; return ','; }
+    function parseBarisCSV(line, delim) {
+        const out = []; let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+            const c = line[i];
+            if (inQ) { if (c === '"') { if (line[i+1] === '"') { cur += '"'; i++; } else inQ = false; } else cur += c; }
+            else { if (c === '"') inQ = true; else if (c === delim) { out.push(cur); cur = ''; } else cur += c; }
+        }
+        out.push(cur); return out.map(s => s.replace(/\r$/,''));
+    }
+    function parseKelasList(k) {
+        if (!k) return [];
+        if (Array.isArray(k)) return k.filter(x => x && typeof x === 'string');
+        if (typeof k === 'string') return k.split(',').map(s => s.trim()).filter(s => s);
+        if (typeof k === 'object') return Object.values(k).filter(x => typeof x === 'string');
+        return [];
+    }
+
+    function ambilParamAtauTanya() {
+        const p = new URLSearchParams(window.location.search);
+        usernameAdmin = (p.get('username') || '').trim().toLowerCase();
+        namaAdmin = p.get('nama') || '';
+        if (!usernameAdmin) { usernameAdmin = (prompt('Testing: username admin') || '').trim().toLowerCase(); namaAdmin = usernameAdmin; }
+        document.getElementById('info-admin').textContent = 'Selamat datang, ' + (namaAdmin || usernameAdmin);
+    }
+    function tampilkanStatus(p, j) { j = j || 'info'; const k = document.getElementById('pesan-status'); k.textContent = p; k.className = 'pesan-status tampil ' + j; setTimeout(() => k.classList.remove('tampil'), 3500); }
+    function buatTokenAcak() { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let h = ''; for (let i = 0; i < 6; i++) h += c.charAt(Math.floor(Math.random() * c.length)); return h; }
+
+    function gantiTab(tab) {
+        ['mapel','kelas','akun'].forEach(t => {
+            document.getElementById('tab-btn-' + t).classList.toggle('aktif', t === tab);
+            document.getElementById('tab-' + t).style.display = t === tab ? 'flex' : 'none';
+        });
+        if (tab === 'kelas') muatKelas();
+        if (tab === 'akun') { muatAkunAll(); isiSelectKelasAkun(); }
+    }
+
+    // ============ TAB MAPEL ============
+    async function muatDaftarMapel() {
+        try {
+            const [r1, r2, r3] = await Promise.all([
+                fetch(`${FIREBASE_URL}/mapel.json`),
+                fetch(`${FIREBASE_URL}/hasil_ujian.json`),
+                fetch(`${FIREBASE_URL}/pengajuan_ulang.json`)
+            ]);
+            const data = await r1.json();
+            const dataHasil = await r2.json();
+            const dataUlang = await r3.json();
+            daftarMapel = [];
+            if (data) {
+                for (const id in data) {
+                    const h = dataHasil ? dataHasil[id] : null;
+                    const u = dataUlang ? dataUlang[id] : null;
+                    let menunggu = 0;
+                    if (u) for (const nis in u) if (u[nis].status === 'menunggu') menunggu++;
+                    daftarMapel.push({
+                        id, ...data[id],
+                        jumlah_hasil: h ? Object.keys(h).length : 0,
+                        jumlah_pengajuan_menunggu: menunggu
+                    });
+                }
+            }
+            renderDaftarMapel();
+        } catch (e) { tampilkanStatus('Gagal memuat.', 'gagal'); }
+    }
+
+    function renderDaftarMapel() {
+        const k = document.getElementById('daftar-mapel');
+        if (daftarMapel.length === 0) { k.innerHTML = '<p class="kosong">Belum ada mapel.</p>'; return; }
+        k.innerHTML = daftarMapel.map(m => {
+            const kelasList = parseKelasList(m.kelas);
+            return `
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <b>${escapeHtml(m.nama_mapel)}</b>
+                        <span>Guru: ${escapeHtml(m.guru)}</span>
+                        <span>Kelas: ${kelasList.length ? kelasList.map(escapeHtml).join(', ') : '-'}</span>
+                    </div>
+                    <span class="badge ${m.status_aktif ? 'badge-aktif' : 'badge-nonaktif'}">${m.status_aktif ? 'Aktif' : 'Nonaktif'}</span>
+                </div>
+                <div class="statistik">
+                    <span>${m.jumlah_pg || 0} PG</span>
+                    <span>${m.jumlah_essay || 0} Essay</span>
+                    <span>${m.jumlah_hasil} siswa</span>
+                    ${m.jumlah_pengajuan_menunggu > 0 ? `<span class="badge badge-info">${m.jumlah_pengajuan_menunggu} pengajuan</span>` : ''}
+                </div>
+                ${m.status_aktif && m.token ? `<div class="kotak-token"><span>Token:</span><span class="kode">${m.token}</span></div>` : ''}
+                <div class="baris-tombol">
+                    ${m.status_aktif
+                        ? `<button class="btn-bahaya" onclick="nonaktifkanMapel('${m.id}')">Nonaktifkan</button>
+                           <button class="btn-sekunder" onclick="rilisTokenBaru('${m.id}', '${escapeHtml(m.nama_mapel)}')">Ganti Token</button>`
+                        : `<button class="btn-utama" onclick="rilisTokenBaru('${m.id}', '${escapeHtml(m.nama_mapel)}')">Rilis Token</button>`}
+                </div>
+                <div class="baris-tombol">
+                    <button class="btn-sekunder" onclick="lihatRekapNilai('${m.id}', '${escapeHtml(m.nama_mapel)}')">👥 Rekap Nilai</button>
+                    <button class="btn-sekunder" onclick="lihatPengajuan('${m.id}', '${escapeHtml(m.nama_mapel)}')">📩 Pengajuan</button>
+                </div>
+                <div class="baris-tombol">
+                    <button class="btn-sekunder" onclick="unduhHasil('${m.id}', '${escapeHtml(m.nama_mapel)}')">📊 Export CSV</button>
+                    <button class="btn-bahaya" onclick="hapusMapelAdmin('${m.id}', '${escapeHtml(m.nama_mapel)}')">🗑️ Hapus</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    async function rilisTokenBaru(id, nama) {
+        const token = buatTokenAcak();
+        const ya = await konfirmasi(`Rilis token baru untuk "${nama}"?\n\nToken: ${token}`, 'Rilis', 'Ya');
+        if (!ya) return;
+        try {
+            await fetch(`${FIREBASE_URL}/mapel/${id}.json`, {
+                method: 'PATCH', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ status_aktif: true, token })
+            });
+            tampilkanStatus(`Token: ${token}`, 'sukses');
+            muatDaftarMapel();
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+    async function nonaktifkanMapel(id) {
+        const ya = await konfirmasi('Nonaktifkan mapel ini?', 'Nonaktifkan', 'Ya');
+        if (!ya) return;
+        try {
+            await fetch(`${FIREBASE_URL}/mapel/${id}.json`, {
+                method: 'PATCH', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ status_aktif: false, token: '' })
+            });
+            tampilkanStatus('Nonaktif.', 'sukses');
+            muatDaftarMapel();
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+    async function hapusMapelAdmin(id, nama) {
+        const ya = await konfirmasi(`Hapus mapel "${nama}"?`, 'Hapus', 'Ya, Hapus');
+        if (!ya) return;
+        try {
+            await Promise.allSettled([
+                fetch(`${FIREBASE_URL}/mapel/${id}.json`, { method: 'DELETE' }),
+                fetch(`${FIREBASE_URL}/hasil_ujian/${id}.json`, { method: 'DELETE' }),
+                fetch(`${FIREBASE_URL}/pengajuan_ulang/${id}.json`, { method: 'DELETE' }),
+                fetch(`${FIREBASE_URL}/draft_soal/${id}.json`, { method: 'DELETE' }),
+                fetch(`${FIREBASE_URL}/soal/${id}.json`, { method: 'DELETE' })
+            ]);
+            tampilkanStatus('Dihapus.', 'sukses');
+            muatDaftarMapel();
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+
+    // ============ REKAP NILAI ============
+    async function lihatRekapNilai(mapelId, namaMapel) {
+        document.getElementById('judul-pengerjaan').textContent = 'Rekap: ' + namaMapel;
+        const k = document.getElementById('daftar-pengerjaan');
+        k.innerHTML = '<p class="kosong">Memuat...</p>';
+        document.getElementById('filter-kelas-box').style.display = 'block';
+        document.getElementById('popup-pengerjaan').classList.add('tampil');
+        try {
+            const r = await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}.json`);
+            const data = await r.json();
+            if (!data || Object.keys(data).length === 0) {
+                k.innerHTML = '<p class="kosong">Belum ada.</p>';
+                document.getElementById('pilih-filter-kelas').innerHTML = '<option value="">Semua</option>';
+                return;
+            }
+            const list = Object.keys(data).map(nis => ({ nis, ...data[nis] }));
+            list.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
+            rekapSekarang = { mapelId, semuaData: list };
+            const kelasUnik = [...new Set(list.map(h => h.kelas).filter(Boolean))].sort();
+            document.getElementById('pilih-filter-kelas').innerHTML =
+                '<option value="">Semua Kelas</option>' +
+                kelasUnik.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+            renderRekapNilai();
+        } catch (e) { k.innerHTML = '<p class="kosong">Gagal.</p>'; }
+    }
+    function terapkanFilterKelas() { renderRekapNilai(); }
+    function renderRekapNilai() {
+        const kelasPilih = document.getElementById('pilih-filter-kelas').value;
+        const list = rekapSekarang.semuaData.filter(h => !kelasPilih || (h.kelas||'') === kelasPilih);
+        const k = document.getElementById('daftar-pengerjaan');
+        if (list.length === 0) { k.innerHTML = '<p class="kosong">Kosong.</p>'; return; }
+        k.innerHTML = list.map(h => {
+            const status = h.status === 'dinilai_guru' ? '<span class="badge badge-aktif">Dinilai Guru</span>'
+                : (h.status === 'selesai' ? '<span class="badge badge-aktif">Selesai</span>'
+                : '<span class="badge badge-info">Menunggu Essay</span>');
+            return `<div class="item-siswa">
+                <div><b>${escapeHtml(h.nama||'-')}</b> ${status}</div>
+                <span>NISN: ${escapeHtml(h.nisn||h.nis||'-')} · ${escapeHtml(h.kelas||'-')}</span>
+                <div class="statistik">
+                    <span>PG: ${h.benar_pg||0}/${h.total_pg||0} (${h.nilai_pg||0})</span>
+                    <span>Essay: ${h.nilai_essay != null ? h.nilai_essay : '-'}</span>
+                    <span>Akhir: ${h.nilai_akhir != null ? h.nilai_akhir : '-'}</span>
+                </div>
+                ${h.total_essay > 0 ? `<div class="baris-tombol">
+                    <button class="btn-sekunder" onclick="bukaNilaiEssay('${rekapSekarang.mapelId}','${escapeHtml(h.nisn||h.nis||'')}')">✍️ Lihat Essay</button>
+                </div>` : ''}
+            </div>`;
+        }).join('');
+    }
+
+    async function bukaNilaiEssay(mapelId, nisn) {
+        konteksNilaiEssay = { mapelId, nisn };
+        document.getElementById('judul-nilai-essay').textContent = 'Essay — ' + nisn;
+        const k = document.getElementById('isi-nilai-essay');
+        k.innerHTML = '<p class="kosong">Memuat...</p>';
+        document.getElementById('popup-nilai-essay').classList.add('tampil');
+        try {
+            const [r1, r2] = await Promise.all([
+                ambilSoalMapel(mapelId),
+                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`)
+            ]);
+            const soal = r1 || {};
+            const hasil = await r2.json() || {};
+            const je = hasil.jawaban_essay || {};
+            let html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+            let ada = 0;
+            for (const sid in soal) {
+                if (soal[sid].tipe !== 'essay') continue;
+                ada++;
+                html += `<div class="item-siswa">
+                    <b>${escapeHtml(soal[sid].pertanyaan)}</b>
+                    ${soal[sid].kunci_essay ? `<span style="color:#166534;">Kunci: ${escapeHtml(soal[sid].kunci_essay)}</span>` : ''}
+                    <div style="background:#fff;border-radius:8px;padding:8px;font-size:13px;">${escapeHtml(je[sid] || '(kosong)')}</div>
+                </div>`;
+            }
+            if (ada === 0) html += '<p class="kosong">Tidak ada essay.</p>';
+            html += `<div class="field">
+                <label>Nilai Essay (0-100)</label>
+                <input type="number" id="input-nilai-essay" min="0" max="100" value="${hasil.nilai_essay != null ? hasil.nilai_essay : ''}" style="text-align:center;font-weight:700;">
+            </div></div>`;
+            k.innerHTML = html;
+        } catch (e) { k.innerHTML = '<p class="kosong">Gagal.</p>'; }
+    }
+    async function simpanNilaiEssay() {
+        const { mapelId, nisn } = konteksNilaiEssay;
+        const nilai = parseInt(document.getElementById('input-nilai-essay').value, 10);
+        if (isNaN(nilai) || nilai < 0 || nilai > 100) { alert('0-100.'); return; }
+        try {
+            const r = await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`);
+            const h = await r.json() || {};
+            const tp = h.total_pg||0, te = h.total_essay||0, np = h.nilai_pg||0;
+            const na = (tp+te) === 0 ? 0 : Math.round((np*tp + nilai*te)/(tp+te));
+            await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`, {
+                method: 'PATCH', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ nilai_essay: nilai, nilai_akhir: na, status: 'selesai' })
+            });
+            tutupPopup('popup-nilai-essay');
+            tampilkanStatus('Tersimpan.', 'sukses');
+            lihatRekapNilai(mapelId, 'Mapel');
+        } catch (e) { alert('Gagal.'); }
+    }
+
+    // ============ PENGAJUAN PER MAPEL ============
+    async function lihatPengajuan(mapelId, namaMapel) {
+        document.getElementById('judul-pengajuan').textContent = 'Pengajuan: ' + namaMapel;
+        const k = document.getElementById('daftar-pengajuan');
+        k.innerHTML = '<p class="kosong">Memuat...</p>';
+        document.getElementById('popup-pengajuan').classList.add('tampil');
+        try {
+            const r = await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mapelId}.json`);
+            const data = await r.json();
+            if (!data || Object.keys(data).length === 0) { k.innerHTML = '<p class="kosong">Tidak ada.</p>'; return; }
+            const list = Object.keys(data).map(nis => ({ nis, ...data[nis] }));
+            list.sort((a, b) => (a.nama||'').localeCompare(b.nama||''));
+            k.innerHTML = renderListPengajuan(list, mapelId, false);
+        } catch (e) { k.innerHTML = '<p class="kosong">Gagal.</p>'; }
+    }
+
+    // ============ REKAP SEMUA PENGAJUAN ============
+    async function lihatSemuaPengajuan() {
+        document.getElementById('judul-pengajuan').textContent = 'Semua Pengajuan Ujian Ulang';
+        const k = document.getElementById('daftar-pengajuan');
+        k.innerHTML = '<p class="kosong">Memuat...</p>';
+        document.getElementById('popup-pengajuan').classList.add('tampil');
+        try {
+            const r = await fetch(`${FIREBASE_URL}/pengajuan_ulang.json`);
+            const data = await r.json();
+            if (!data || Object.keys(data).length === 0) { k.innerHTML = '<p class="kosong">Tidak ada pengajuan.</p>'; return; }
+            let html = '';
+            const semuaMenunggu = [];
+            const listMapel = Object.keys(data).sort();
+            listMapel.forEach(mid => {
+                for (const nis in data[mid]) if (data[mid][nis].status === 'menunggu') semuaMenunggu.push({ mid, nis });
+            });
+            if (semuaMenunggu.length > 0) {
+                html += `<div class="baris-tombol" style="margin-bottom:10px;">
+                    <button class="btn-utama" onclick="setujuiSemuaGlobal()">✅ Setujui Semua (${semuaMenunggu.length})</button>
+                </div>`;
+            }
+            listMapel.forEach(mid => {
+                const mapel = daftarMapel.find(x => x.id === mid);
+                const namaMapel = mapel ? mapel.nama_mapel : '(mapel terhapus)';
+                const list = Object.keys(data[mid]).map(nis => ({ nis, ...data[mid][nis] }));
+                list.sort((a, b) => (a.nama||'').localeCompare(b.nama||''));
+                html += `<div style="margin-top:10px;padding:8px;background:rgba(27,94,32,0.08);border-radius:10px;">
+                    <b style="font-size:13px;color:#14532d;">📚 ${escapeHtml(namaMapel)}</b>
+                </div>`;
+                html += renderListPengajuan(list, mid, false);
+            });
+            k.innerHTML = html;
+        } catch (e) { k.innerHTML = '<p class="kosong">Gagal.</p>'; }
+    }
+
+    function renderListPengajuan(list, mapelId, global) {
+        let html = '';
+        list.forEach(p => {
+            let b = '', a = '';
+            if (p.status === 'menunggu') {
+                b = '<span class="badge badge-info">Menunggu</span>';
+                a = `<div class="baris-tombol">
+                    <button class="btn-bahaya" onclick="putuskanUlang('${mapelId}','${escapeHtml(p.nis)}','ditolak',${!!global})">Tolak</button>
+                    <button class="btn-utama" onclick="putuskanUlang('${mapelId}','${escapeHtml(p.nis)}','disetujui',${!!global})">Setujui</button>
+                </div>`;
+            } else if (p.status === 'disetujui') b = '<span class="badge badge-aktif">Disetujui</span>';
+            else b = '<span class="badge badge-nonaktif">Ditolak</span>';
+            html += `<div class="item-siswa">
+                <div><b>${escapeHtml(p.nama||'-')}</b> ${b}</div>
+                <span>NISN: ${escapeHtml(p.nisn||p.nis||'-')} · ${escapeHtml(p.kelas||'-')}</span>
+                <span>${escapeHtml(p.waktu||'-')}</span>
+                ${p.alasan ? `<span>Alasan: ${escapeHtml(p.alasan)}</span>` : ''}
+                ${a}
+            </div>`;
+        });
+        return html;
+    }
+
+    async function putuskanUlang(mapelId, nisn, keputusan, dariGlobal) {
+        const ya = await konfirmasi(keputusan === 'disetujui' ? 'Setujui?' : 'Tolak?', 'Konfirmasi', 'Ya');
+        if (!ya) return;
+        try {
+            await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mapelId}/${nisn}.json`, {
+                method: 'PATCH', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ status: keputusan, waktu_keputusan: new Date().toLocaleString('id-ID') })
+            });
+            if (keputusan === 'disetujui') {
+                await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`, { method: 'DELETE' });
+            }
+            tampilkanStatus('Tersimpan.', 'sukses');
+            if (dariGlobal) lihatSemuaPengajuan();
+            else lihatPengajuan(mapelId, 'Mapel');
+            muatDaftarMapel();
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+
+    async function setujuiSemuaGlobal() {
+        const ya = await konfirmasi('Setujui SEMUA pengajuan yang masih menunggu di semua mapel?', 'Setujui Semua', 'Ya');
+        if (!ya) return;
+        try {
+            const r = await fetch(`${FIREBASE_URL}/pengajuan_ulang.json`);
+            const data = await r.json();
+            if (!data) return;
+            let total = 0;
+            for (const mid in data) {
+                for (const nis in data[mid]) {
+                    if (data[mid][nis].status !== 'menunggu') continue;
+                    await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mid}/${nis}.json`, {
+                        method: 'PATCH', headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ status: 'disetujui', waktu_keputusan: new Date().toLocaleString('id-ID') })
+                    });
+                    await fetch(`${FIREBASE_URL}/hasil_ujian/${mid}/${nis}.json`, { method: 'DELETE' });
+                    total++;
+                }
+            }
+            tampilkanStatus(`${total} pengajuan disetujui.`, 'sukses');
+            lihatSemuaPengajuan();
+            muatDaftarMapel();
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+
+    // ============ EXPORT CSV ============
+    async function unduhHasil(mapelId, namaMapel) {
+        try {
+            const r = await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}.json`);
+            const data = await r.json();
+            if (!data || Object.keys(data).length === 0) { tampilkanStatus('Belum ada.', 'gagal'); return; }
+            const baris = [];
+            for (const nis in data) {
+                const h = data[nis];
+                baris.push({
+                    'NISN': nis, 'Nama': h.nama||'', 'Kelas': h.kelas||'',
+                    'Benar PG': h.benar_pg||0, 'Total PG': h.total_pg||0, 'Nilai PG': h.nilai_pg||0,
+                    'Total Essay': h.total_essay||0,
+                    'Nilai Essay': h.nilai_essay != null ? h.nilai_essay : '',
+                    'Nilai Akhir': h.nilai_akhir != null ? h.nilai_akhir : '',
+                    'Status': h.status||'', 'Waktu': h.waktu_kirim||''
+                });
+            }
+            baris.sort((a,b) => (a.Kelas||'').localeCompare(b.Kelas||'') || (a.Nama||'').localeCompare(b.Nama||''));
+            const headers = Object.keys(baris[0]);
+            const csv = [headers.join(',')].concat(baris.map(row => headers.map(k => escapeCSV(row[k])).join(','))).join('\n');
+            document.getElementById('judul-export').textContent = 'Hasil: ' + namaMapel;
+            document.getElementById('isi-export-csv').value = csv;
+            document.getElementById('popup-export').classList.add('tampil');
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+    function copyExportCSV() { const ok = copyTextarea('isi-export-csv'); if (ok) tampilkanStatus('Copy berhasil.', 'sukses'); else alert('Tekan lama lalu copy manual.'); }
+
+    async function lihatRekapToken() {
+        const r = await fetch(`${FIREBASE_URL}/mapel.json`);
+        const data = await r.json();
+        const aktif = [];
+        if (data) for (const id in data) if (data[id].status_aktif && data[id].token) aktif.push(data[id]);
+        if (aktif.length === 0) { alert('Belum ada token aktif.'); return; }
+        aktif.sort((a,b) => (a.nama_mapel||'').localeCompare(b.nama_mapel||''));
+        let teks = '🔑 *DAFTAR TOKEN UJIAN AKTIF*\n' + new Date().toLocaleString('id-ID') + '\n━━━━━━━━━━━━━━━\n\n';
+        aktif.forEach((m, i) => {
+            const kelasList = parseKelasList(m.kelas);
+            teks += `${i+1}. *${m.nama_mapel}*\n   🏫 Kelas: ${kelasList.join(', ') || '-'}\n   🔑 Token: *${m.token}*\n   👨‍🏫 ${m.guru}\n\n`;
+        });
+        teks += '━━━━━━━━━━━━━━━\nSilakan gunakan token sesuai mapel.';
+        document.getElementById('judul-export').textContent = 'Rekap Token Aktif';
+        document.getElementById('isi-export-csv').value = teks;
+        document.getElementById('popup-export').classList.add('tampil');
+    }
+
+    // ============ TAB KELAS ============
+    async function muatKelas() {
+        try {
+            const r = await fetch(`${FIREBASE_URL}/daftar_kelas.json`);
+            const data = await r.json();
+            daftarKelas = [];
+            if (data) for (const id in data) daftarKelas.push({ id, ...data[id] });
+            daftarKelas.sort((a,b) => (a.nama||'').localeCompare(b.nama||''));
+            renderKelas();
+        } catch (e) {}
+    }
+    function renderKelas() {
+        const k = document.getElementById('daftar-kelas');
+        if (daftarKelas.length === 0) { k.innerHTML = '<p class="kosong">Belum ada kelas.</p>'; return; }
+        k.innerHTML = daftarKelas.map(c => `
+            <div class="kelas-item">
+                <span>${escapeHtml(c.nama)}</span>
+                <button class="btn-bahaya" onclick="hapusKelas('${c.id}','${escapeHtml(c.nama)}')" style="flex:0;padding:8px 12px;">Hapus</button>
+            </div>`).join('');
+    }
+    async function tambahKelas() {
+        const nama = document.getElementById('input-nama-kelas').value.trim();
+        if (!nama) { tampilkanStatus('Isi nama kelas.', 'gagal'); return; }
+        if (daftarKelas.some(c => c.nama.toLowerCase() === nama.toLowerCase())) { tampilkanStatus('Sudah ada.', 'gagal'); return; }
+        try {
+            await fetch(`${FIREBASE_URL}/daftar_kelas.json`, {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ nama })
+            });
+            document.getElementById('input-nama-kelas').value = '';
+            tampilkanStatus('Ditambahkan.', 'sukses');
+            muatKelas();
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+    async function hapusKelas(id, nama) {
+        const ya = await konfirmasi(`Hapus kelas "${nama}"?`, 'Hapus', 'Ya');
+        if (!ya) return;
+        try {
+            await fetch(`${FIREBASE_URL}/daftar_kelas/${id}.json`, { method: 'DELETE' });
+            tampilkanStatus('Dihapus.', 'sukses');
+            muatKelas();
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+
+    // ============ TAB AKUN (ADMIN / GURU / SISWA) ============
+    function gantiSubTabAkun(t) {
+        subTabAkun = t;
+        ['admin','guru','siswa'].forEach(x => {
+            document.getElementById('sub-btn-' + x).classList.toggle('aktif', x === t);
+        });
+        // Tampilkan peringatan
+        document.getElementById('peringatan-guru').style.display = t === 'guru' ? 'block' : 'none';
+        document.getElementById('peringatan-siswa').style.display = t === 'siswa' ? 'block' : 'none';
+
+        // Atur label & placeholder
+        if (t === 'siswa') {
+            document.getElementById('field-kelas-akun').style.display = 'block';
+            document.getElementById('field-password-akun').style.display = 'none';
+            document.getElementById('label-username-akun').textContent = 'NISN (kunci unik di Firebase)';
+            document.getElementById('input-username-akun').placeholder = 'mis. 12345';
+            document.getElementById('input-nama-akun').placeholder = 'mis. Ahmad Fauzi';
+            document.getElementById('judul-form-akun').textContent = 'Tambah Akun Siswa';
+        } else if (t === 'guru') {
+            document.getElementById('field-kelas-akun').style.display = 'none';
+            document.getElementById('field-password-akun').style.display = 'block';
+            document.getElementById('label-username-akun').textContent = 'Username (kunci unik di Firebase)';
+            document.getElementById('input-username-akun').placeholder = 'mis. budi';
+            document.getElementById('input-nama-akun').placeholder = 'mis. Budi Santoso, S.Pd.';
+            document.getElementById('judul-form-akun').textContent = 'Tambah Akun Guru';
+        } else {
+            document.getElementById('field-kelas-akun').style.display = 'none';
+            document.getElementById('field-password-akun').style.display = 'block';
+            document.getElementById('label-username-akun').textContent = 'Username (kunci unik di Firebase)';
+            document.getElementById('input-username-akun').placeholder = 'mis. admin1';
+            document.getElementById('input-nama-akun').placeholder = 'mis. Administrator';
+            document.getElementById('judul-form-akun').textContent = 'Tambah Akun Admin';
+        }
+        resetFormAkun();
+        renderAkun();
+    }
+
+    async function muatAkunAll() {
+        try {
+            const [ra, rg, rs, rk] = await Promise.all([
+                fetch(`${FIREBASE_URL}/${PATH_AKUN.admin}.json`),
+                fetch(`${FIREBASE_URL}/${PATH_AKUN.guru}.json`),
+                fetch(`${FIREBASE_URL}/${PATH_AKUN.siswa}.json`),
+                fetch(`${FIREBASE_URL}/daftar_kelas.json`)
+            ]);
+            const da = await ra.json();
+            const dg = await rg.json();
+            const ds = await rs.json();
+            const dk = await rk.json();
+            daftarAkun.admin = [];
+            daftarAkun.guru = [];
+            daftarAkun.siswa = [];
+            if (da) for (const k in da) daftarAkun.admin.push({ kunci: k, ...da[k] });
+            if (dg) for (const k in dg) daftarAkun.guru.push({ kunci: k, ...dg[k] });
+            if (ds) for (const k in ds) daftarAkun.siswa.push({ kunci: k, ...ds[k] });
+            daftarKelas = [];
+            if (dk) for (const id in dk) daftarKelas.push({ id, ...dk[id] });
+            daftarKelas.sort((a,b) => (a.nama||'').localeCompare(b.nama||''));
+            renderAkun();
+        } catch (e) { tampilkanStatus('Gagal memuat akun.', 'gagal'); }
+    }
+
+    function isiSelectKelasAkun() {
+        const sel = document.getElementById('input-kelas-akun');
+        sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
+            daftarKelas.map(k => `<option value="${escapeHtml(k.nama)}">${escapeHtml(k.nama)}</option>`).join('');
+    }
+
+    function renderAkun() {
+        const k = document.getElementById('daftar-akun');
+        const list = daftarAkun[subTabAkun] || [];
+        if (list.length === 0) { k.innerHTML = `<p class="kosong">Belum ada akun ${subTabAkun}.</p>`; return; }
+        k.innerHTML = list.map(a => {
+            const badgeClass = subTabAkun === 'admin' ? 'badge-admin' : (subTabAkun === 'guru' ? 'badge-guru' : 'badge-siswa');
+            const badgeLabel = subTabAkun === 'admin' ? 'Admin' : (subTabAkun === 'guru' ? 'Guru' : 'Siswa');
+            let detail = '';
+            if (subTabAkun === 'siswa') {
+                detail = `NISN: ${escapeHtml(a.nisn || a.kunci)} · Kelas: ${escapeHtml(a.kelas || '-')}`;
+            } else {
+                detail = `Username: ${escapeHtml(a.username || a.kunci)}`;
+            }
+            return `
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <b>${escapeHtml(a.nama || '-')}</b> <span class="badge ${badgeClass}">${badgeLabel}</span>
+                        <span>${detail}</span>
+                    </div>
+                </div>
+                <div class="baris-tombol">
+                    <button class="btn-sekunder" onclick="editAkun('${escapeHtml(a.kunci)}')">Edit</button>
+                    <button class="btn-bahaya" onclick="hapusAkun('${escapeHtml(a.kunci)}')">Hapus</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function resetFormAkun() {
+        document.getElementById('input-nama-akun').value = '';
+        document.getElementById('input-username-akun').value = '';
+        document.getElementById('input-password-akun').value = '';
+        document.getElementById('input-kelas-akun').value = '';
+        sedangEditAkun = null;
+        document.getElementById('judul-form-akun').textContent =
+            subTabAkun === 'admin' ? 'Tambah Akun Admin' :
+            subTabAkun === 'guru' ? 'Tambah Akun Guru' : 'Tambah Akun Siswa';
+    }
+
+    function editAkun(kunci) {
+        const a = (daftarAkun[subTabAkun] || []).find(x => x.kunci === kunci);
+        if (!a) return;
+        sedangEditAkun = { tipe: subTabAkun, kunciLama: kunci };
+        document.getElementById('input-nama-akun').value = a.nama || '';
+        if (subTabAkun === 'siswa') {
+            document.getElementById('input-username-akun').value = a.nisn || a.kunci;
+            document.getElementById('input-kelas-akun').value = a.kelas || '';
+        } else {
+            document.getElementById('input-username-akun').value = a.username || a.kunci;
+            document.getElementById('input-password-akun').value = a.password || '';
+        }
+        document.getElementById('judul-form-akun').textContent =
+            subTabAkun === 'admin' ? 'Edit Akun Admin' :
+            subTabAkun === 'guru' ? 'Edit Akun Guru' : 'Edit Akun Siswa';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function simpanAkun() {
+        const nama = document.getElementById('input-nama-akun').value.trim();
+        const kunciBaru = document.getElementById('input-username-akun').value.trim();
+        const password = document.getElementById('input-password-akun').value.trim();
+        const kelas = document.getElementById('input-kelas-akun').value;
+
+        if (!nama || !kunciBaru) { tampilkanStatus('Nama & username/NISN wajib diisi.', 'gagal'); return; }
+
+        const path = PATH_AKUN[subTabAkun];
+        const kunciFinal = subTabAkun === 'siswa' ? kunciBaru : kunciBaru.toLowerCase();
+
+        // Validasi
+        if (subTabAkun === 'siswa' && !kelas) { tampilkanStatus('Pilih kelas siswa.', 'gagal'); return; }
+        if (subTabAkun !== 'siswa' && !password) { tampilkanStatus('Password wajib diisi.', 'gagal'); return; }
+
+        // Data yang disimpan — SESUAI dengan yang dibaca halaman login
+        let dataSimpan;
+        if (subTabAkun === 'admin') {
+            dataSimpan = { username: kunciFinal, nama, password };
+        } else if (subTabAkun === 'guru') {
+            dataSimpan = { username: kunciFinal, nama, password };
+        } else {
+            // Siswa: halaman loginsiswa baca {nama, kelas}, kunci = NISN
+            dataSimpan = { nisn: kunciFinal, nama, kelas };
+        }
+
+        try {
+            // Kalau edit & kunci berubah → hapus key lama
+            if (sedangEditAkun && sedangEditAkun.kunciLama && sedangEditAkun.kunciLama !== kunciFinal) {
+                await fetch(`${FIREBASE_URL}/${path}/${sedangEditAkun.kunciLama}.json`, { method: 'DELETE' });
+            }
+            const r = await fetch(`${FIREBASE_URL}/${path}/${kunciFinal}.json`, {
+                method: 'PUT', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(dataSimpan)
+            });
+            if (!r.ok) throw new Error('fail');
+            tampilkanStatus('Akun tersimpan. Bisa langsung dipakai login.', 'sukses');
+            resetFormAkun();
+            muatAkunAll();
+        } catch (e) { tampilkanStatus('Gagal menyimpan akun.', 'gagal'); }
+    }
+
+    async function hapusAkun(kunci) {
+        const ya = await konfirmasi(`Hapus akun "${kunci}"?`, 'Hapus Akun', 'Ya, Hapus');
+        if (!ya) return;
+        const path = PATH_AKUN[subTabAkun];
+        try {
+            await fetch(`${FIREBASE_URL}/${path}/${kunci}.json`, { method: 'DELETE' });
+            tampilkanStatus('Akun dihapus.', 'sukses');
+            muatAkunAll();
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+
+    // ============ IMPORT AKUN CSV ============
+    function bukaImportAkunCSV() {
+        const p = document.getElementById('petunjuk-import-akun');
+        if (subTabAkun === 'siswa') {
+            p.innerHTML = '<b>Format Siswa:</b> <code>Nama, NISN, Kelas</code><br>Baris pertama = header (diabaikan).';
+        } else {
+            p.innerHTML = '<b>Format ' + (subTabAkun === 'admin' ? 'Admin' : 'Guru') + ':</b> <code>Nama, Username, Password</code><br>Baris pertama = header (diabaikan).';
+        }
+        document.getElementById('input-csv-akun').value = '';
+        document.getElementById('popup-import-akun').classList.add('tampil');
+    }
+
+    function lihatTemplateAkun() {
+        let contoh;
+        if (subTabAkun === 'siswa') {
+            contoh = [['Nama','NISN','Kelas'], ['Ahmad Fauzi','12345','X TKJ 1'], ['Rina Wati','12346','X TKJ 1']];
+        } else {
+            contoh = [['Nama','Username','Password'], ['Budi Santoso','budi','budi123'], ['Siti Aminah','siti','siti456']];
+        }
+        document.getElementById('isi-template-akun').value = contoh.map(r => r.map(escapeCSV).join(',')).join('\n');
+        document.getElementById('popup-template-akun').classList.add('tampil');
+    }
+    function copyTemplateAkun() {
+        const ok = copyTextarea('isi-template-akun');
+        if (ok) tampilkanStatus('Copy berhasil.', 'sukses'); else alert('Tekan lama lalu copy manual.');
+    }
+
+    async function prosesImportAkunCSV() {
+        const teks = document.getElementById('input-csv-akun').value.trim();
+        if (!teks) { alert('Paste data dulu.'); return; }
+        const delim = detectDelimiter(teks);
+        const baris = teks.split(/\r?\n/).filter(b => b.trim() !== '');
+        if (baris.length < 2) { alert('Minimal header + 1 baris.'); return; }
+
+        const path = PATH_AKUN[subTabAkun];
+        let ok = 0, skip = 0;
+
+        for (let i = 1; i < baris.length; i++) {
+            const b = parseBarisCSV(baris[i], delim);
+            if (!b || b.length < 3) { skip++; continue; }
+            const nama = String(b[0]||'').trim();
+            const kunci = String(b[1]||'').trim();
+            if (!nama || !kunci) { skip++; continue; }
+
+            let data, kunciFinal;
+            if (subTabAkun === 'siswa') {
+                const kelas = String(b[2]||'').trim();
+                if (!kelas) { skip++; continue; }
+                kunciFinal = kunci;
+                data = { nisn: kunciFinal, nama, kelas };
+            } else {
+                const password = String(b[2]||'').trim();
+                if (!password) { skip++; continue; }
+                kunciFinal = kunci.toLowerCase();
+                data = { username: kunciFinal, nama, password };
+            }
+
+            try {
+                const r = await fetch(`${FIREBASE_URL}/${path}/${kunciFinal}.json`, {
+                    method: 'PUT', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(data)
+                });
+                if (r.ok) ok++; else skip++;
+            } catch (e) { skip++; }
+        }
+
+        tutupPopup('popup-import-akun');
+        if (ok === 0) alert('Tidak ada akun berhasil diimport.');
+        else tampilkanStatus(`${ok} akun diimport${skip ? `, ${skip} dilewati` : ''}.`, 'sukses');
+        muatAkunAll();
+    }
+
+    // ============ INIT ============
+    ambilParamAtauTanya();
+    muatDaftarMapel();
+    muatKelas();
+    // Set tampilan default sub-tab akun
+    setTimeout(() => {
+        document.getElementById('peringatan-guru').style.display = 'block';
+    }, 100);
+</script>
+</body>
+</html>
