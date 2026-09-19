@@ -28,6 +28,7 @@
     .btn-utama { background: #1b5e20; color: #fff; }
     .btn-sekunder { background: rgba(255,255,255,0.85); color: #1b5e20; border: 1px solid #1b5e20; }
     .btn-bahaya { background: #fff; color: #b91c1c; border: 1px solid rgba(185,28,28,0.4); }
+    .btn-bahaya-solid { background: #b91c1c; color: #fff; border: 1px solid #b91c1c; }
     .kosong { text-align: center; font-size: 13px; color: #475569; padding: 20px 0; }
     .pesan-status { display: none; font-size: 13px; padding: 10px 12px; border-radius: 10px; text-align: center; }
     .pesan-status.tampil { display: block; }
@@ -61,6 +62,12 @@
     .petunjuk-csv code { background: #fff; padding: 1px 5px; border-radius: 4px; font-size: 11px; }
     .info-kecil { font-size:11px; color:#475569; }
     .peringatan-box { background: rgba(254,243,199,0.85); border: 1px solid #f59e0b; border-radius: 10px; padding: 10px; font-size: 12px; color: #7c4a03; line-height: 1.5; }
+    .kotak-hapus-semua {
+        background: rgba(254,226,226,0.6); border: 1px solid rgba(185,28,28,0.4);
+        border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;
+        margin-bottom: 10px;
+    }
+    .kotak-hapus-semua span { font-size: 12px; color: #7f1d1d; }
 </style>
 </head>
 <body>
@@ -79,14 +86,12 @@
         <button id="tab-btn-akun" onclick="gantiTab('akun')">👥 Akun</button>
     </div>
 
-    <!-- TAB MAPEL -->
     <div id="tab-mapel" style="display:flex;flex-direction:column;gap:16px;">
         <button class="btn-sekunder" onclick="lihatRekapToken()">🔑 Rekap Token Aktif (share WA)</button>
         <button class="btn-sekunder" onclick="lihatSemuaPengajuan()">📩 Rekap Semua Pengajuan Ujian Ulang</button>
         <div id="daftar-mapel"></div>
     </div>
 
-    <!-- TAB KELAS -->
     <div id="tab-kelas" style="display:none;flex-direction:column;gap:16px;">
         <div class="card">
             <div class="field"><label>Nama Kelas</label><input type="text" id="input-nama-kelas" placeholder="Contoh: X TKJ 1"></div>
@@ -95,7 +100,6 @@
         <div id="daftar-kelas"></div>
     </div>
 
-    <!-- TAB AKUN -->
     <div id="tab-akun" style="display:none;flex-direction:column;gap:16px;">
         <div class="sub-tab">
             <button id="sub-btn-admin" onclick="gantiSubTabAkun('admin')">🔐 Admin</button>
@@ -141,7 +145,7 @@
     </div>
 </div>
 
-<!-- POPUP PENGERJAAN -->
+<!-- POPUP PENGERJAAN (REKAP NILAI) -->
 <div class="popup-overlay" id="popup-pengerjaan">
     <div class="popup-box">
         <h3 id="judul-pengerjaan">Rekap</h3>
@@ -149,6 +153,7 @@
             <label>Filter Kelas</label>
             <select id="pilih-filter-kelas" onchange="terapkanFilterKelas()"><option value="">Semua Kelas</option></select>
         </div>
+        <button class="btn-sekunder" onclick="hitungUlangSemuaPG()" id="btn-hitung-ulang" style="display:none;">🔄 Hitung Ulang Semua Nilai PG</button>
         <div id="daftar-pengerjaan"></div>
         <button class="btn-sekunder" onclick="tutupPopup('popup-pengerjaan')">Tutup</button>
     </div>
@@ -228,30 +233,83 @@
 <script>
     const FIREBASE_URL = "https://admin-ffded-default-rtdb.firebaseio.com";
 
+    // Path akun
+    const PATH_AKUN = {
+        admin: 'admin_akun',
+        guru:  'guru_akun',
+        siswa: 'peserta_ujian'
+    };
+
     // ============================================================
-    // SOAL disimpan terpisah di "soal/{idMapel}" supaya daftar mapel ringan.
-    // Kalau belum dimigrasi, otomatis membaca lokasi lama "mapel/{idMapel}/soal".
+    // HELPER: BACA SOAL & KUNCI (Langkah 2)
+    //   /soal/{id}   → soal tanpa kunci (untuk tampil di popup essay)
+    //   /kunci/{id}  → kunci jawaban PG + kunci essay
+    //   Fallback     : /mapel/{id}/soal → ekstrak manual
     // ============================================================
     async function ambilSoalMapel(id) {
         const r = await fetch(`${FIREBASE_URL}/soal/${id}.json`);
-        const baru = await r.json();
-        if (baru) return baru;
-        const r2 = await fetch(`${FIREBASE_URL}/mapel/${id}/soal.json`);
-        return (await r2.json()) || null;
+        let sumber = await r.json();
+        if (!sumber) {
+            const r2 = await fetch(`${FIREBASE_URL}/mapel/${id}/soal.json`);
+            sumber = await r2.json();
+        }
+        if (!sumber) return null;
+        // Bersihkan kunci biar tidak ke-render
+        const bersih = {};
+        for (const sid in sumber) {
+            const s = sumber[sid];
+            bersih[sid] = {
+                tipe: s.tipe === 'essay' ? 'essay' : 'pg',
+                pertanyaan: s.pertanyaan || '',
+                pilihan: s.pilihan || []
+            };
+        }
+        return bersih;
     }
 
-    // Path Firebase SESUAI halaman login Anda
-    const PATH_AKUN = {
-        admin: 'admin_akun',    // loginadmin.html
-        guru:  'guru_akun',     // loginguru.html (cari by nama)
-        siswa: 'peserta_ujian'  // loginsiswa.html (kunci = NISN)
-    };
+    async function ambilKunci(id) {
+        const r = await fetch(`${FIREBASE_URL}/kunci/${id}.json`);
+        let sumber = await r.json();
+        if (!sumber) {
+            const r2 = await fetch(`${FIREBASE_URL}/mapel/${id}/soal.json`);
+            sumber = await r2.json();
+        }
+        if (!sumber) return {};
+        const kunci = {};
+        for (const sid in sumber) {
+            const s = sumber[sid];
+            if (s.tipe === 'essay') kunci[sid] = { tipe: 'essay', kunci_essay: s.kunci_essay || '' };
+            else kunci[sid] = { tipe: 'pg', jawaban_benar: s.jawaban_benar || '' };
+        }
+        return kunci;
+    }
+
+    // Hitung nilai PG dari kunci + jawaban siswa
+    function hitungNilaiDariJawaban(kunci, hasil) {
+        const jp = hasil.jawaban_pg || {};
+        let benar = 0, total = 0;
+        for (const sid in kunci) {
+            if (kunci[sid].tipe === 'essay') continue;
+            total++;
+            const jwb = (jp[sid] || '').toString().trim().toUpperCase();
+            const kjwb = (kunci[sid].jawaban_benar || '').toString().trim().toUpperCase();
+            if (jwb && jwb === kjwb) benar++;
+        }
+        const nilai_pg = total > 0 ? Math.round((benar / total) * 100) : 0;
+        const te = hasil.total_essay || 0;
+        const ne = (hasil.nilai_essay != null) ? hasil.nilai_essay : null;
+        let nilai_akhir = null;
+        if (ne != null) {
+            nilai_akhir = (total + te) === 0 ? 0 : Math.round((nilai_pg * total + ne * te) / (total + te));
+        }
+        return { benar_pg: benar, total_pg: total, nilai_pg, nilai_akhir };
+    }
 
     let usernameAdmin = "", namaAdmin = "";
     let daftarMapel = [], daftarKelas = [];
     let daftarAkun = { admin: [], guru: [], siswa: [] };
     let konteksNilaiEssay = { mapelId: null, nisn: null };
-    let rekapSekarang = { mapelId: null, semuaData: [] };
+    let rekapSekarang = { mapelId: null, namaMapel: '', semuaData: [], kunciCache: null };
     let subTabAkun = 'guru';
     let sedangEditAkun = null;
 
@@ -296,7 +354,7 @@
         if (!usernameAdmin) { usernameAdmin = (prompt('Testing: username admin') || '').trim().toLowerCase(); namaAdmin = usernameAdmin; }
         document.getElementById('info-admin').textContent = 'Selamat datang, ' + (namaAdmin || usernameAdmin);
     }
-    function tampilkanStatus(p, j) { j = j || 'info'; const k = document.getElementById('pesan-status'); k.textContent = p; k.className = 'pesan-status tampil ' + j; setTimeout(() => k.classList.remove('tampil'), 3500); }
+    function tampilkanStatus(p, j) { j = j || 'info'; const k = document.getElementById('pesan-status'); k.textContent = p; k.className = 'pesan-status tampil ' + j; setTimeout(() => k.classList.remove('tampil'), 4000); }
     function buatTokenAcak() { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let h = ''; for (let i = 0; i < 6; i++) h += c.charAt(Math.floor(Math.random() * c.length)); return h; }
 
     function gantiTab(tab) {
@@ -406,12 +464,14 @@
         const ya = await konfirmasi(`Hapus mapel "${nama}"?`, 'Hapus', 'Ya, Hapus');
         if (!ya) return;
         try {
+            // Semua path yang terkait mapel (tambahan /soal dan /kunci)
             await Promise.allSettled([
                 fetch(`${FIREBASE_URL}/mapel/${id}.json`, { method: 'DELETE' }),
                 fetch(`${FIREBASE_URL}/hasil_ujian/${id}.json`, { method: 'DELETE' }),
                 fetch(`${FIREBASE_URL}/pengajuan_ulang/${id}.json`, { method: 'DELETE' }),
                 fetch(`${FIREBASE_URL}/draft_soal/${id}.json`, { method: 'DELETE' }),
-                fetch(`${FIREBASE_URL}/soal/${id}.json`, { method: 'DELETE' })
+                fetch(`${FIREBASE_URL}/soal/${id}.json`, { method: 'DELETE' }),
+                fetch(`${FIREBASE_URL}/kunci/${id}.json`, { method: 'DELETE' })
             ]);
             tampilkanStatus('Dihapus.', 'sukses');
             muatDaftarMapel();
@@ -424,18 +484,28 @@
         const k = document.getElementById('daftar-pengerjaan');
         k.innerHTML = '<p class="kosong">Memuat...</p>';
         document.getElementById('filter-kelas-box').style.display = 'block';
+        document.getElementById('btn-hitung-ulang').style.display = 'block';
         document.getElementById('popup-pengerjaan').classList.add('tampil');
         try {
-            const r = await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}.json`);
+            const [r, kunci] = await Promise.all([
+                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}.json`),
+                ambilKunci(mapelId)
+            ]);
             const data = await r.json();
             if (!data || Object.keys(data).length === 0) {
                 k.innerHTML = '<p class="kosong">Belum ada.</p>';
                 document.getElementById('pilih-filter-kelas').innerHTML = '<option value="">Semua</option>';
+                rekapSekarang = { mapelId, namaMapel, semuaData: [], kunciCache: kunci };
                 return;
             }
-            const list = Object.keys(data).map(nis => ({ nis, ...data[nis] }));
+            // Hitung nilai PG dari kunci, tidak percaya nilai yang tersimpan
+            const list = Object.keys(data).map(nis => {
+                const h = data[nis];
+                const hitung = hitungNilaiDariJawaban(kunci, h);
+                return { nis, ...h, ...hitung };
+            });
             list.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
-            rekapSekarang = { mapelId, semuaData: list };
+            rekapSekarang = { mapelId, namaMapel, semuaData: list, kunciCache: kunci };
             const kelasUnik = [...new Set(list.map(h => h.kelas).filter(Boolean))].sort();
             document.getElementById('pilih-filter-kelas').innerHTML =
                 '<option value="">Semua Kelas</option>' +
@@ -443,31 +513,149 @@
             renderRekapNilai();
         } catch (e) { k.innerHTML = '<p class="kosong">Gagal.</p>'; }
     }
+
     function terapkanFilterKelas() { renderRekapNilai(); }
+
     function renderRekapNilai() {
         const kelasPilih = document.getElementById('pilih-filter-kelas').value;
         const list = rekapSekarang.semuaData.filter(h => !kelasPilih || (h.kelas||'') === kelasPilih);
         const k = document.getElementById('daftar-pengerjaan');
-        if (list.length === 0) { k.innerHTML = '<p class="kosong">Kosong.</p>'; return; }
-        k.innerHTML = list.map(h => {
+
+        if (list.length === 0) {
+            k.innerHTML = '<p class="kosong">Kosong.</p>';
+            return;
+        }
+
+        // KOTAK HAPUS SEMUA (ikut filter kelas) — dari versi asli
+        let html = `
+            <div class="kotak-hapus-semua">
+                <b style="font-size:13px;color:#7f1d1d;">🗑️ Hapus Hasil Ujian</b>
+                <span>
+                    ${kelasPilih
+                        ? `Kelas <b>${escapeHtml(kelasPilih)}</b> &mdash; <b>${list.length}</b> siswa akan dihapus`
+                        : `Semua kelas &mdash; <b>${list.length}</b> siswa akan dihapus`}
+                </span>
+                <button class="btn-bahaya-solid" onclick="hapusHasilSemua()">🗑️ Hapus Semua (${list.length} siswa)</button>
+                <span style="font-size:11px;">Siswa yang hasilnya dihapus akan bisa mengerjakan ulang ujian ini.</span>
+            </div>`;
+
+        html += list.map(h => {
             const status = h.status === 'dinilai_guru' ? '<span class="badge badge-aktif">Dinilai Guru</span>'
                 : (h.status === 'selesai' ? '<span class="badge badge-aktif">Selesai</span>'
                 : '<span class="badge badge-info">Menunggu Essay</span>');
+            const nisn = h.nisn || h.nis || '';
+            const nama = h.nama || '-';
             return `<div class="item-siswa">
-                <div><b>${escapeHtml(h.nama||'-')}</b> ${status}</div>
-                <span>NISN: ${escapeHtml(h.nisn||h.nis||'-')} · ${escapeHtml(h.kelas||'-')}</span>
+                <div><b>${escapeHtml(nama)}</b> ${status}</div>
+                <span>NISN: ${escapeHtml(nisn)} · ${escapeHtml(h.kelas||'-')}</span>
                 <div class="statistik">
                     <span>PG: ${h.benar_pg||0}/${h.total_pg||0} (${h.nilai_pg||0})</span>
                     <span>Essay: ${h.nilai_essay != null ? h.nilai_essay : '-'}</span>
                     <span>Akhir: ${h.nilai_akhir != null ? h.nilai_akhir : '-'}</span>
                 </div>
-                ${h.total_essay > 0 ? `<div class="baris-tombol">
-                    <button class="btn-sekunder" onclick="bukaNilaiEssay('${rekapSekarang.mapelId}','${escapeHtml(h.nisn||h.nis||'')}')">✍️ Lihat Essay</button>
-                </div>` : ''}
+                <div class="baris-tombol">
+                    ${h.total_essay > 0 ? `<button class="btn-sekunder" onclick="bukaNilaiEssay('${rekapSekarang.mapelId}','${escapeHtml(nisn)}')">✍️ Lihat Essay</button>` : ''}
+                    <button class="btn-bahaya" onclick="hapusHasilSatu('${escapeHtml(nisn)}', '${escapeHtml(nama)}')">🗑️ Hapus</button>
+                </div>
             </div>`;
         }).join('');
+
+        k.innerHTML = html;
     }
 
+    // ============ HITUNG ULANG SEMUA PG ============
+    async function hitungUlangSemuaPG() {
+        if (!rekapSekarang.mapelId) return;
+        const ya = await konfirmasi('Hitung ulang nilai PG untuk semua siswa di mapel ini dari kunci? Nilai lama akan ditimpa.', 'Hitung Ulang', 'Ya');
+        if (!ya) return;
+        tampilkanStatus('Menghitung...', 'info');
+        try {
+            const [r, kunci] = await Promise.all([
+                fetch(`${FIREBASE_URL}/hasil_ujian/${rekapSekarang.mapelId}.json`),
+                ambilKunci(rekapSekarang.mapelId)
+            ]);
+            const data = await r.json();
+            if (!data) { tampilkanStatus('Belum ada jawaban siswa.', 'info'); return; }
+            let ok = 0, gagal = 0;
+            const tasks = [];
+            for (const nis in data) {
+                const h = data[nis];
+                const hitung = hitungNilaiDariJawaban(kunci, h);
+                const status = (h.total_essay || 0) > 0
+                    ? (h.nilai_essay != null ? 'dinilai_guru' : 'menunggu_penilaian')
+                    : 'selesai';
+                tasks.push(fetch(`${FIREBASE_URL}/hasil_ujian/${rekapSekarang.mapelId}/${nis}.json`, {
+                    method: 'PATCH', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                        benar_pg: hitung.benar_pg,
+                        total_pg: hitung.total_pg,
+                        nilai_pg: hitung.nilai_pg,
+                        nilai_akhir: hitung.nilai_akhir,
+                        status
+                    })
+                }).then(res => res.ok ? ok++ : gagal++).catch(() => gagal++));
+            }
+            await Promise.all(tasks);
+            tampilkanStatus(`Selesai. ${ok} diperbarui${gagal ? `, ${gagal} gagal` : ''}.`, gagal ? 'info' : 'sukses');
+            lihatRekapNilai(rekapSekarang.mapelId, rekapSekarang.namaMapel);
+            muatDaftarMapel();
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+
+    // ============ HAPUS HASIL UJIAN (dari versi asli) ============
+    async function hapusHasilSatu(nisn, nama) {
+        const ya = await konfirmasi(
+            `Hapus hasil ujian "${nama}" (NISN: ${nisn})?\n\nSiswa ini akan bisa mengerjakan ulang ujian ini dari awal.`,
+            'Hapus Hasil', 'Ya, Hapus'
+        );
+        if (!ya) return;
+        try {
+            await fetch(`${FIREBASE_URL}/hasil_ujian/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' });
+            await fetch(`${FIREBASE_URL}/pengajuan_ulang/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' });
+            tampilkanStatus(`Hasil "${nama}" dihapus.`, 'sukses');
+            lihatRekapNilai(rekapSekarang.mapelId, rekapSekarang.namaMapel);
+            muatDaftarMapel();
+        } catch (e) { tampilkanStatus('Gagal menghapus.', 'gagal'); }
+    }
+
+    async function hapusHasilSemua() {
+        const kelasPilih = document.getElementById('pilih-filter-kelas').value;
+        const list = rekapSekarang.semuaData.filter(h => !kelasPilih || (h.kelas||'') === kelasPilih);
+        if (list.length === 0) { alert('Tidak ada data untuk dihapus.'); return; }
+
+        const info = kelasPilih
+            ? `SEMUA hasil ujian kelas "${kelasPilih}" (${list.length} siswa)`
+            : `SEMUA hasil ujian (${list.length} siswa dari semua kelas)`;
+
+        const ya = await konfirmasi(
+            `Hapus ${info}?\n\nTindakan ini tidak dapat dibatalkan. Semua siswa yang dihapus akan bisa mengerjakan ulang ujian ini.`,
+            'Hapus Semua Hasil', 'Ya, Hapus Semua'
+        );
+        if (!ya) return;
+
+        tampilkanStatus('Menghapus...', 'info');
+
+        let sukses = 0, gagal = 0;
+        for (const h of list) {
+            const nisn = h.nisn || h.nis || '';
+            if (!nisn) { gagal++; continue; }
+            try {
+                const r1 = await fetch(`${FIREBASE_URL}/hasil_ujian/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' });
+                await fetch(`${FIREBASE_URL}/pengajuan_ulang/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' });
+                if (r1.ok) sukses++; else gagal++;
+            } catch (e) { gagal++; }
+        }
+
+        if (gagal > 0) {
+            tampilkanStatus(`${sukses} dihapus, ${gagal} gagal.`, 'info');
+        } else {
+            tampilkanStatus(`${sukses} hasil ujian berhasil dihapus.`, 'sukses');
+        }
+        lihatRekapNilai(rekapSekarang.mapelId, rekapSekarang.namaMapel);
+        muatDaftarMapel();
+    }
+
+    // ============ NILAI ESSAY ============
     async function bukaNilaiEssay(mapelId, nisn) {
         konteksNilaiEssay = { mapelId, nisn };
         document.getElementById('judul-nilai-essay').textContent = 'Essay — ' + nisn;
@@ -475,9 +663,10 @@
         k.innerHTML = '<p class="kosong">Memuat...</p>';
         document.getElementById('popup-nilai-essay').classList.add('tampil');
         try {
-            const [r1, r2] = await Promise.all([
+            const [r1, r2, kunci] = await Promise.all([
                 ambilSoalMapel(mapelId),
-                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`)
+                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`),
+                ambilKunci(mapelId)
             ]);
             const soal = r1 || {};
             const hasil = await r2.json() || {};
@@ -487,9 +676,10 @@
             for (const sid in soal) {
                 if (soal[sid].tipe !== 'essay') continue;
                 ada++;
+                const kunciTeks = (kunci[sid] && kunci[sid].kunci_essay) || '';
                 html += `<div class="item-siswa">
                     <b>${escapeHtml(soal[sid].pertanyaan)}</b>
-                    ${soal[sid].kunci_essay ? `<span style="color:#166534;">Kunci: ${escapeHtml(soal[sid].kunci_essay)}</span>` : ''}
+                    ${kunciTeks ? `<span style="color:#166534;">Kunci: ${escapeHtml(kunciTeks)}</span>` : ''}
                     <div style="background:#fff;border-radius:8px;padding:8px;font-size:13px;">${escapeHtml(je[sid] || '(kosong)')}</div>
                 </div>`;
             }
@@ -501,22 +691,33 @@
             k.innerHTML = html;
         } catch (e) { k.innerHTML = '<p class="kosong">Gagal.</p>'; }
     }
+
     async function simpanNilaiEssay() {
         const { mapelId, nisn } = konteksNilaiEssay;
         const nilai = parseInt(document.getElementById('input-nilai-essay').value, 10);
         if (isNaN(nilai) || nilai < 0 || nilai > 100) { alert('0-100.'); return; }
         try {
-            const r = await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`);
+            const [r, kunci] = await Promise.all([
+                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`),
+                ambilKunci(mapelId)
+            ]);
             const h = await r.json() || {};
-            const tp = h.total_pg||0, te = h.total_essay||0, np = h.nilai_pg||0;
-            const na = (tp+te) === 0 ? 0 : Math.round((np*tp + nilai*te)/(tp+te));
+            // Hitung ulang pakai kunci, bukan nilai yang tersimpan
+            const hitung = hitungNilaiDariJawaban(kunci, { ...h, nilai_essay: nilai });
             await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`, {
                 method: 'PATCH', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ nilai_essay: nilai, nilai_akhir: na, status: 'selesai' })
+                body: JSON.stringify({
+                    nilai_essay: nilai,
+                    benar_pg: hitung.benar_pg,
+                    total_pg: hitung.total_pg,
+                    nilai_pg: hitung.nilai_pg,
+                    nilai_akhir: hitung.nilai_akhir,
+                    status: 'selesai'
+                })
             });
             tutupPopup('popup-nilai-essay');
             tampilkanStatus('Tersimpan.', 'sukses');
-            lihatRekapNilai(mapelId, 'Mapel');
+            lihatRekapNilai(mapelId, rekapSekarang.namaMapel || 'Mapel');
         } catch (e) { alert('Gagal.'); }
     }
 
@@ -640,18 +841,22 @@
     // ============ EXPORT CSV ============
     async function unduhHasil(mapelId, namaMapel) {
         try {
-            const r = await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}.json`);
+            const [r, kunci] = await Promise.all([
+                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}.json`),
+                ambilKunci(mapelId)
+            ]);
             const data = await r.json();
             if (!data || Object.keys(data).length === 0) { tampilkanStatus('Belum ada.', 'gagal'); return; }
             const baris = [];
             for (const nis in data) {
                 const h = data[nis];
+                const hitung = hitungNilaiDariJawaban(kunci, h);
                 baris.push({
                     'NISN': nis, 'Nama': h.nama||'', 'Kelas': h.kelas||'',
-                    'Benar PG': h.benar_pg||0, 'Total PG': h.total_pg||0, 'Nilai PG': h.nilai_pg||0,
+                    'Benar PG': hitung.benar_pg, 'Total PG': hitung.total_pg, 'Nilai PG': hitung.nilai_pg,
                     'Total Essay': h.total_essay||0,
                     'Nilai Essay': h.nilai_essay != null ? h.nilai_essay : '',
-                    'Nilai Akhir': h.nilai_akhir != null ? h.nilai_akhir : '',
+                    'Nilai Akhir': hitung.nilai_akhir != null ? hitung.nilai_akhir : '',
                     'Status': h.status||'', 'Waktu': h.waktu_kirim||''
                 });
             }
@@ -727,17 +932,15 @@
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
-    // ============ TAB AKUN (ADMIN / GURU / SISWA) ============
+    // ============ TAB AKUN ============
     function gantiSubTabAkun(t) {
         subTabAkun = t;
         ['admin','guru','siswa'].forEach(x => {
             document.getElementById('sub-btn-' + x).classList.toggle('aktif', x === t);
         });
-        // Tampilkan peringatan
         document.getElementById('peringatan-guru').style.display = t === 'guru' ? 'block' : 'none';
         document.getElementById('peringatan-siswa').style.display = t === 'siswa' ? 'block' : 'none';
 
-        // Atur label & placeholder
         if (t === 'siswa') {
             document.getElementById('field-kelas-akun').style.display = 'block';
             document.getElementById('field-password-akun').style.display = 'none';
@@ -864,23 +1067,15 @@
         const path = PATH_AKUN[subTabAkun];
         const kunciFinal = subTabAkun === 'siswa' ? kunciBaru : kunciBaru.toLowerCase();
 
-        // Validasi
         if (subTabAkun === 'siswa' && !kelas) { tampilkanStatus('Pilih kelas siswa.', 'gagal'); return; }
         if (subTabAkun !== 'siswa' && !password) { tampilkanStatus('Password wajib diisi.', 'gagal'); return; }
 
-        // Data yang disimpan — SESUAI dengan yang dibaca halaman login
         let dataSimpan;
-        if (subTabAkun === 'admin') {
-            dataSimpan = { username: kunciFinal, nama, password };
-        } else if (subTabAkun === 'guru') {
-            dataSimpan = { username: kunciFinal, nama, password };
-        } else {
-            // Siswa: halaman loginsiswa baca {nama, kelas}, kunci = NISN
-            dataSimpan = { nisn: kunciFinal, nama, kelas };
-        }
+        if (subTabAkun === 'admin') dataSimpan = { username: kunciFinal, nama, password };
+        else if (subTabAkun === 'guru') dataSimpan = { username: kunciFinal, nama, password };
+        else dataSimpan = { nisn: kunciFinal, nama, kelas };
 
         try {
-            // Kalau edit & kunci berubah → hapus key lama
             if (sedangEditAkun && sedangEditAkun.kunciLama && sedangEditAkun.kunciLama !== kunciFinal) {
                 await fetch(`${FIREBASE_URL}/${path}/${sedangEditAkun.kunciLama}.json`, { method: 'DELETE' });
             }
@@ -982,7 +1177,6 @@
     ambilParamAtauTanya();
     muatDaftarMapel();
     muatKelas();
-    // Set tampilan default sub-tab akun
     setTimeout(() => {
         document.getElementById('peringatan-guru').style.display = 'block';
     }, 100);
