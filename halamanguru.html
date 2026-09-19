@@ -64,6 +64,8 @@
     .item-nilai { background: rgba(241,245,249,0.9); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
     .item-nilai b { font-size: 13px; color: #0f172a; }
     .item-nilai span { font-size: 11px; color: #475569; }
+    .statistik { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; color: #14532d; }
+    .statistik span { background: rgba(255,255,255,0.85); padding: 3px 9px; border-radius: 8px; }
 </style>
 </head>
 <body>
@@ -131,7 +133,8 @@
         <div id="tab-nilai" style="display:none;flex-direction:column;gap:12px;">
             <div class="card">
                 <b style="font-size:14px;color:#0f172a;">Nilai Siswa</b>
-                <span style="font-size:12px;color:#475569;">Periksa jawaban essay siswa, isi nilai, lalu klik Kirim Nilai.</span>
+                <span style="font-size:12px;color:#475569;">Nilai PG dihitung otomatis dari kunci. Periksa essay, isi nilai, lalu simpan.</span>
+                <button class="btn-sekunder" onclick="hitungUlangSemuaPG()">🔄 Hitung Ulang Semua Nilai PG</button>
             </div>
             <div id="daftar-nilai-siswa"></div>
         </div>
@@ -221,7 +224,7 @@
         <div id="isi-nilai-essay-guru"></div>
         <div class="baris-tombol">
             <button class="btn-sekunder" onclick="tutupPopup('popup-nilai-essay')">Batal</button>
-            <button class="btn-utama" onclick="kirimNilaiEssayKeAdmin()">📤 Kirim Nilai ke Admin</button>
+            <button class="btn-utama" onclick="kirimNilaiEssayKeAdmin()">📤 Simpan Nilai</button>
         </div>
     </div>
 </div>
@@ -255,16 +258,91 @@
     const FIREBASE_URL = "https://admin-ffded-default-rtdb.firebaseio.com";
 
     // ============================================================
-    // SOAL disimpan terpisah di "soal/{idMapel}" supaya daftar mapel ringan.
-    // Kalau belum dimigrasi, otomatis membaca lokasi lama "mapel/{idMapel}/soal".
+    // STRUKTUR DATA (Langkah 2)
+    //   /soal/{id}   → soal tanpa kunci  (untuk siswa & ditampilkan)
+    //   /kunci/{id}  → kunci PG + essay  (hanya guru/admin)
+    //   /mapel/{id}  → info mapel
+    //   /draft_soal  → draft guru (lengkap dengan kunci)
+    // Fallback: /mapel/{id}/soal (format lama) → tetap didukung
     // ============================================================
-    async function ambilSoalMapel(id) {
+
+    // Soal siswa (tanpa kunci) — untuk menampilkan di daftar soal
+    async function ambilSoalSiswa(id) {
         const r = await fetch(`${FIREBASE_URL}/soal/${id}.json`);
-        const baru = await r.json();
-        if (baru) return baru;
-        const r2 = await fetch(`${FIREBASE_URL}/mapel/${id}/soal.json`);
-        return (await r2.json()) || null;
+        let sumber = await r.json();
+        if (!sumber) {
+            const r2 = await fetch(`${FIREBASE_URL}/mapel/${id}/soal.json`);
+            sumber = await r2.json();
+        }
+        if (!sumber) return null;
+        const bersih = {};
+        for (const sid in sumber) {
+            const s = sumber[sid];
+            bersih[sid] = {
+                tipe: s.tipe === 'essay' ? 'essay' : 'pg',
+                pertanyaan: s.pertanyaan || '',
+                pilihan: s.pilihan || []
+            };
+        }
+        return bersih;
     }
+
+    // Kunci dari /kunci/{id} — untuk guru hitung nilai
+    async function ambilKunci(id) {
+        const r = await fetch(`${FIREBASE_URL}/kunci/${id}.json`);
+        let sumber = await r.json();
+        if (!sumber) {
+            const r2 = await fetch(`${FIREBASE_URL}/mapel/${id}/soal.json`);
+            sumber = await r2.json();
+        }
+        if (!sumber) return {};
+        const kunci = {};
+        for (const sid in sumber) {
+            const s = sumber[sid];
+            if (s.tipe === 'essay') kunci[sid] = { tipe: 'essay', kunci_essay: s.kunci_essay || '' };
+            else kunci[sid] = { tipe: 'pg', jawaban_benar: s.jawaban_benar || '' };
+        }
+        return kunci;
+    }
+
+    // Gabung soal + kunci → untuk layar kelola soal guru
+    async function ambilSoalDenganKunci(id) {
+        const [soal, kunci] = await Promise.all([ambilSoalSiswa(id), ambilKunci(id)]);
+        if (!soal) return null;
+        const gabung = {};
+        for (const sid in soal) {
+            gabung[sid] = {
+                tipe: soal[sid].tipe,
+                pertanyaan: soal[sid].pertanyaan,
+                pilihan: soal[sid].pilihan,
+                jawaban_benar: (kunci[sid] && kunci[sid].jawaban_benar) || '',
+                kunci_essay: (kunci[sid] && kunci[sid].kunci_essay) || ''
+            };
+        }
+        return gabung;
+    }
+
+    // Hitung nilai PG dari kunci + jawaban siswa
+    function hitungNilaiDariJawaban(kunci, hasil) {
+        const jp = hasil.jawaban_pg || {};
+        let benar = 0, total = 0;
+        for (const sid in kunci) {
+            if (kunci[sid].tipe === 'essay') continue;
+            total++;
+            const jwb = (jp[sid] || '').toString().trim().toUpperCase();
+            const kjwb = (kunci[sid].jawaban_benar || '').toString().trim().toUpperCase();
+            if (jwb && jwb === kjwb) benar++;
+        }
+        const nilai_pg = total > 0 ? Math.round((benar / total) * 100) : 0;
+        const te = hasil.total_essay || 0;
+        const ne = (hasil.nilai_essay != null) ? hasil.nilai_essay : null;
+        let nilai_akhir = null;
+        if (ne != null) {
+            nilai_akhir = (total + te) === 0 ? 0 : Math.round((nilai_pg * total + ne * te) / (total + te));
+        }
+        return { benar_pg: benar, total_pg: total, nilai_pg, nilai_akhir };
+    }
+
     let usernameGuru = "", namaGuru = "";
     let daftarMapel = [], daftarKelas = [], daftarSoal = [], daftarNilaiMapel = [];
     let mapelAktifId = null, namaMapelAktif = "", mapelAktifStatus = false;
@@ -398,13 +476,14 @@
         const ya = await konfirmasi(`Hapus mapel "${nama}"?`, 'Hapus', 'Ya, Hapus');
         if (!ya) return;
         try {
-            // Hapus satu-satu, jangan sampai satu 404 batalkan yang lain
+            // Hapus semua terkait termasuk /soal dan /kunci (Langkah 2)
             const urls = [
                 `${FIREBASE_URL}/mapel/${id}.json`,
                 `${FIREBASE_URL}/hasil_ujian/${id}.json`,
                 `${FIREBASE_URL}/pengajuan_ulang/${id}.json`,
                 `${FIREBASE_URL}/draft_soal/${id}.json`,
-                `${FIREBASE_URL}/soal/${id}.json`
+                `${FIREBASE_URL}/soal/${id}.json`,
+                `${FIREBASE_URL}/kunci/${id}.json`
             ];
             await Promise.allSettled(urls.map(u => fetch(u, { method: 'DELETE' })));
             tampilkanStatus('Mapel dihapus.', 'sukses');
@@ -437,9 +516,10 @@
             draftServer = await r.json();
         } catch (e) {}
 
+        // Load soal + kunci yang sudah dirilis
         let soalServer = {};
         try {
-            soalServer = await ambilSoalMapel(mapelId) || {};
+            soalServer = await ambilSoalDenganKunci(mapelId) || {};
         } catch (e) {}
 
         const draftArr = [];
@@ -456,9 +536,7 @@
         renderDaftarSoal();
 
         gantiTabGuru('soal');
-        // Load data nilai
         muatNilaiMapel();
-        // Render checkbox kelas edit
         renderCheckboxKelasEdit(kelasList);
     }
 
@@ -525,7 +603,6 @@
         const { pg, essay } = hitungJumlahSoal();
         document.getElementById('ringkasan-soal').innerHTML = `<span>Total: ${daftarSoal.length}</span><span>PG: ${pg}</span><span>Essay: ${essay}</span>`;
 
-        // Kunci edit kalau mapel aktif
         const formAksi = document.getElementById('aksi-soal');
         if (mapelAktifStatus) {
             document.getElementById('peringatan-aktif').style.display = 'block';
@@ -672,7 +749,8 @@
         else tampilkanStatus(`${ok} soal diimport${skip ? `, ${skip} dilewati` : ''}.`, 'sukses');
     }
 
-    // ============ RILIS ============
+    // ============ RILIS SOAL ============
+    // Soal dipecah DUA: /soal/{id} tanpa kunci, /kunci/{id} hanya kunci
     async function rilisSoal() {
         if (!mapelAktifId) return;
         if (mapelAktifStatus) { alert('Mapel aktif. Minta admin menonaktifkan dulu.'); return; }
@@ -680,39 +758,53 @@
             const ya = await konfirmasi('Soal kosong. Rilis tetap?', 'Rilis', 'Ya');
             if (!ya) return;
         }
-        const obj = {};
+        const objSoal = {};
+        const objKunci = {};
         daftarSoal.forEach(s => {
-            if (s.tipe === 'essay') obj[s.id] = { tipe: 'essay', pertanyaan: s.pertanyaan, kunci_essay: s.kunci_essay || '' };
-            else obj[s.id] = { tipe: 'pg', pertanyaan: s.pertanyaan, pilihan: s.pilihan, jawaban_benar: s.jawaban_benar };
+            if (s.tipe === 'essay') {
+                objSoal[s.id] = { tipe: 'essay', pertanyaan: s.pertanyaan };
+                objKunci[s.id] = { tipe: 'essay', kunci_essay: s.kunci_essay || '' };
+            } else {
+                objSoal[s.id] = { tipe: 'pg', pertanyaan: s.pertanyaan, pilihan: s.pilihan };
+                objKunci[s.id] = { tipe: 'pg', jawaban_benar: s.jawaban_benar };
+            }
         });
         const { pg, essay } = hitungJumlahSoal();
 
-        let suksesSoal = false, suksesMeta = false;
+        let suksesSoal = false, suksesKunci = false, suksesMeta = false;
         try {
-            // Soal disimpan di lokasi baru: soal/{idMapel}
             const r1 = await fetch(`${FIREBASE_URL}/soal/${mapelAktifId}.json`, {
                 method: 'PUT', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify(obj)
+                body: JSON.stringify(objSoal)
             });
             if (r1.ok) {
                 suksesSoal = true;
-                // Bersihkan salinan lama (kalau ada) supaya daftar mapel tetap ringan
+                // Bersihkan salinan lama di /mapel/{id}/soal (kalau ada)
                 try { await fetch(`${FIREBASE_URL}/mapel/${mapelAktifId}/soal.json`, { method: 'DELETE' }); } catch (e) {}
             }
         } catch (e) {}
         try {
-            const r2 = await fetch(`${FIREBASE_URL}/mapel/${mapelAktifId}.json`, {
+            const r2 = await fetch(`${FIREBASE_URL}/kunci/${mapelAktifId}.json`, {
+                method: 'PUT', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(objKunci)
+            });
+            if (r2.ok) suksesKunci = true;
+        } catch (e) {}
+        try {
+            const r3 = await fetch(`${FIREBASE_URL}/mapel/${mapelAktifId}.json`, {
                 method: 'PATCH', headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({ jumlah_pg: pg, jumlah_essay: essay })
             });
-            if (r2.ok) suksesMeta = true;
+            if (r3.ok) suksesMeta = true;
         } catch (e) {}
         try {
             await fetch(`${FIREBASE_URL}/draft_soal/${mapelAktifId}.json`, { method: 'DELETE' });
         } catch (e) {}
 
-        if (suksesSoal) {
-            tampilkanStatus(`✅ ${pg} PG + ${essay} Essay berhasil dirilis.`, 'sukses');
+        if (suksesSoal && suksesKunci) {
+            tampilkanStatus(`✅ ${pg} PG + ${essay} Essay dirilis (soal & kunci terpisah).`, 'sukses');
+        } else if (suksesSoal) {
+            tampilkanStatus(`⚠️ Soal tersimpan, tapi kunci gagal. Coba lagi.`, 'gagal');
         } else {
             tampilkanStatus('❌ Gagal merilis. Coba lagi.', 'gagal');
         }
@@ -723,24 +815,69 @@
         const k = document.getElementById('daftar-nilai-siswa');
         k.innerHTML = '<p class="kosong">Memuat nilai...</p>';
         try {
-            const r = await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelAktifId}.json`);
+            const [r, kunci] = await Promise.all([
+                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelAktifId}.json`),
+                ambilKunci(mapelAktifId)
+            ]);
             const data = await r.json();
             if (!data || Object.keys(data).length === 0) {
                 k.innerHTML = '<p class="kosong">Belum ada siswa yang mengumpulkan.</p>';
                 daftarNilaiMapel = [];
                 return;
             }
-            daftarNilaiMapel = Object.keys(data).map(nis => ({ nis, ...data[nis] }));
+            daftarNilaiMapel = Object.keys(data).map(nis => {
+                const h = data[nis];
+                const hitung = hitungNilaiDariJawaban(kunci, h);
+                return { nis, ...h, ...hitung };
+            });
             daftarNilaiMapel.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
             renderNilaiMapel();
         } catch (e) { k.innerHTML = '<p class="kosong">Gagal memuat.</p>'; }
+    }
+
+    // Simpan nilai PG (dan akhir) untuk SEMUA siswa — pengganti "Hitung Nilai"
+    async function hitungUlangSemuaPG() {
+        if (!mapelAktifId) return;
+        const ya = await konfirmasi('Hitung ulang nilai PG untuk semua siswa dari kunci? Nilai lama akan ditimpa.', 'Hitung Ulang', 'Ya');
+        if (!ya) return;
+        tampilkanStatus('Menghitung...', 'info');
+        try {
+            const [r, kunci] = await Promise.all([
+                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelAktifId}.json`),
+                ambilKunci(mapelAktifId)
+            ]);
+            const data = await r.json();
+            if (!data) { tampilkanStatus('Belum ada jawaban siswa.', 'info'); return; }
+            let ok = 0, gagal = 0;
+            const tasks = [];
+            for (const nis in data) {
+                const h = data[nis];
+                const hitung = hitungNilaiDariJawaban(kunci, h);
+                const status = (h.total_essay || 0) > 0
+                    ? (h.nilai_essay != null ? 'dinilai_guru' : 'menunggu_penilaian')
+                    : 'selesai';
+                tasks.push(fetch(`${FIREBASE_URL}/hasil_ujian/${mapelAktifId}/${nis}.json`, {
+                    method: 'PATCH', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                        benar_pg: hitung.benar_pg,
+                        total_pg: hitung.total_pg,
+                        nilai_pg: hitung.nilai_pg,
+                        nilai_akhir: hitung.nilai_akhir,
+                        status
+                    })
+                }).then(res => res.ok ? ok++ : gagal++).catch(() => gagal++));
+            }
+            await Promise.all(tasks);
+            tampilkanStatus(`Selesai. ${ok} diperbarui${gagal ? `, ${gagal} gagal` : ''}.`, gagal ? 'info' : 'sukses');
+            muatNilaiMapel();
+        } catch (e) { tampilkanStatus('Gagal menghitung.', 'gagal'); }
     }
 
     function renderNilaiMapel() {
         const k = document.getElementById('daftar-nilai-siswa');
         if (daftarNilaiMapel.length === 0) { k.innerHTML = '<p class="kosong">Belum ada nilai.</p>'; return; }
         k.innerHTML = daftarNilaiMapel.map(h => {
-            const status = h.status === 'dinilai_guru' ? '<span class="badge badge-aktif">Sudah Dikirim ke Admin</span>'
+            const status = h.status === 'dinilai_guru' ? '<span class="badge badge-aktif">Sudah Dinilai</span>'
                 : (h.status === 'selesai' ? '<span class="badge badge-aktif">Selesai</span>'
                 : '<span class="badge badge-info">Menunggu Nilai Essay</span>');
             const perluNilai = h.total_essay > 0 && h.nilai_essay == null;
@@ -770,9 +907,10 @@
         k.innerHTML = '<p class="kosong">Memuat...</p>';
         document.getElementById('popup-nilai-essay').classList.add('tampil');
         try {
-            const [r1, r2] = await Promise.all([
-                ambilSoalMapel(mapelAktifId),
-                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelAktifId}/${nisn}.json`)
+            const [r1, r2, kunci] = await Promise.all([
+                ambilSoalSiswa(mapelAktifId),
+                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelAktifId}/${nisn}.json`),
+                ambilKunci(mapelAktifId)
             ]);
             const soal = r1 || {};
             const hasil = await r2.json() || {};
@@ -782,9 +920,10 @@
             for (const sid in soal) {
                 if (soal[sid].tipe !== 'essay') continue;
                 ada++;
+                const kunciTeks = (kunci[sid] && kunci[sid].kunci_essay) || '';
                 html += `<div class="item-nilai">
                     <b>${escapeHtml(soal[sid].pertanyaan)}</b>
-                    ${soal[sid].kunci_essay ? `<span style="color:#166534;">Kunci: ${escapeHtml(soal[sid].kunci_essay)}</span>` : ''}
+                    ${kunciTeks ? `<span style="color:#166534;">Kunci: ${escapeHtml(kunciTeks)}</span>` : ''}
                     <div style="background:#fff;border-radius:8px;padding:8px;font-size:13px;">${escapeHtml(je[sid] || '(kosong)')}</div>
                 </div>`;
             }
@@ -802,16 +941,27 @@
         const nilai = parseInt(document.getElementById('input-nilai-essay-guru').value, 10);
         if (isNaN(nilai) || nilai < 0 || nilai > 100) { alert('Nilai 0-100.'); return; }
         try {
-            const r = await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`);
+            const [r, kunci] = await Promise.all([
+                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`),
+                ambilKunci(mapelId)
+            ]);
             const h = await r.json() || {};
-            const tp = h.total_pg || 0, te = h.total_essay || 0, np = h.nilai_pg || 0;
-            const na = (tp + te) === 0 ? 0 : Math.round((np * tp + nilai * te) / (tp + te));
+            // Hitung ulang pakai kunci, bukan nilai tersimpan
+            const hitung = hitungNilaiDariJawaban(kunci, { ...h, nilai_essay: nilai });
             await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`, {
                 method: 'PATCH', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ nilai_essay: nilai, nilai_akhir: na, status: 'dinilai_guru', waktu_nilai_guru: new Date().toLocaleString('id-ID') })
+                body: JSON.stringify({
+                    nilai_essay: nilai,
+                    benar_pg: hitung.benar_pg,
+                    total_pg: hitung.total_pg,
+                    nilai_pg: hitung.nilai_pg,
+                    nilai_akhir: hitung.nilai_akhir,
+                    status: 'dinilai_guru',
+                    waktu_nilai_guru: new Date().toLocaleString('id-ID')
+                })
             });
             tutupPopup('popup-nilai-essay');
-            tampilkanStatus('✅ Nilai terkirim ke admin.', 'sukses');
+            tampilkanStatus('✅ Nilai tersimpan.', 'sukses');
             muatNilaiMapel();
         } catch (e) { alert('Gagal.'); }
     }
@@ -822,13 +972,20 @@
         k.innerHTML = '<p class="kosong">Memuat...</p>';
         document.getElementById('popup-hasil-kelas').classList.add('tampil');
         try {
-            const r = await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelAktifId}.json`);
+            const [r, kunci] = await Promise.all([
+                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelAktifId}.json`),
+                ambilKunci(mapelAktifId)
+            ]);
             const data = await r.json();
             if (!data || Object.keys(data).length === 0) {
                 k.innerHTML = '<p class="kosong">Belum ada nilai.</p>';
                 return;
             }
-            const list = Object.keys(data).map(nis => ({ nis, ...data[nis] }));
+            const list = Object.keys(data).map(nis => {
+                const h = data[nis];
+                const hitung = hitungNilaiDariJawaban(kunci, h);
+                return { nis, ...h, ...hitung };
+            });
             list.sort((a, b) => (a.kelas || '').localeCompare(b.kelas || '') || (a.nama || '').localeCompare(b.nama || ''));
             window._dataHasilGuru = list;
             const kelasUnik = [...new Set(list.map(h => h.kelas).filter(Boolean))].sort();
@@ -844,7 +1001,6 @@
         const list = (window._dataHasilGuru || []).filter(h => !kelas || (h.kelas||'') === kelas);
         const k = document.getElementById('isi-hasil-kelas');
         if (list.length === 0) { k.innerHTML = '<p class="kosong">Kosong.</p>'; return; }
-        // Header nama mapel untuk screenshot
         k.innerHTML = `
             <div style="background:#1b5e20;color:#fff;padding:10px;border-radius:10px;text-align:center;margin-bottom:10px;">
                 <b>${escapeHtml(namaMapelAktif)}</b><br>
