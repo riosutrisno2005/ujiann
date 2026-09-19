@@ -29,6 +29,7 @@
     .btn-sekunder { background: rgba(255,255,255,0.85); color: #1b5e20; border: 1px solid #1b5e20; }
     .btn-bahaya { background: #fff; color: #b91c1c; border: 1px solid rgba(185,28,28,0.4); }
     .btn-bahaya-solid { background: #b91c1c; color: #fff; border: 1px solid #b91c1c; }
+    .btn-edit-kecil { background: rgba(255,255,255,0.85); color: #1b5e20; border: 1px solid #1b5e20; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; flex: 0; }
     .kosong { text-align: center; font-size: 13px; color: #475569; padding: 20px 0; }
     .pesan-status { display: none; font-size: 13px; padding: 10px 12px; border-radius: 10px; text-align: center; }
     .pesan-status.tampil { display: block; }
@@ -218,6 +219,27 @@
     </div>
 </div>
 
+<!-- POPUP EDIT KELAS -->
+<div class="popup-overlay" id="popup-edit-kelas">
+    <div class="popup-box">
+        <h3>✏️ Edit Nama Kelas</h3>
+        <p style="font-size:12px;color:#475569;">Nama lama: <b id="edit-kelas-lama"></b></p>
+        <div class="field">
+            <label>Nama Kelas Baru</label>
+            <input type="text" id="input-nama-kelas-baru" placeholder="Contoh: X TKJ A">
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#14532d;font-weight:600;cursor:pointer;padding:10px;background:rgba(219,234,254,0.5);border-radius:10px;">
+            <input type="checkbox" id="cb-update-referensi" checked style="width:18px;height:18px;accent-color:#1b5e20;">
+            <span>Update semua data yang menyebut kelas lama (mapel, siswa, hasil ujian)</span>
+        </label>
+        <div class="petunjuk-csv" id="info-referensi-kelas" style="display:none;"></div>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupPopup('popup-edit-kelas')">Batal</button>
+            <button class="btn-utama" onclick="simpanEditKelas()">Simpan</button>
+        </div>
+    </div>
+</div>
+
 <!-- POPUP KONFIRMASI -->
 <div class="popup-overlay" id="popup-konfirmasi">
     <div class="popup-box" style="text-align:center;">
@@ -233,7 +255,6 @@
 <script>
     const FIREBASE_URL = "https://admin-ffded-default-rtdb.firebaseio.com";
 
-    // Path akun
     const PATH_AKUN = {
         admin: 'admin_akun',
         guru:  'guru_akun',
@@ -241,10 +262,10 @@
     };
 
     // ============================================================
-    // HELPER: BACA SOAL & KUNCI (Langkah 2)
-    //   /soal/{id}   → soal tanpa kunci (untuk tampil di popup essay)
-    //   /kunci/{id}  → kunci jawaban PG + kunci essay
-    //   Fallback     : /mapel/{id}/soal → ekstrak manual
+    // HELPER SOAL & KUNCI (Langkah 2)
+    //   /soal/{id}  → tanpa kunci
+    //   /kunci/{id} → kunci PG + essay
+    //   Fallback    → /mapel/{id}/soal (format lama)
     // ============================================================
     async function ambilSoalMapel(id) {
         const r = await fetch(`${FIREBASE_URL}/soal/${id}.json`);
@@ -254,7 +275,6 @@
             sumber = await r2.json();
         }
         if (!sumber) return null;
-        // Bersihkan kunci biar tidak ke-render
         const bersih = {};
         for (const sid in sumber) {
             const s = sumber[sid];
@@ -284,7 +304,6 @@
         return kunci;
     }
 
-    // Hitung nilai PG dari kunci + jawaban siswa
     function hitungNilaiDariJawaban(kunci, hasil) {
         const jp = hasil.jawaban_pg || {};
         let benar = 0, total = 0;
@@ -464,7 +483,6 @@
         const ya = await konfirmasi(`Hapus mapel "${nama}"?`, 'Hapus', 'Ya, Hapus');
         if (!ya) return;
         try {
-            // Semua path yang terkait mapel (tambahan /soal dan /kunci)
             await Promise.allSettled([
                 fetch(`${FIREBASE_URL}/mapel/${id}.json`, { method: 'DELETE' }),
                 fetch(`${FIREBASE_URL}/hasil_ujian/${id}.json`, { method: 'DELETE' }),
@@ -498,7 +516,6 @@
                 rekapSekarang = { mapelId, namaMapel, semuaData: [], kunciCache: kunci };
                 return;
             }
-            // Hitung nilai PG dari kunci, tidak percaya nilai yang tersimpan
             const list = Object.keys(data).map(nis => {
                 const h = data[nis];
                 const hitung = hitungNilaiDariJawaban(kunci, h);
@@ -526,7 +543,6 @@
             return;
         }
 
-        // KOTAK HAPUS SEMUA (ikut filter kelas) — dari versi asli
         let html = `
             <div class="kotak-hapus-semua">
                 <b style="font-size:13px;color:#7f1d1d;">🗑️ Hapus Hasil Ujian</b>
@@ -563,7 +579,6 @@
         k.innerHTML = html;
     }
 
-    // ============ HITUNG ULANG SEMUA PG ============
     async function hitungUlangSemuaPG() {
         if (!rekapSekarang.mapelId) return;
         const ya = await konfirmasi('Hitung ulang nilai PG untuk semua siswa di mapel ini dari kunci? Nilai lama akan ditimpa.', 'Hitung Ulang', 'Ya');
@@ -602,7 +617,6 @@
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
-    // ============ HAPUS HASIL UJIAN (dari versi asli) ============
     async function hapusHasilSatu(nisn, nama) {
         const ya = await konfirmasi(
             `Hapus hasil ujian "${nama}" (NISN: ${nisn})?\n\nSiswa ini akan bisa mengerjakan ulang ujian ini dari awal.`,
@@ -702,7 +716,6 @@
                 ambilKunci(mapelId)
             ]);
             const h = await r.json() || {};
-            // Hitung ulang pakai kunci, bukan nilai yang tersimpan
             const hitung = hitungNilaiDariJawaban(kunci, { ...h, nilai_essay: nilai });
             await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`, {
                 method: 'PATCH', headers: {'Content-Type':'application/json'},
@@ -737,7 +750,6 @@
         } catch (e) { k.innerHTML = '<p class="kosong">Gagal.</p>'; }
     }
 
-    // ============ REKAP SEMUA PENGAJUAN ============
     async function lihatSemuaPengajuan() {
         document.getElementById('judul-pengajuan').textContent = 'Semua Pengajuan Ujian Ulang';
         const k = document.getElementById('daftar-pengajuan');
@@ -899,15 +911,18 @@
             renderKelas();
         } catch (e) {}
     }
+
     function renderKelas() {
         const k = document.getElementById('daftar-kelas');
         if (daftarKelas.length === 0) { k.innerHTML = '<p class="kosong">Belum ada kelas.</p>'; return; }
         k.innerHTML = daftarKelas.map(c => `
             <div class="kelas-item">
                 <span>${escapeHtml(c.nama)}</span>
+                <button class="btn-edit-kecil" onclick="bukaPopupEditKelas('${c.id}', '${escapeHtml(c.nama)}')">✏️ Edit</button>
                 <button class="btn-bahaya" onclick="hapusKelas('${c.id}','${escapeHtml(c.nama)}')" style="flex:0;padding:8px 12px;">Hapus</button>
             </div>`).join('');
     }
+
     async function tambahKelas() {
         const nama = document.getElementById('input-nama-kelas').value.trim();
         if (!nama) { tampilkanStatus('Isi nama kelas.', 'gagal'); return; }
@@ -922,14 +937,160 @@
             muatKelas();
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
+
     async function hapusKelas(id, nama) {
-        const ya = await konfirmasi(`Hapus kelas "${nama}"?`, 'Hapus', 'Ya');
+        const ya = await konfirmasi(`Hapus kelas "${nama}"?\n\nCatatan: referensi kelas ini di mapel & siswa tidak akan dihapus otomatis.`, 'Hapus', 'Ya');
         if (!ya) return;
         try {
             await fetch(`${FIREBASE_URL}/daftar_kelas/${id}.json`, { method: 'DELETE' });
             tampilkanStatus('Dihapus.', 'sukses');
             muatKelas();
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+
+    // ============ EDIT KELAS + CASCADE UPDATE ============
+    function bukaPopupEditKelas(id, nama) {
+        document.getElementById('edit-kelas-lama').textContent = nama;
+        document.getElementById('input-nama-kelas-baru').value = nama;
+        document.getElementById('cb-update-referensi').checked = true;
+        window._kelasEdit = { id, namaLama: nama };
+        hitungReferensiKelas(nama);
+        document.getElementById('popup-edit-kelas').classList.add('tampil');
+    }
+
+    async function hitungReferensiKelas(namaLama) {
+        const info = document.getElementById('info-referensi-kelas');
+        info.style.display = 'block';
+        info.innerHTML = '⏳ Menghitung referensi...';
+        try {
+            const [rMapel, rSiswa, rHasil, rUlang] = await Promise.all([
+                fetch(`${FIREBASE_URL}/mapel.json`),
+                fetch(`${FIREBASE_URL}/peserta_ujian.json`),
+                fetch(`${FIREBASE_URL}/hasil_ujian.json`),
+                fetch(`${FIREBASE_URL}/pengajuan_ulang.json`)
+            ]);
+            const dMapel = await rMapel.json() || {};
+            const dSiswa = await rSiswa.json() || {};
+            const dHasil = await rHasil.json() || {};
+            const dUlang = await rUlang.json() || {};
+
+            let nMapel = 0, nSiswa = 0, nHasil = 0, nUlang = 0;
+            for (const id in dMapel) {
+                if (parseKelasList(dMapel[id].kelas).includes(namaLama)) nMapel++;
+            }
+            for (const nisn in dSiswa) {
+                if ((dSiswa[nisn].kelas || '') === namaLama) nSiswa++;
+            }
+            for (const mid in dHasil) {
+                for (const nisn in dHasil[mid]) {
+                    if ((dHasil[mid][nisn].kelas || '') === namaLama) nHasil++;
+                }
+            }
+            for (const mid in dUlang) {
+                for (const nisn in dUlang[mid]) {
+                    if ((dUlang[mid][nisn].kelas || '') === namaLama) nUlang++;
+                }
+            }
+            info.innerHTML = `<b>Ditemukan referensi:</b><br>
+                • ${nMapel} mapel memakai kelas ini<br>
+                • ${nSiswa} akun siswa di kelas ini<br>
+                • ${nHasil} hasil ujian<br>
+                • ${nUlang} pengajuan ujian ulang`;
+        } catch (e) {
+            info.innerHTML = '⚠️ Gagal menghitung referensi. Lanjutkan dengan hati-hati.';
+        }
+    }
+
+    async function simpanEditKelas() {
+        const { id, namaLama } = window._kelasEdit || {};
+        if (!id) return;
+        const namaBaru = document.getElementById('input-nama-kelas-baru').value.trim();
+        const updateRef = document.getElementById('cb-update-referensi').checked;
+
+        if (!namaBaru) { alert('Nama kelas baru wajib diisi.'); return; }
+        if (namaBaru === namaLama) { alert('Nama kelas tidak berubah.'); return; }
+        if (daftarKelas.some(c => c.id !== id && c.nama.toLowerCase() === namaBaru.toLowerCase())) {
+            alert('Sudah ada kelas dengan nama itu.');
+            return;
+        }
+
+        const ya = await konfirmasi(
+            `Ganti nama kelas "${namaLama}" menjadi "${namaBaru}"?${updateRef ? '\n\nSemua referensi ke kelas lama juga akan di-update.' : '\n\n⚠️ Referensi di mapel/siswa TIDAK akan di-update. Kelas lama bisa muncul di data.'}`,
+            'Edit Kelas', 'Ya, Ganti'
+        );
+        if (!ya) return;
+
+        try {
+            await fetch(`${FIREBASE_URL}/daftar_kelas/${id}.json`, {
+                method: 'PATCH', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ nama: namaBaru })
+            });
+
+            let jumlahUpdate = 0;
+            if (updateRef) {
+                tampilkanStatus('Memperbarui referensi...', 'info');
+                jumlahUpdate = await updateSemuaReferensiKelas(namaLama, namaBaru);
+            }
+
+            tutupPopup('popup-edit-kelas');
+            tampilkanStatus(`Kelas diganti. ${jumlahUpdate} referensi diperbarui.`, 'sukses');
+            muatKelas();
+            muatDaftarMapel();
+            if (subTabAkun) muatAkunAll();
+        } catch (e) { tampilkanStatus('Gagal mengganti nama kelas.', 'gagal'); }
+    }
+
+    async function updateSemuaReferensiKelas(namaLama, namaBaru) {
+        const updates = {};
+
+        const [rMapel, rSiswa, rHasil, rUlang] = await Promise.all([
+            fetch(`${FIREBASE_URL}/mapel.json`),
+            fetch(`${FIREBASE_URL}/peserta_ujian.json`),
+            fetch(`${FIREBASE_URL}/hasil_ujian.json`),
+            fetch(`${FIREBASE_URL}/pengajuan_ulang.json`)
+        ]);
+        const dMapel = await rMapel.json() || {};
+        const dSiswa = await rSiswa.json() || {};
+        const dHasil = await rHasil.json() || {};
+        const dUlang = await rUlang.json() || {};
+
+        for (const id in dMapel) {
+            const kelasList = parseKelasList(dMapel[id].kelas);
+            if (kelasList.includes(namaLama)) {
+                const baru = kelasList.map(k => k === namaLama ? namaBaru : k);
+                updates[`mapel/${id}/kelas`] = baru;
+            }
+        }
+        for (const nisn in dSiswa) {
+            if ((dSiswa[nisn].kelas || '') === namaLama) {
+                updates[`peserta_ujian/${nisn}/kelas`] = namaBaru;
+            }
+        }
+        for (const mid in dHasil) {
+            for (const nisn in dHasil[mid]) {
+                if ((dHasil[mid][nisn].kelas || '') === namaLama) {
+                    updates[`hasil_ujian/${mid}/${nisn}/kelas`] = namaBaru;
+                }
+            }
+        }
+        for (const mid in dUlang) {
+            for (const nisn in dUlang[mid]) {
+                if ((dUlang[mid][nisn].kelas || '') === namaLama) {
+                    updates[`pengajuan_ulang/${mid}/${nisn}/kelas`] = namaBaru;
+                }
+            }
+        }
+
+        const jumlah = Object.keys(updates).length;
+        if (jumlah === 0) return 0;
+
+        const r = await fetch(`${FIREBASE_URL}/.json`, {
+            method: 'PATCH',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(updates)
+        });
+        if (!r.ok) throw new Error('Cascade update gagal');
+        return jumlah;
     }
 
     // ============ TAB AKUN ============
