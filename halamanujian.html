@@ -46,8 +46,17 @@
     .tag-essay { background: #fef3c7; color: #92400e; }
     .opsi-pilihan { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: rgba(255,255,255,0.6); border-radius: 12px; border: 2px solid transparent; cursor: pointer; margin-bottom: 8px; }
     .opsi-pilihan.terpilih { border-color: #1b5e20; background: rgba(220,252,231,0.7); }
-    .opsi-pilihan input { width: 18px; height: 18px; accent-color: #1b5e20; }
     .opsi-pilihan span { font-size: 14px; color: #0f172a; }
+    /* Radio custom — ganti <input type="radio"> biar tidak ada state nyangkut di WebViewer */
+    .radio-custom {
+        width: 22px; height: 22px; border-radius: 50%; border: 2px solid #1b5e20;
+        background: #fff; flex-shrink: 0; position: relative; display: inline-block;
+    }
+    .radio-custom.terisi { background: #1b5e20; }
+    .radio-custom.terisi::after {
+        content: ''; width: 8px; height: 8px; border-radius: 50%; background: #fff;
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    }
     .jawaban-essay { width: 100%; min-height: 120px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.9); background: rgba(255,255,255,0.8); font-family: inherit; font-size: 14px; resize: vertical; outline: none; }
     .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; padding: 20px; z-index: 999; }
     .popup-overlay.tampil { display: flex; }
@@ -63,7 +72,14 @@
     .tab-nav button { padding: 10px; border: none; border-radius: 10px; font-weight: 600; font-size: 13px; background: transparent; color: #14532d; cursor: pointer; flex: 1; }
     .tab-nav button.aktif { background: #1b5e20; color: #fff; }
     .grid-soal { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 4px; }
-    .nomor-soal { aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; border: 2px solid transparent; background: #fee2e2; color: #991b1b; user-select: none; }
+    .nomor-soal {
+        aspect-ratio: 1 / 1;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 10px; font-weight: 700; font-size: 14px;
+        cursor: pointer; border: 2px solid transparent;
+        background: #fee2e2; color: #991b1b;
+        user-select: none;
+    }
     .nomor-soal.sudah { background: #dcfce7; color: #166534; }
     .nomor-soal.aktif { border-color: #0f172a; box-shadow: 0 0 0 2px #fff inset; }
     .legenda { display: flex; gap: 12px; justify-content: center; font-size: 11px; color: #475569; margin-top: 4px; flex-wrap: wrap; }
@@ -104,11 +120,13 @@
         <div class="card">
             <h3 style="color:#0f172a;" id="judul-mapel-mulai"></h3>
             <div class="peringatan">
-                📴 <b>Matikan koneksi internet / data kamu sekarang</b> (Wi-Fi dan data seluler). Ujian ini dikerjakan offline untuk mencegah kecurangan.
+                📴 <b>Matikan koneksi internet / data kamu sekarang</b> (Wi-Fi dan data seluler). Ujian ini dikerjakan secara offline.
                 <br><br>
-                Kalau internet menyala lagi saat ujian berlangsung, kamu akan <b>dikembalikan ke soal nomor 1</b>.
+                Kalau internet menyala lagi saat ujian berlangsung, semua jawaban kamu akan dihapus dan kembali ke soal nomor 1.
+                <br><br>
+                ⚠️ <b>Jangan keluar dari aplikasi ini selama ujian.</b> Kalau keluar lebih dari 5 detik, semua jawaban akan dihapus dan kamu mulai dari soal nomor 1.
             </div>
-            <button class="btn-utama" onclick="mulaiMengerjakan()">Internet Sudah Dimatikan, Mulai</button>
+            <button class="btn-utama" id="btn-mulai-ujian" onclick="mulaiMengerjakan()">Internet Sudah Dimatikan, Mulai</button>
         </div>
     </div>
 
@@ -134,7 +152,7 @@
             <div class="peringatan" style="background: rgba(220,252,231,0.85); border-color:#1b5e20; color:#14532d;">
                 📶 <b>Nyalakan kembali internet / data kamu</b>, lalu tekan tombol di bawah untuk mengirim jawaban.
             </div>
-            <button class="btn-utama" onclick="kirimJawaban()">Kirim Jawaban</button>
+            <button class="btn-utama" id="btn-kirim" onclick="kirimJawaban()">Kirim Jawaban</button>
         </div>
     </div>
 
@@ -213,27 +231,28 @@
 <div class="kunci-layar" id="kunci-curang">
     <h2 id="judul-kunci">⚠️ Terdeteksi Pelanggaran</h2>
     <p id="pesan-kunci"></p>
-    <button class="btn-utama" id="btn-kunci" style="width:auto;padding:14px 24px;background:#fff;color:#b91c1c;" onclick="aksiKunci()">Lanjutkan dari Soal 1</button>
+    <button class="btn-utama" id="btn-kunci" style="width:auto;padding:14px 24px;background:#fff;color:#b91c1c;" onclick="aksiKunci()">Mulai Ulang dari Soal 1</button>
 </div>
 
 <script>
     const FIREBASE_URL = "https://admin-ffded-default-rtdb.firebaseio.com";
+    const BATAS_DETIK_KELUAR = 5;
+    const INTERVAL_CEK_ONLINE_MS = 3000;
+    const INTERVAL_CEK_STATUS_MS = 15000;
 
     // ============================================================
-    // AMBIL SOAL UNTUK SISWA — TANPA KUNCI JAWABAN
-    // Format baru: /soal/{id}  (sudah tidak ada kunci)
-    // Fallback: /mapel/{id}/soal (format lama) → tetap di-strip di sini
+    // AMBIL SOAL UNTUK SISWA — TANPA KUNCI
+    // Format baru: /soal/{id} (sudah tidak ada kunci)
+    // Fallback   : /mapel/{id}/soal (format lama) → tetap di-strip
     // ============================================================
     async function ambilSoalSiswa(id) {
-        // Coba format baru
         const r = await fetch(`${FIREBASE_URL}/soal/${id}.json`);
-        const data = await r.json();
-        const sumber = data || await (async () => {
+        let sumber = await r.json();
+        if (!sumber) {
             const r2 = await fetch(`${FIREBASE_URL}/mapel/${id}/soal.json`);
-            return await r2.json();
-        })();
+            sumber = await r2.json();
+        }
         if (!sumber) return null;
-        // Strip: buang jawaban_benar & kunci_essay agar tidak pernah masuk ke memori aplikasi siswa
         const bersih = {};
         for (const sid in sumber) {
             const s = sumber[sid];
@@ -250,7 +269,9 @@
     let semuaMapel = [], daftarKelas = [];
     let mapelDipilih = null, daftarSoal = [], jawabanSiswa = {};
     let indexSoalSekarang = 0, sedangUjian = false;
-    let mapelUntukUlang = null, monitorInterval = null, aksiKunciSaatIni = 'curang';
+    let mapelUntukUlang = null, monitorInterval = null, statusInterval = null;
+    let aksiKunciSaatIni = 'online';
+    let timestampKeluar = null;
 
     let resolveKonfirmasi = null;
     function konfirmasi(pesan, judul, labelOk) {
@@ -272,6 +293,34 @@
         if (typeof k === 'string') return k.split(',').map(s => s.trim()).filter(s => s);
         if (typeof k === 'object') return Object.values(k).filter(x => typeof x === 'string');
         return [];
+    }
+
+    // ==== CEK ONLINE PAKAI FETCH (akurat di WebViewer App Inventor) ====
+    async function cekOnlineCepat(timeoutMs) {
+        timeoutMs = timeoutMs || 2500;
+        try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            const r = await fetch(`${FIREBASE_URL}/.json?shallow=true&t=${Date.now()}`, {
+                cache: 'no-store',
+                signal: controller.signal
+            });
+            clearTimeout(timer);
+            return r.ok;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // ==== RESET SEMUA JAWABAN — eksplisit hapus per key ====
+    function resetSemuaJawaban() {
+        Object.keys(jawabanSiswa).forEach(k => { delete jawabanSiswa[k]; });
+        jawabanSiswa = {};
+        indexSoalSekarang = 0;
+        const c = document.getElementById('daftar-opsi');
+        if (c) c.innerHTML = '';
+        document.getElementById('teks-soal').textContent = '';
+        document.getElementById('progres-info').textContent = '';
     }
 
     function sudahDijawab(s) {
@@ -332,6 +381,12 @@
         muatSemuaData();
     }
 
+    // ============================================================
+    // MUAT DATA RINGAN
+    // Asli: ambil seluruh /mapel.json + /hasil_ujian.json + /pengajuan_ulang.json
+    // Baru: /mapel.json saja (tanpa field "soal"), lalu cek milik SISWA INI
+    //       pakai ?shallow=true per mapel kelasnya.
+    // ============================================================
     async function muatSemuaData() {
         try {
             const r1 = await fetch(`${FIREBASE_URL}/mapel.json`);
@@ -347,6 +402,7 @@
                     });
                 }
             }
+            // Cek status siswa ini saja, hanya untuk mapel kelasnya
             await Promise.all(semuaMapel.filter(m => m.untuk_kelas_saya).map(async m => {
                 const [ra, rb] = await Promise.all([
                     fetch(`${FIREBASE_URL}/hasil_ujian/${m.id}/${nisnSiswa}.json?shallow=true`),
@@ -463,28 +519,65 @@
                         tipe: s.tipe === 'essay' ? 'essay' : 'pg',
                         pertanyaan: s.pertanyaan || '',
                         pilihan: s.pilihan || []
-                        // Catatan: TIDAK ada jawaban_benar / kunci_essay di sini
+                        // TIDAK ada jawaban_benar / kunci_essay
                     });
                 }
             }
             if (daftarSoal.length === 0) { alert('Soal belum tersedia.'); return; }
-            jawabanSiswa = {}; indexSoalSekarang = 0;
+            resetSemuaJawaban();
             tutupPopup('popup-token');
             document.getElementById('judul-mapel-mulai').textContent = mapelDipilih.nama_mapel;
             pindahLayar('layar-instruksi-offline');
         } catch (e) { alert('Gagal memuat soal.'); }
     }
 
-    function mulaiMengerjakan() {
+    // ============================================================
+    // MULAI UJIAN — CEK ONLINE PAKAI FETCH (fitur asli)
+    // ============================================================
+    async function mulaiMengerjakan() {
+        const btn = document.getElementById('btn-mulai-ujian');
+        const teksAsli = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Memeriksa koneksi...';
+
+        const online = await cekOnlineCepat();
+
+        btn.disabled = false;
+        btn.textContent = teksAsli;
+
+        if (online) {
+            alert('⚠️ Internet kamu masih nyala!\n\nMatikan Wi-Fi DAN data seluler dulu, lalu klik tombol "Internet Sudah Dimatikan, Mulai" lagi.');
+            return;
+        }
+
+        resetSemuaJawaban();
         sedangUjian = true;
+        timestampKeluar = null;
         pindahLayar('layar-ujian');
         tampilkanSoal();
+        mulaiMonitorPelanggaran();
         mulaiMonitorStatusMapel();
     }
 
-    function mulaiMonitorStatusMapel() {
+    // ============================================================
+    // MONITOR PELANGGARAN — cek tiap 3 detik pakai fetch (fitur asli)
+    // ============================================================
+    function mulaiMonitorPelanggaran() {
         if (monitorInterval) clearInterval(monitorInterval);
         monitorInterval = setInterval(async () => {
+            if (!sedangUjian) return;
+            if (document.hidden) return;
+            const online = await cekOnlineCepat(2500);
+            if (online && sedangUjian && !document.hidden) {
+                tanganiPelanggaran('online_saat_aktif');
+            }
+        }, INTERVAL_CEK_ONLINE_MS);
+    }
+
+    // ==== MONITOR STATUS MAPEL — tiap 15 detik (tambahan Claude) ====
+    function mulaiMonitorStatusMapel() {
+        if (statusInterval) clearInterval(statusInterval);
+        statusInterval = setInterval(async () => {
             if (!sedangUjian || !mapelDipilih) return;
             try {
                 const r = await fetch(`${FIREBASE_URL}/mapel/${mapelDipilih.id}/status_aktif.json`);
@@ -494,7 +587,8 @@
                     const ulang = await r2.json();
                     if (!ulang || ulang.status !== 'disetujui') {
                         sedangUjian = false;
-                        clearInterval(monitorInterval);
+                        if (monitorInterval) { clearInterval(monitorInterval); monitorInterval = null; }
+                        if (statusInterval) { clearInterval(statusInterval); statusInterval = null; }
                         aksiKunciSaatIni = 'nonaktif';
                         document.getElementById('judul-kunci').textContent = '🛑 Ujian Dibatalkan';
                         document.getElementById('pesan-kunci').textContent = 'Ujian ini telah dinonaktifkan oleh admin.';
@@ -503,39 +597,148 @@
                     }
                 }
             } catch (e) {}
-        }, 15000);
+        }, INTERVAL_CEK_STATUS_MS);
+    }
+
+    // ==== Event: keluar / masuk aplikasi (fitur asli) ====
+    document.addEventListener('visibilitychange', function () {
+        if (!sedangUjian) return;
+        if (document.hidden) {
+            timestampKeluar = Date.now();
+        } else {
+            if (timestampKeluar == null) return;
+            const durasiDetik = (Date.now() - timestampKeluar) / 1000;
+            timestampKeluar = null;
+
+            cekOnlineCepat(2500).then(online => {
+                if (!sedangUjian) return;
+                if (online) {
+                    tanganiPelanggaran('online_saat_kembali');
+                    return;
+                }
+                if (durasiDetik > BATAS_DETIK_KELUAR) {
+                    tanganiPelanggaran('keluar_lama', durasiDetik);
+                }
+            });
+        }
+    });
+
+    // ==== Tambahan: deteksi instan saat WiFi/data nyala (event 'online') ====
+    window.addEventListener('online', function () {
+        if (sedangUjian) {
+            tanganiPelanggaran('online_saat_aktif');
+        }
+    });
+
+    // ==== TANGANI PELANGGARAN — RESET TOTAL (fitur asli) ====
+    function tanganiPelanggaran(jenis, durasiDetik) {
+        if (!sedangUjian) return;
+        sedangUjian = false;
+        if (monitorInterval) { clearInterval(monitorInterval); monitorInterval = null; }
+        if (statusInterval) { clearInterval(statusInterval); statusInterval = null; }
+        timestampKeluar = null;
+
+        resetSemuaJawaban();
+
+        let pesan = '';
+        if (jenis === 'online_saat_aktif') {
+            pesan = 'Internet kamu terdeteksi nyala saat ujian berlangsung. ' +
+                    'Semua jawaban kamu dihapus dan kamu dikembalikan ke soal nomor 1. ' +
+                    'Matikan Wi-Fi dan data seluler dulu, lalu klik tombol di bawah.';
+        } else if (jenis === 'online_saat_kembali') {
+            pesan = 'Saat kamu kembali ke aplikasi, internet kamu terdeteksi nyala. ' +
+                    'Semua jawaban kamu dihapus dan kamu dikembalikan ke soal nomor 1. ' +
+                    'Matikan Wi-Fi dan data seluler dulu, lalu klik tombol di bawah.';
+        } else if (jenis === 'keluar_lama') {
+            const d = Math.round(durasiDetik);
+            pesan = `Kamu terdeteksi keluar dari aplikasi selama ${d} detik. ` +
+                    'Semua jawaban kamu dihapus dan kamu dikembalikan ke soal nomor 1. ' +
+                    'Jangan keluar aplikasi selama ujian. Klik tombol di bawah untuk mulai lagi.';
+        }
+
+        aksiKunciSaatIni = 'online';
+        document.getElementById('judul-kunci').textContent = '🛑 Terdeteksi Pelanggaran';
+        document.getElementById('pesan-kunci').textContent = pesan;
+        document.getElementById('btn-kunci').textContent = 'Mulai Ulang dari Soal 1';
+        document.getElementById('kunci-curang').classList.add('tampil');
+    }
+
+    async function aksiKunci() {
+        document.getElementById('kunci-curang').classList.remove('tampil');
+
+        if (aksiKunciSaatIni === 'nonaktif') {
+            pindahLayar('layar-daftar-mapel');
+            muatSemuaData();
+            return;
+        }
+
+        const btn = document.getElementById('btn-kunci');
+        const teksAsli = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Memeriksa koneksi...';
+
+        const online = await cekOnlineCepat();
+
+        btn.disabled = false;
+        btn.textContent = teksAsli;
+
+        if (online) {
+            alert('⚠️ Internet masih nyala. Matikan Wi-Fi dan data seluler dulu, lalu klik tombol lagi.');
+            document.getElementById('kunci-curang').classList.add('tampil');
+            return;
+        }
+        resetSemuaJawaban();
+        sedangUjian = true;
+        timestampKeluar = null;
+        pindahLayar('layar-ujian');
+        tampilkanSoal();
+        mulaiMonitorPelanggaran();
+        mulaiMonitorStatusMapel();
     }
 
     function tampilkanSoal() {
         const soal = daftarSoal[indexSoalSekarang];
+        if (!soal) return;
+
         document.getElementById('progres-info').textContent = `Soal ${indexSoalSekarang + 1} dari ${daftarSoal.length}`;
         document.getElementById('tag-tipe-soal').innerHTML = soal.tipe === 'essay'
             ? '<span class="tag-tipe tag-essay">✍️ ESSAY</span>'
             : '<span class="tag-tipe tag-pg">📝 PILIHAN GANDA</span>';
         document.getElementById('teks-soal').textContent = soal.pertanyaan;
+
         const c = document.getElementById('daftar-opsi');
+        c.innerHTML = '';
+
         if (soal.tipe === 'essay') {
             const jwb = jawabanSiswa[soal.id] || '';
-            c.innerHTML = `<textarea class="jawaban-essay" id="input-jawaban-essay" placeholder="Tulis jawaban...">${escapeHtml(jwb)}</textarea>`;
-            document.getElementById('input-jawaban-essay').addEventListener('input', (e) => {
+            c.innerHTML = `<textarea class="jawaban-essay" id="input-jawaban-essay" placeholder="Tulis jawaban..."></textarea>`;
+            const ta = document.getElementById('input-jawaban-essay');
+            ta.value = jwb;
+            ta.addEventListener('input', (e) => {
                 jawabanSiswa[soal.id] = e.target.value;
                 updateHitungTerjawab();
             });
         } else {
             const H = ['A','B','C','D','E'];
             c.innerHTML = soal.pilihan.map((t, i) => {
-                const h = H[i]; const s = jawabanSiswa[soal.id] === h;
-                return `<label class="opsi-pilihan ${s ? 'terpilih' : ''}" onclick="pilihJawaban('${soal.id}','${h}')">
-                    <input type="radio" name="opsi" ${s ? 'checked' : ''} readonly>
+                const h = H[i];
+                const s = jawabanSiswa[soal.id] === h;
+                return `<div class="opsi-pilihan ${s ? 'terpilih' : ''}" onclick="pilihJawaban('${soal.id}','${h}')">
+                    <span class="radio-custom ${s ? 'terisi' : ''}"></span>
                     <span><b>${h}.</b> ${escapeHtml(t)}</span>
-                </label>`;
+                </div>`;
             }).join('');
         }
+
         document.getElementById('btn-sebelumnya').disabled = indexSoalSekarang === 0;
         document.getElementById('btn-selanjutnya').textContent = indexSoalSekarang === daftarSoal.length - 1 ? 'Selesai Mengerjakan' : 'Selanjutnya →';
         updateHitungTerjawab();
     }
-    function pilihJawaban(sid, h) { jawabanSiswa[sid] = h; tampilkanSoal(); }
+
+    function pilihJawaban(sid, h) {
+        jawabanSiswa[sid] = h;
+        tampilkanSoal();
+    }
     function soalSebelumnya() { if (indexSoalSekarang > 0) { indexSoalSekarang--; tampilkanSoal(); } }
 
     function bukaSemuaSoal() {
@@ -590,53 +793,40 @@
         const ya = await konfirmasi('Semua soal sudah dijawab. Selesaikan ujian sekarang?', 'Konfirmasi', 'Ya, Selesai');
         if (!ya) return;
         sedangUjian = false;
-        if (monitorInterval) clearInterval(monitorInterval);
+        if (monitorInterval) { clearInterval(monitorInterval); monitorInterval = null; }
+        if (statusInterval) { clearInterval(statusInterval); statusInterval = null; }
         pindahLayar('layar-selesai-mengerjakan');
     }
 
-    window.addEventListener('online', function () {
-        if (sedangUjian) {
-            indexSoalSekarang = 0;
-            aksiKunciSaatIni = 'curang';
-            document.getElementById('judul-kunci').textContent = '⚠️ Terdeteksi Pelanggaran';
-            document.getElementById('pesan-kunci').textContent = 'Internet menyala saat ujian. Kamu dikembalikan ke soal nomor 1.';
-            document.getElementById('btn-kunci').textContent = 'Lanjutkan dari Soal 1';
-            document.getElementById('kunci-curang').classList.add('tampil');
-        }
-    });
-    document.addEventListener('visibilitychange', function () {
-        if (document.hidden && sedangUjian) {
-            paksaKeSoalPertama('Kamu keluar dari aplikasi saat ujian. Kembali ke soal nomor 1.');
-        }
-    });
-    function paksaKeSoalPertama(pesan) {
-        if (!sedangUjian) return;
-        indexSoalSekarang = 0;
-        aksiKunciSaatIni = 'curang';
-        document.getElementById('judul-kunci').textContent = '⚠️ Terdeteksi Pelanggaran';
-        document.getElementById('pesan-kunci').textContent = pesan;
-        document.getElementById('btn-kunci').textContent = 'Lanjutkan dari Soal 1';
-        document.getElementById('kunci-curang').classList.add('tampil');
-    }
-    function aksiKunci() {
-        document.getElementById('kunci-curang').classList.remove('tampil');
-        if (aksiKunciSaatIni === 'nonaktif') {
-            pindahLayar('layar-daftar-mapel');
-            muatSemuaData();
-        } else {
-            tampilkanSoal();
-        }
-    }
-
     // ============================================================
-    // KIRIM JAWABAN — hanya data mentah, TANPA hitung nilai
+    // KIRIM JAWABAN
+    // Asli: cek online dulu pakai fetch
+    // Baru: kirim jawaban MENTAH saja, tanpa hitung nilai
+    //       (benar_pg, nilai_pg, nilai_akhir dihitung guru/admin)
     // ============================================================
     async function kirimJawaban() {
+        const btn = document.getElementById('btn-kirim');
+        const teksAsli = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Memeriksa koneksi...';
+
+        const online = await cekOnlineCepat(3000);
+
+        btn.disabled = false;
+        btn.textContent = teksAsli;
+
+        if (!online) {
+            alert('⚠️ Internet belum nyala!\n\nNyalakan Wi-Fi atau data seluler dulu, lalu klik "Kirim Jawaban" lagi.');
+            return;
+        }
+
         const kosong = daftarIndexKosong();
         if (kosong.length > 0) {
             sedangUjian = true;
             pindahLayar('layar-ujian');
             tampilkanSoal();
+            mulaiMonitorPelanggaran();
+            mulaiMonitorStatusMapel();
             bukaPopupBelumLengkap();
             return;
         }
@@ -648,7 +838,6 @@
             else { tp++; jp[s.id] = jawabanSiswa[s.id] || ''; }
         });
 
-        // Status default: biar guru/admin yang hitung & ubah
         const status = te > 0 ? 'menunggu_penilaian' : 'menunggu_dinilai';
 
         const data = {
@@ -661,21 +850,21 @@
             total_essay: te,
             waktu_kirim: new Date().toLocaleString('id-ID'),
             status
-            // Catatan: benar_pg, nilai_pg, nilai_essay, nilai_akhir TIDAK dikirim dari sini.
-            // Nilai-nilai itu dihitung guru/admin saat membuka rekap.
+            // benar_pg, nilai_pg, nilai_essay, nilai_akhir TIDAK dikirim
+            // → dihitung oleh guru/admin dari kunci
         };
         try {
             await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelDipilih.id}/${nisnSiswa}.json`, {
                 method: 'PUT', headers: {'Content-Type':'application/json'},
                 body: JSON.stringify(data)
             });
-            // Hapus pengajuan ulang milik sendiri (kalau ada) — ini tetap diizinkan
+            // Hapus pengajuan ulang milik sendiri kalau ada
             try {
                 await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mapelDipilih.id}/${nisnSiswa}.json`, { method: 'DELETE' });
             } catch (e) {}
 
             document.getElementById('pesan-terkirim').textContent = te > 0
-                ? 'Jawaban sudah terkirim. Nilai PG akan dihitung oleh guru, essay juga akan diperiksa guru.'
+                ? 'Jawaban sudah terkirim. Nilai PG dan essay akan dihitung oleh guru.'
                 : 'Jawaban sudah terkirim. Nilai akan dihitung oleh guru.';
             pindahLayar('layar-terkirim');
         } catch (e) { alert('Gagal mengirim. Coba lagi.'); }
