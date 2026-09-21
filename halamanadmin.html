@@ -4,88 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Halaman Admin</title>
-<script>
-(function(){
-  var IZINKAN_BROWSER_UNTUK_UJI = false;
-  var KEY_DATA = 'username';
-  var MAX_TUNGGU_MS = 2500;
-
-  window.__AKSES_DITOLAK = false;
-  window.__AKSES_OK = false;
-  var queue = [];
-  var _fetch = window.fetch ? window.fetch.bind(window) : null;
-
-  window.fetch = function(){
-    if (window.__AKSES_DITOLAK) return Promise.reject(new Error('AKSES_DITOLAK'));
-    if (window.__AKSES_OK && _fetch) return _fetch.apply(null, arguments);
-    var args = arguments;
-    return new Promise(function(res, rej){ queue.push({ a: args, r: res, j: rej }); });
-  };
-  function flush(ok){
-    var q = queue; queue = [];
-    for (var i = 0; i < q.length; i++) {
-      var it = q[i];
-      if (ok && _fetch) { try { it.r(_fetch.apply(null, it.a)); } catch(e) { it.j(e); } }
-      else it.j(new Error('AKSES_DITOLAK'));
-    }
-  }
-  function getData(){
-    try { var p = new URLSearchParams(location.search).get(KEY_DATA); if (p) return p.trim(); } catch(e){}
-    try {
-      if (window.AppInventor && typeof window.AppInventor.getWebViewString === 'function'){
-        var w = window.AppInventor.getWebViewString();
-        if (w) {
-          try { var o = JSON.parse(w); if (o && o[KEY_DATA]) return String(o[KEY_DATA]).trim(); } catch(e){}
-          return String(w).trim();
-        }
-      }
-    } catch(e){}
-    return '';
-  }
-  function isAI(){
-    return !!(window.AppInventor && typeof window.AppInventor.getWebViewString === 'function');
-  }
-  function deny(){
-    if (window.__AKSES_DITOLAK) return;
-    window.__AKSES_DITOLAK = true;
-    flush(false);
-    function apply(){
-      if (document.getElementById('__deny')) return true;
-      if (!document.body) return false;
-      var s = document.createElement('style');
-      s.textContent = 'html,body{overflow:hidden !important;}';
-      document.head.appendChild(s);
-      var d = document.createElement('div');
-      d.id = '__deny';
-      d.style.cssText = 'position:fixed;inset:0;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;z-index:2147483647;font-family:-apple-system,sans-serif;padding:20px;text-align:center;';
-      d.innerHTML = '<div><h1 style="font-size:22px;margin:0 0 8px;">Akses ditolak</h1><p style="color:#999;font-size:14px;margin:0;">Halaman ini hanya bisa dibuka dari dalam aplikasi.</p></div>';
-      document.body.appendChild(d);
-      return true;
-    }
-    if (!apply()) {
-      document.addEventListener('DOMContentLoaded', apply);
-      var iv = setInterval(function(){ if (apply()) clearInterval(iv); }, 50);
-      setTimeout(function(){ clearInterval(iv); }, 5000);
-    }
-  }
-  function ok(){ window.__AKSES_OK = true; flush(true); }
-  function check(){
-    if (IZINKAN_BROWSER_UNTUK_UJI) {
-      if (!getData()) { deny(); return true; }
-      ok(); return true;
-    }
-    if (!isAI()) { deny(); return true; }
-    if (getData()) { ok(); return true; }
-    return false;
-  }
-  if (check()) return;
-  var t0 = Date.now();
-  var iv = setInterval(function(){
-    if (check()) { clearInterval(iv); return; }
-    if (Date.now() - t0 > MAX_TUNGGU_MS) { clearInterval(iv); if (!window.__AKSES_OK) deny(); }
-  }, 100);
-})();
-</script>
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #b9fbc0 0%, #70e000 100%); min-height: 100vh; color: #1C1C1E; padding: 16px; }
@@ -97,13 +15,15 @@
     .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
     .card-header b { font-size: 15px; color: #0f172a; }
     .card-header span { font-size: 12px; color: #475569; display: block; margin-top: 2px; }
-    .badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; display: inline-block; }
     .badge-aktif { background: #dcfce7; color: #166534; }
     .badge-nonaktif { background: #fee2e2; color: #991b1b; }
     .badge-info { background: #dbeafe; color: #1e40af; }
     .badge-siswa { background: #fef3c7; color: #92400e; }
     .badge-guru { background: #e0e7ff; color: #3730a3; }
     .badge-admin { background: #fee2e2; color: #991b1b; }
+    .badge-lock { background: #fef3c7; color: #92400e; font-weight: 700; }
+    .badge-nilai { background: #dcfce7; color: #166534; font-weight: 700; }
     .kotak-token { background: rgba(27,94,32,0.08); border: 1px dashed #1b5e20; border-radius: 10px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; }
     .kotak-token .kode { font-size: 20px; font-weight: 800; letter-spacing: 3px; color: #14532d; }
     .btn-utama, .btn-sekunder, .btn-bahaya { padding: 12px 14px; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
@@ -111,6 +31,7 @@
     .btn-sekunder { background: rgba(255,255,255,0.85); color: #1b5e20; border: 1px solid #1b5e20; }
     .btn-bahaya { background: #fff; color: #b91c1c; border: 1px solid rgba(185,28,28,0.4); }
     .btn-bahaya-solid { background: #b91c1c; color: #fff; border: 1px solid #b91c1c; }
+    .btn-unlock { background: #f59e0b; color: #fff; border: 1px solid #f59e0b; }
     .btn-edit-kecil { background: rgba(255,255,255,0.85); color: #1b5e20; border: 1px solid #1b5e20; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; flex: 0; }
     .kosong { text-align: center; font-size: 13px; color: #475569; padding: 20px 0; }
     .pesan-status { display: none; font-size: 13px; padding: 10px 12px; border-radius: 10px; text-align: center; }
@@ -143,10 +64,22 @@
     .sub-tab button.aktif { background:#1b5e20; color:#fff; }
     .petunjuk-csv { font-size: 12px; color: #475569; line-height: 1.5; background: rgba(219,234,254,0.5); border-radius: 10px; padding: 10px 12px; }
     .petunjuk-csv code { background: #fff; padding: 1px 5px; border-radius: 4px; font-size: 11px; }
-    .info-kecil { font-size:11px; color:#475569; }
     .peringatan-box { background: rgba(254,243,199,0.85); border: 1px solid #f59e0b; border-radius: 10px; padding: 10px; font-size: 12px; color: #7c4a03; line-height: 1.5; }
-    .kotak-hapus-semua { background: rgba(254,226,226,0.6); border: 1px solid rgba(185,28,28,0.4); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .kotak-hapus-semua {
+        background: rgba(254,226,226,0.6); border: 1px solid rgba(185,28,28,0.4);
+        border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;
+        margin-bottom: 10px;
+    }
     .kotak-hapus-semua span { font-size: 12px; color: #7f1d1d; }
+    .kotak-essay { background: rgba(255,255,255,0.9); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; border: 1px solid rgba(27,94,32,0.2); }
+    .kotak-essay .nomor-essay { font-size: 11px; font-weight: 700; color: #fff; background: #1b5e20; padding: 3px 10px; border-radius: 999px; display: inline-block; }
+    .kotak-essay .pertanyaan { font-size: 13px; color: #0f172a; line-height: 1.4; font-weight: 600; margin-top: 6px; }
+    .kotak-essay .kunci { font-size: 11px; color: #166534; font-style: italic; margin-top: 4px; }
+    .kotak-essay .jawaban { background: #f8fafc; border-radius: 8px; padding: 8px 10px; font-size: 13px; color: #0f172a; margin-top: 6px; line-height: 1.4; }
+    .kotak-essay .input-nilai { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .kotak-essay .input-nilai label { font-size: 12px; font-weight: 600; color: #14532d; flex-shrink: 0; }
+    .kotak-essay .input-nilai input { width: 80px; padding: 8px 10px; border-radius: 10px; border: 1px solid #1b5e20; text-align: center; font-weight: 700; font-size: 15px; background: #fff; }
+    .info-nilai-tersimpan { background: rgba(220,252,231,0.7); border-radius: 10px; padding: 8px 10px; font-size: 12px; color: #166534; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -163,6 +96,7 @@
         <button id="tab-btn-mapel" class="aktif" onclick="gantiTab('mapel')">📚 Mapel</button>
         <button id="tab-btn-kelas" onclick="gantiTab('kelas')">🏫 Kelas</button>
         <button id="tab-btn-akun" onclick="gantiTab('akun')">👥 Akun</button>
+        <button id="tab-btn-kolab" onclick="gantiTab('kolab')">🤝 Kolaborasi</button>
     </div>
 
     <div id="tab-mapel" style="display:flex;flex-direction:column;gap:16px;">
@@ -222,8 +156,19 @@
         </div>
         <div id="daftar-akun"></div>
     </div>
+
+    <!-- TAB KOLABORASI (BARU) -->
+    <div id="tab-kolab" style="display:none;flex-direction:column;gap:16px;">
+        <div class="card">
+            <b style="font-size:14px;color:#0f172a;">🤝 Monitoring Kolaborasi Koreksi</b>
+            <span style="font-size:12px;color:#475569;">Pantau aktivitas guru yang bekerja sama mengoreksi essay. Admin bisa memaksa lepas lock jika guru lupa keluar.</span>
+            <button class="btn-sekunder" onclick="muatMonitoringKolaborasi()">🔄 Refresh Data</button>
+        </div>
+        <div id="daftar-kolab"></div>
+    </div>
 </div>
 
+<!-- POPUP PENGERJAAN (REKAP NILAI) -->
 <div class="popup-overlay" id="popup-pengerjaan">
     <div class="popup-box">
         <h3 id="judul-pengerjaan">Rekap</h3>
@@ -237,6 +182,7 @@
     </div>
 </div>
 
+<!-- POPUP PENGAJUAN -->
 <div class="popup-overlay" id="popup-pengajuan">
     <div class="popup-box">
         <h3 id="judul-pengajuan">Pengajuan Ujian Ulang</h3>
@@ -245,17 +191,20 @@
     </div>
 </div>
 
+<!-- POPUP NILAI ESSAY (ADMIN - SEMUA SEKALIGUS) -->
 <div class="popup-overlay" id="popup-nilai-essay">
     <div class="popup-box">
         <h3 id="judul-nilai-essay">Nilai Essay</h3>
+        <div id="info-lock-essay-admin"></div>
         <div id="isi-nilai-essay"></div>
         <div class="baris-tombol">
-            <button class="btn-sekunder" onclick="tutupPopup('popup-nilai-essay')">Batal</button>
-            <button class="btn-utama" onclick="simpanNilaiEssay()">Simpan</button>
+            <button class="btn-sekunder" onclick="tutupPopupNilaiEssay()">Batal</button>
+            <button class="btn-utama" onclick="simpanNilaiEssay()">💾 Simpan Semua</button>
         </div>
     </div>
 </div>
 
+<!-- POPUP EXPORT CSV -->
 <div class="popup-overlay" id="popup-export">
     <div class="popup-box">
         <h3 id="judul-export">Export CSV</h3>
@@ -268,6 +217,7 @@
     </div>
 </div>
 
+<!-- POPUP IMPORT AKUN CSV -->
 <div class="popup-overlay" id="popup-import-akun">
     <div class="popup-box">
         <h3>Import Akun dari CSV</h3>
@@ -280,6 +230,7 @@
     </div>
 </div>
 
+<!-- POPUP TEMPLATE AKUN -->
 <div class="popup-overlay" id="popup-template-akun">
     <div class="popup-box">
         <h3>Template CSV Akun</h3>
@@ -291,6 +242,7 @@
     </div>
 </div>
 
+<!-- POPUP EDIT KELAS -->
 <div class="popup-overlay" id="popup-edit-kelas">
     <div class="popup-box">
         <h3>✏️ Edit Nama Kelas</h3>
@@ -311,6 +263,7 @@
     </div>
 </div>
 
+<!-- POPUP KONFIRMASI -->
 <div class="popup-overlay" id="popup-konfirmasi">
     <div class="popup-box" style="text-align:center;">
         <h3 id="judul-konfirmasi">Konfirmasi</h3>
@@ -391,8 +344,8 @@
     let usernameAdmin = "", namaAdmin = "";
     let daftarMapel = [], daftarKelas = [];
     let daftarAkun = { admin: [], guru: [], siswa: [] };
-    let konteksNilaiEssay = { mapelId: null, nisn: null };
-    let rekapSekarang = { mapelId: null, namaMapel: '', semuaData: [], kunciCache: null };
+    let konteksNilaiEssay = { mapelId: null, nisn: null, soalEssay: [], nilaiPerSoal: {}, hasilSiswa: {}, lock: null };
+    let rekapSekarang = { mapelId: null, namaMapel: '', semuaData: [], kunciCache: null, locks: {}, nilaiEssayMap: {} };
     let subTabAkun = 'guru';
     let sedangEditAkun = null;
 
@@ -434,21 +387,23 @@
         const p = new URLSearchParams(window.location.search);
         usernameAdmin = (p.get('username') || '').trim().toLowerCase();
         namaAdmin = p.get('nama') || '';
-        if (!usernameAdmin) { return; }
+        if (!usernameAdmin) { usernameAdmin = (prompt('Testing: username admin') || '').trim().toLowerCase(); namaAdmin = usernameAdmin; }
         document.getElementById('info-admin').textContent = 'Selamat datang, ' + (namaAdmin || usernameAdmin);
     }
-    function tampilkanStatus(p, j) { j = j || 'info'; const k = document.getElementById('pesan-status'); if (!k) return; k.textContent = p; k.className = 'pesan-status tampil ' + j; setTimeout(() => k.classList.remove('tampil'), 4000); }
+    function tampilkanStatus(p, j) { j = j || 'info'; const k = document.getElementById('pesan-status'); k.textContent = p; k.className = 'pesan-status tampil ' + j; setTimeout(() => k.classList.remove('tampil'), 4000); }
     function buatTokenAcak() { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let h = ''; for (let i = 0; i < 6; i++) h += c.charAt(Math.floor(Math.random() * c.length)); return h; }
 
     function gantiTab(tab) {
-        ['mapel','kelas','akun'].forEach(t => {
+        ['mapel','kelas','akun','kolab'].forEach(t => {
             document.getElementById('tab-btn-' + t).classList.toggle('aktif', t === tab);
             document.getElementById('tab-' + t).style.display = t === tab ? 'flex' : 'none';
         });
         if (tab === 'kelas') muatKelas();
         if (tab === 'akun') { muatAkunAll(); isiSelectKelasAkun(); }
+        if (tab === 'kolab') muatMonitoringKolaborasi();
     }
 
+    // ============ TAB MAPEL ============
     async function muatDaftarMapel() {
         try {
             const [r1, r2, r3] = await Promise.all([
@@ -466,7 +421,11 @@
                     const u = dataUlang ? dataUlang[id] : null;
                     let menunggu = 0;
                     if (u) for (const nis in u) if (u[nis].status === 'menunggu') menunggu++;
-                    daftarMapel.push({ id, ...data[id], jumlah_hasil: h ? Object.keys(h).length : 0, jumlah_pengajuan_menunggu: menunggu });
+                    daftarMapel.push({
+                        id, ...data[id],
+                        jumlah_hasil: h ? Object.keys(h).length : 0,
+                        jumlah_pengajuan_menunggu: menunggu
+                    });
                 }
             }
             renderDaftarMapel();
@@ -539,7 +498,7 @@
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
     async function hapusMapelAdmin(id, nama) {
-        const ya = await konfirmasi(`Hapus mapel "${nama}"?`, 'Hapus', 'Ya, Hapus');
+        const ya = await konfirmasi(`Hapus mapel "${nama}"? Semua data terkait (soal, kunci, hasil, kolaborasi, lock) juga akan dihapus.`, 'Hapus', 'Ya, Hapus');
         if (!ya) return;
         try {
             await Promise.allSettled([
@@ -548,13 +507,17 @@
                 fetch(`${FIREBASE_URL}/pengajuan_ulang/${id}.json`, { method: 'DELETE' }),
                 fetch(`${FIREBASE_URL}/draft_soal/${id}.json`, { method: 'DELETE' }),
                 fetch(`${FIREBASE_URL}/soal/${id}.json`, { method: 'DELETE' }),
-                fetch(`${FIREBASE_URL}/kunci/${id}.json`, { method: 'DELETE' })
+                fetch(`${FIREBASE_URL}/kunci/${id}.json`, { method: 'DELETE' }),
+                fetch(`${FIREBASE_URL}/kolaborasi/${id}.json`, { method: 'DELETE' }),
+                fetch(`${FIREBASE_URL}/koreksi_lock/${id}.json`, { method: 'DELETE' }),
+                fetch(`${FIREBASE_URL}/nilai_essay/${id}.json`, { method: 'DELETE' })
             ]);
             tampilkanStatus('Dihapus.', 'sukses');
             muatDaftarMapel();
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
+    // ============ REKAP NILAI (dengan info lock & kolaborasi) ============
     async function lihatRekapNilai(mapelId, namaMapel) {
         document.getElementById('judul-pengerjaan').textContent = 'Rekap: ' + namaMapel;
         const k = document.getElementById('daftar-pengerjaan');
@@ -563,15 +526,18 @@
         document.getElementById('btn-hitung-ulang').style.display = 'block';
         document.getElementById('popup-pengerjaan').classList.add('tampil');
         try {
-            const [r, kunci] = await Promise.all([
+            const [r, kunci, rLock, rNilaiEssay, rKolab] = await Promise.all([
                 fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}.json`),
-                ambilKunci(mapelId)
+                ambilKunci(mapelId),
+                fetch(`${FIREBASE_URL}/koreksi_lock/${mapelId}.json`).then(x => x.json()).catch(() => null),
+                fetch(`${FIREBASE_URL}/nilai_essay/${mapelId}.json`).then(x => x.json()).catch(() => null),
+                fetch(`${FIREBASE_URL}/kolaborasi/${mapelId}.json`).then(x => x.json()).catch(() => null)
             ]);
             const data = await r.json();
             if (!data || Object.keys(data).length === 0) {
                 k.innerHTML = '<p class="kosong">Belum ada.</p>';
                 document.getElementById('pilih-filter-kelas').innerHTML = '<option value="">Semua</option>';
-                rekapSekarang = { mapelId, namaMapel, semuaData: [], kunciCache: kunci };
+                rekapSekarang = { mapelId, namaMapel, semuaData: [], kunciCache: kunci, locks: {}, nilaiEssayMap: {}, kolab: null };
                 return;
             }
             const list = Object.keys(data).map(nis => {
@@ -580,7 +546,10 @@
                 return { nis, ...h, ...hitung };
             });
             list.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
-            rekapSekarang = { mapelId, namaMapel, semuaData: list, kunciCache: kunci };
+            rekapSekarang = {
+                mapelId, namaMapel, semuaData: list, kunciCache: kunci,
+                locks: rLock || {}, nilaiEssayMap: rNilaiEssay || {}, kolab: rKolab || null
+            };
             const kelasUnik = [...new Set(list.map(h => h.kelas).filter(Boolean))].sort();
             document.getElementById('pilih-filter-kelas').innerHTML =
                 '<option value="">Semua Kelas</option>' +
@@ -601,7 +570,22 @@
             return;
         }
 
-        let html = `
+        // Info kolaborasi
+        let infoKolab = '';
+        if (rekapSekarang.kolab && rekapSekarang.kolab.status === 'aktif') {
+            const helperDisetujui = [];
+            if (rekapSekarang.kolab.helper) {
+                for (const u in rekapSekarang.kolab.helper) {
+                    if (rekapSekarang.kolab.helper[u].status === 'disetujui') helperDisetujui.push(rekapSekarang.kolab.helper[u].nama || u);
+                }
+            }
+            infoKolab = `<div class="info-nilai-tersimpan" style="margin-bottom:8px;">
+                🤝 <b>Kolaborasi Aktif</b> — Pemilik: ${escapeHtml(rekapSekarang.kolab.nama_guru || rekapSekarang.kolab.pemilik)}
+                ${helperDisetujui.length ? `<br>Helper: <b>${helperDisetujui.map(escapeHtml).join(', ')}</b>` : ''}
+            </div>`;
+        }
+
+        let html = infoKolab + `
             <div class="kotak-hapus-semua">
                 <b style="font-size:13px;color:#7f1d1d;">🗑️ Hapus Hasil Ujian</b>
                 <span>
@@ -619,8 +603,25 @@
                 : '<span class="badge badge-info">Menunggu Essay</span>');
             const nisn = h.nisn || h.nis || '';
             const nama = h.nama || '-';
+
+            // Cek lock
+            const lock = rekapSekarang.locks ? rekapSekarang.locks[nisn] : null;
+            let badgeLock = '';
+            let tombolUnlock = '';
+            if (lock && lock.guru) {
+                badgeLock = `<span class="badge badge-lock">🔒 Dikoreksi: ${escapeHtml(lock.nama || lock.guru)}</span>`;
+                tombolUnlock = `<button class="btn-unlock" onclick="forceUnlock('${escapeHtml(nisn)}', '${escapeHtml(nama)}')">🔓 Force Unlock</button>`;
+            }
+
+            // Cek guru yang sudah menilai (dari nilai_essay)
+            const nilaiData = rekapSekarang.nilaiEssayMap ? rekapSekarang.nilaiEssayMap[nisn] : null;
+            let infoPenilai = '';
+            if (nilaiData && nilaiData.nama_guru) {
+                infoPenilai = `<span class="badge badge-nilai">✅ Dinilai: ${escapeHtml(nilaiData.nama_guru)}</span>`;
+            }
+
             return `<div class="item-siswa">
-                <div><b>${escapeHtml(nama)}</b> ${status}</div>
+                <div><b>${escapeHtml(nama)}</b> ${status} ${badgeLock} ${infoPenilai}</div>
                 <span>NISN: ${escapeHtml(nisn)} · ${escapeHtml(h.kelas||'-')}</span>
                 <div class="statistik">
                     <span>PG: ${h.benar_pg||0}/${h.total_pg||0} (${h.nilai_pg||0})</span>
@@ -628,13 +629,25 @@
                     <span>Akhir: ${h.nilai_akhir != null ? h.nilai_akhir : '-'}</span>
                 </div>
                 <div class="baris-tombol">
-                    ${h.total_essay > 0 ? `<button class="btn-sekunder" onclick="bukaNilaiEssay('${rekapSekarang.mapelId}','${escapeHtml(nisn)}')">✍️ Lihat Essay</button>` : ''}
+                    ${h.total_essay > 0 ? `<button class="btn-sekunder" onclick="bukaNilaiEssay('${rekapSekarang.mapelId}','${escapeHtml(nisn)}')">✍️ Lihat/Nilai Essay</button>` : ''}
+                    ${tombolUnlock}
                     <button class="btn-bahaya" onclick="hapusHasilSatu('${escapeHtml(nisn)}', '${escapeHtml(nama)}')">🗑️ Hapus</button>
                 </div>
             </div>`;
         }).join('');
 
         k.innerHTML = html;
+    }
+
+    async function forceUnlock(nisn, nama) {
+        const ya = await konfirmasi(`Paksa lepas lock untuk "${nama}"? Guru yang sedang mengoreksi akan terganggu.`, 'Force Unlock', 'Ya, Lepas');
+        if (!ya) return;
+        try {
+            await fetch(`${FIREBASE_URL}/koreksi_lock/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' });
+            tampilkanStatus('Lock dilepas.', 'sukses');
+            // Refresh rekap
+            lihatRekapNilai(rekapSekarang.mapelId, rekapSekarang.namaMapel);
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
     async function hitungUlangSemuaPG() {
@@ -682,8 +695,12 @@
         );
         if (!ya) return;
         try {
-            await fetch(`${FIREBASE_URL}/hasil_ujian/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' });
-            await fetch(`${FIREBASE_URL}/pengajuan_ulang/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' });
+            await Promise.allSettled([
+                fetch(`${FIREBASE_URL}/hasil_ujian/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' }),
+                fetch(`${FIREBASE_URL}/pengajuan_ulang/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' }),
+                fetch(`${FIREBASE_URL}/koreksi_lock/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' }),
+                fetch(`${FIREBASE_URL}/nilai_essay/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' })
+            ]);
             tampilkanStatus(`Hasil "${nama}" dihapus.`, 'sukses');
             lihatRekapNilai(rekapSekarang.mapelId, rekapSekarang.namaMapel);
             muatDaftarMapel();
@@ -700,7 +717,7 @@
             : `SEMUA hasil ujian (${list.length} siswa dari semua kelas)`;
 
         const ya = await konfirmasi(
-            `Hapus ${info}?\n\nTindakan ini tidak dapat dibatalkan. Semua siswa yang dihapus akan bisa mengerjakan ulang ujian ini.`,
+            `Hapus ${info}?\n\nTindakan ini tidak dapat dibatalkan.`,
             'Hapus Semua Hasil', 'Ya, Hapus Semua'
         );
         if (!ya) return;
@@ -714,83 +731,235 @@
             try {
                 const r1 = await fetch(`${FIREBASE_URL}/hasil_ujian/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' });
                 await fetch(`${FIREBASE_URL}/pengajuan_ulang/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' });
+                await fetch(`${FIREBASE_URL}/koreksi_lock/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' });
+                await fetch(`${FIREBASE_URL}/nilai_essay/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' });
                 if (r1.ok) sukses++; else gagal++;
             } catch (e) { gagal++; }
         }
 
-        if (gagal > 0) {
-            tampilkanStatus(`${sukses} dihapus, ${gagal} gagal.`, 'info');
-        } else {
-            tampilkanStatus(`${sukses} hasil ujian berhasil dihapus.`, 'sukses');
-        }
+        if (gagal > 0) tampilkanStatus(`${sukses} dihapus, ${gagal} gagal.`, 'info');
+        else tampilkanStatus(`${sukses} hasil ujian berhasil dihapus.`, 'sukses');
         lihatRekapNilai(rekapSekarang.mapelId, rekapSekarang.namaMapel);
         muatDaftarMapel();
     }
 
+    // ============ NILAI ESSAY ADMIN (SEMUA SEKALIGUS) ============
     async function bukaNilaiEssay(mapelId, nisn) {
-        konteksNilaiEssay = { mapelId, nisn };
+        konteksNilaiEssay = {
+            mapelId, nisn, soalEssay: [], nilaiPerSoal: {}, hasilSiswa: {}, lock: null, nilaiTersimpan: null
+        };
         document.getElementById('judul-nilai-essay').textContent = 'Essay — ' + nisn;
-        const k = document.getElementById('isi-nilai-essay');
-        k.innerHTML = '<p class="kosong">Memuat...</p>';
+        document.getElementById('info-lock-essay-admin').innerHTML = '';
+        document.getElementById('isi-nilai-essay').innerHTML = '<p class="kosong">Memuat...</p>';
         document.getElementById('popup-nilai-essay').classList.add('tampil');
+
         try {
-            const [r1, r2, kunci] = await Promise.all([
+            const [soal, hasil, kunci, rLock, rNilai] = await Promise.all([
                 ambilSoalMapel(mapelId),
-                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`),
-                ambilKunci(mapelId)
+                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`).then(x => x.json()),
+                ambilKunci(mapelId),
+                fetch(`${FIREBASE_URL}/koreksi_lock/${mapelId}/${nisn}.json`).then(x => x.json()).catch(() => null),
+                fetch(`${FIREBASE_URL}/nilai_essay/${mapelId}/${nisn}.json`).then(x => x.json()).catch(() => null)
             ]);
-            const soal = r1 || {};
-            const hasil = await r2.json() || {};
-            const je = hasil.jawaban_essay || {};
-            let html = '<div style="display:flex;flex-direction:column;gap:10px;">';
-            let ada = 0;
-            for (const sid in soal) {
-                if (soal[sid].tipe !== 'essay') continue;
-                ada++;
-                const kunciTeks = (kunci[sid] && kunci[sid].kunci_essay) || '';
-                html += `<div class="item-siswa">
-                    <b>${escapeHtml(soal[sid].pertanyaan)}</b>
-                    ${kunciTeks ? `<span style="color:#166534;">Kunci: ${escapeHtml(kunciTeks)}</span>` : ''}
-                    <div style="background:#fff;border-radius:8px;padding:8px;font-size:13px;">${escapeHtml(je[sid] || '(kosong)')}</div>
+            if (!soal) { document.getElementById('isi-nilai-essay').innerHTML = '<p class="kosong">Soal tidak ditemukan.</p>'; return; }
+
+            konteksNilaiEssay.hasilSiswa = hasil || {};
+            konteksNilaiEssay.lock = rLock;
+            konteksNilaiEssay.nilaiTersimpan = rNilai;
+
+            // Info lock & penilai
+            let infoHtml = '';
+            if (rLock && rLock.guru) {
+                infoHtml += `<div class="info-nilai-tersimpan" style="background:rgba(254,243,199,0.9);color:#7c4a03;border:1px solid #f59e0b;">
+                    🔒 <b>Sedang dikoreksi</b> oleh <b>${escapeHtml(rLock.nama || rLock.guru)}</b> (${escapeHtml(rLock.waktu || '-')}).
+                    <div style="margin-top:6px;">
+                        <button class="btn-unlock" onclick="forceUnlockEssay('${escapeHtml(nisn)}')" style="padding:6px 12px;font-size:12px;">🔓 Paksa Lepas Lock</button>
+                    </div>
                 </div>`;
             }
-            if (ada === 0) html += '<p class="kosong">Tidak ada essay.</p>';
-            html += `<div class="field">
-                <label>Nilai Essay (0-100)</label>
-                <input type="number" id="input-nilai-essay" min="0" max="100" value="${hasil.nilai_essay != null ? hasil.nilai_essay : ''}" style="text-align:center;font-weight:700;">
-            </div></div>`;
-            k.innerHTML = html;
-        } catch (e) { k.innerHTML = '<p class="kosong">Gagal.</p>'; }
+            if (rNilai && rNilai.nama_guru) {
+                infoHtml += `<div class="info-nilai-tersimpan">
+                    ✅ Sudah dinilai oleh <b>${escapeHtml(rNilai.nama_guru)}</b> pada ${escapeHtml(rNilai.waktu || '-')}
+                    ${rNilai.nilai_akhir != null ? ` · Nilai rata-rata: <b>${rNilai.nilai_akhir}</b>` : ''}
+                </div>`;
+            }
+            document.getElementById('info-lock-essay-admin').innerHTML = infoHtml;
+
+            // Kumpulkan soal essay
+            const je = (hasil && hasil.jawaban_essay) || {};
+            const listEssay = [];
+            let no = 0;
+            for (const sid in soal) {
+                if (soal[sid].tipe !== 'essay') continue;
+                no++;
+                listEssay.push({
+                    id: sid, nomor: no,
+                    pertanyaan: soal[sid].pertanyaan,
+                    kunci_essay: (kunci[sid] && kunci[sid].kunci_essay) || '',
+                    jawaban: je[sid] || '(kosong)'
+                });
+            }
+            konteksNilaiEssay.soalEssay = listEssay;
+
+            // Isi nilai per soal dari rNilai (jika ada)
+            if (rNilai && typeof rNilai === 'object') {
+                for (const sid in rNilai) {
+                    if (sid === 'nilai_akhir' || sid === 'guru' || sid === 'nama_guru' || sid === 'waktu') continue;
+                    if (typeof rNilai[sid] === 'number') konteksNilaiEssay.nilaiPerSoal[sid] = rNilai[sid];
+                }
+            }
+            // Fallback: jika nilai per soal tidak ada tapi nilai_essay ada, pakai nilai_essay sebagai nilai awal semua soal
+            if (Object.keys(konteksNilaiEssay.nilaiPerSoal).length === 0 && hasil && hasil.nilai_essay != null) {
+                for (const s of listEssay) konteksNilaiEssay.nilaiPerSoal[s.id] = hasil.nilai_essay;
+            }
+
+            if (listEssay.length === 0) {
+                document.getElementById('isi-nilai-essay').innerHTML = '<p class="kosong">Tidak ada soal essay di mapel ini.</p>';
+                return;
+            }
+
+            // Render semua essay sekaligus
+            const html = listEssay.map(s => {
+                const nilaiVal = (konteksNilaiEssay.nilaiPerSoal[s.id] != null) ? konteksNilaiEssay.nilaiPerSoal[s.id] : '';
+                return `<div class="kotak-essay">
+                    <span class="nomor-essay">ESSAY ${s.nomor}</span>
+                    <div class="pertanyaan">${escapeHtml(s.pertanyaan)}</div>
+                    ${s.kunci_essay ? `<div class="kunci">🔑 Kunci: ${escapeHtml(s.kunci_essay)}</div>` : ''}
+                    <div class="jawaban"><b>Jawaban Siswa:</b><br>${escapeHtml(s.jawaban)}</div>
+                    <div class="input-nilai">
+                        <label>Nilai (0-100):</label>
+                        <input type="number" class="input-nilai-essay" data-sid="${s.id}" min="0" max="100" value="${nilaiVal}" placeholder="0-100" oninput="updateNilaiSoal('${s.id}', this.value)">
+                    </div>
+                </div>`;
+            }).join('') + `
+                <div class="info-nilai-tersimpan" id="info-rata-rata">
+                    Rata-rata: <b id="rata-rata-teks">-</b>
+                </div>`;
+
+            document.getElementById('isi-nilai-essay').innerHTML = html;
+            updateRataRata();
+        } catch (e) {
+            document.getElementById('isi-nilai-essay').innerHTML = '<p class="kosong">Gagal memuat.</p>';
+        }
+    }
+
+    function updateNilaiSoal(sid, value) {
+        const v = parseInt(value, 10);
+        if (!isNaN(v) && v >= 0 && v <= 100) {
+            konteksNilaiEssay.nilaiPerSoal[sid] = v;
+        } else if (value === '') {
+            delete konteksNilaiEssay.nilaiPerSoal[sid];
+        }
+        updateRataRata();
+    }
+
+    function updateRataRata() {
+        const list = konteksNilaiEssay.soalEssay || [];
+        const nilaiPerSoal = konteksNilaiEssay.nilaiPerSoal || {};
+        let total = 0, jml = 0;
+        for (const s of list) {
+            const v = nilaiPerSoal[s.id];
+            if (typeof v === 'number') { total += v; jml++; }
+        }
+        const rata = jml > 0 ? Math.round(total / jml) : null;
+        const el = document.getElementById('rata-rata-teks');
+        if (el) {
+            el.textContent = rata != null ? `${rata} (dari ${jml}/${list.length} soal)` : '-';
+            el.style.color = (jml === list.length && list.length > 0) ? '#166534' : '#92400e';
+        }
+    }
+
+    async function forceUnlockEssay(nisn) {
+        const ya = await konfirmasi(`Paksa lepas lock untuk siswa ini? Guru yang sedang mengoreksi akan terganggu.`, 'Force Unlock', 'Ya, Lepas');
+        if (!ya) return;
+        try {
+            await fetch(`${FIREBASE_URL}/koreksi_lock/${konteksNilaiEssay.mapelId}/${nisn}.json`, { method: 'DELETE' });
+            document.getElementById('info-lock-essay-admin').innerHTML =
+                `<div class="info-nilai-tersimpan">🔓 Lock berhasil dilepas. Sekarang Anda bisa menyimpan nilai.</div>`;
+            tampilkanStatus('Lock dilepas.', 'sukses');
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+
+    async function tutupPopupNilaiEssay() {
+        tutupPopup('popup-nilai-essay');
+        konteksNilaiEssay = { mapelId: null, nisn: null, soalEssay: [], nilaiPerSoal: {}, hasilSiswa: {}, lock: null, nilaiTersimpan: null };
     }
 
     async function simpanNilaiEssay() {
-        const { mapelId, nisn } = konteksNilaiEssay;
-        const nilai = parseInt(document.getElementById('input-nilai-essay').value, 10);
-        if (isNaN(nilai) || nilai < 0 || nilai > 100) { alert('0-100.'); return; }
+        const { mapelId, nisn, soalEssay, nilaiPerSoal } = konteksNilaiEssay;
+        if (!mapelId || !nisn) return;
+
+        if (soalEssay.length === 0) { alert('Tidak ada essay.'); return; }
+        const belum = soalEssay.filter(s => nilaiPerSoal[s.id] == null);
+        if (belum.length > 0) {
+            const ya = await konfirmasi(
+                `Masih ada ${belum.length} soal yang belum dinilai. Tetap simpan?`,
+                'Simpan Sebagian', 'Ya, Simpan'
+            );
+            if (!ya) return;
+        }
+
+        // Hitung rata-rata
+        let total = 0, jml = 0;
+        for (const s of soalEssay) {
+            const v = nilaiPerSoal[s.id];
+            if (typeof v === 'number') { total += v; jml++; }
+        }
+        const nilaiRata = jml > 0 ? Math.round(total / jml) : null;
+
+        // Data untuk Firebase
+        const dataNilai = {
+            guru: usernameAdmin,
+            nama_guru: (namaAdmin || usernameAdmin) + ' (Admin)',
+            waktu: new Date().toLocaleString('id-ID'),
+            nilai_akhir: nilaiRata
+        };
+        for (const s of soalEssay) {
+            if (typeof nilaiPerSoal[s.id] === 'number') dataNilai[s.id] = nilaiPerSoal[s.id];
+        }
+
         try {
-            const [r, kunci] = await Promise.all([
+            // Simpan nilai per soal
+            await fetch(`${FIREBASE_URL}/nilai_essay/${mapelId}/${nisn}.json`, {
+                method: 'PUT', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(dataNilai)
+            });
+
+            // Update hasil_ujian
+            const [rHasil, kunci] = await Promise.all([
                 fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`),
                 ambilKunci(mapelId)
             ]);
-            const h = await r.json() || {};
-            const hitung = hitungNilaiDariJawaban(kunci, { ...h, nilai_essay: nilai });
+            const h = await rHasil.json() || {};
+            const hitung = hitungNilaiDariJawaban(kunci, { ...h, nilai_essay: nilaiRata });
             await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`, {
                 method: 'PATCH', headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({
-                    nilai_essay: nilai,
+                    nilai_essay: nilaiRata,
                     benar_pg: hitung.benar_pg,
                     total_pg: hitung.total_pg,
                     nilai_pg: hitung.nilai_pg,
                     nilai_akhir: hitung.nilai_akhir,
-                    status: 'selesai'
+                    status: 'dinilai_guru',
+                    waktu_nilai_guru: new Date().toLocaleString('id-ID')
                 })
             });
-            tutupPopup('popup-nilai-essay');
-            tampilkanStatus('Tersimpan.', 'sukses');
+
+            // Lepas lock jika admin yang pegang
+            try {
+                const rLock = await fetch(`${FIREBASE_URL}/koreksi_lock/${mapelId}/${nisn}.json`).then(x => x.json());
+                if (rLock && rLock.guru === usernameAdmin) {
+                    await fetch(`${FIREBASE_URL}/koreksi_lock/${mapelId}/${nisn}.json`, { method: 'DELETE' });
+                }
+            } catch (e) {}
+
+            tutupPopupNilaiEssay();
+            tampilkanStatus(`✅ Nilai essay tersimpan (rata-rata: ${nilaiRata}).`, 'sukses');
             lihatRekapNilai(mapelId, rekapSekarang.namaMapel || 'Mapel');
-        } catch (e) { alert('Gagal.'); }
+        } catch (e) { alert('Gagal menyimpan.'); }
     }
 
+    // ============ PENGAJUAN ============
     async function lihatPengajuan(mapelId, namaMapel) {
         document.getElementById('judul-pengajuan').textContent = 'Pengajuan: ' + namaMapel;
         const k = document.getElementById('daftar-pengajuan');
@@ -873,6 +1042,8 @@
             });
             if (keputusan === 'disetujui') {
                 await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`, { method: 'DELETE' });
+                await fetch(`${FIREBASE_URL}/nilai_essay/${mapelId}/${nisn}.json`, { method: 'DELETE' });
+                await fetch(`${FIREBASE_URL}/koreksi_lock/${mapelId}/${nisn}.json`, { method: 'DELETE' });
             }
             tampilkanStatus('Tersimpan.', 'sukses');
             if (dariGlobal) lihatSemuaPengajuan();
@@ -897,6 +1068,8 @@
                         body: JSON.stringify({ status: 'disetujui', waktu_keputusan: new Date().toLocaleString('id-ID') })
                     });
                     await fetch(`${FIREBASE_URL}/hasil_ujian/${mid}/${nis}.json`, { method: 'DELETE' });
+                    await fetch(`${FIREBASE_URL}/nilai_essay/${mid}/${nis}.json`, { method: 'DELETE' });
+                    await fetch(`${FIREBASE_URL}/koreksi_lock/${mid}/${nis}.json`, { method: 'DELETE' });
                     total++;
                 }
             }
@@ -906,6 +1079,119 @@
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
+    // ============ MONITORING KOLABORASI ============
+    async function muatMonitoringKolaborasi() {
+        const k = document.getElementById('daftar-kolab');
+        k.innerHTML = '<p class="kosong">Memuat...</p>';
+        try {
+            const [rKolab, rLock, rNilai, rMapel] = await Promise.all([
+                fetch(`${FIREBASE_URL}/kolaborasi.json`).then(x => x.json()),
+                fetch(`${FIREBASE_URL}/koreksi_lock.json`).then(x => x.json()),
+                fetch(`${FIREBASE_URL}/nilai_essay.json`).then(x => x.json()),
+                fetch(`${FIREBASE_URL}/mapel.json`).then(x => x.json())
+            ]);
+
+            const dataKolab = rKolab || {};
+            const dataLock = rLock || {};
+            const dataNilai = rNilai || {};
+            const dataMapel = rMapel || {};
+
+            // Hitung total lock aktif
+            let totalLock = 0;
+            for (const mid in dataLock) {
+                for (const nis in dataLock[mid]) totalLock++;
+            }
+
+            let html = '';
+            // Summary
+            const jmlKolabAktif = Object.keys(dataKolab).filter(mid => dataKolab[mid].status === 'aktif').length;
+            html += `<div class="card">
+                <b style="font-size:14px;color:#0f172a;">📊 Ringkasan</b>
+                <div class="statistik">
+                    <span>${jmlKolabAktif} kolaborasi aktif</span>
+                    <span>${totalLock} lock aktif</span>
+                </div>
+            </div>`;
+
+            if (jmlKolabAktif === 0 && totalLock === 0) {
+                html += '<p class="kosong">Belum ada aktivitas kolaborasi.</p>';
+                k.innerHTML = html;
+                return;
+            }
+
+            // Daftar kolaborasi
+            for (const mid in dataKolab) {
+                const c = dataKolab[mid];
+                const mapel = dataMapel[mid];
+                const namaMapel = mapel ? mapel.nama_mapel : c.nama_mapel || '(mapel terhapus)';
+                const statusBadge = c.status === 'selesai'
+                    ? '<span class="badge badge-nonaktif">Selesai</span>'
+                    : '<span class="badge badge-aktif">Aktif</span>';
+
+                // Helper list
+                let helperList = '';
+                if (c.helper) {
+                    for (const u in c.helper) {
+                        const h = c.helper[u];
+                        const warna = h.status === 'disetujui' ? 'badge-aktif' : (h.status === 'ditolak' ? 'badge-nonaktif' : 'badge-info');
+                        helperList += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(241,245,249,0.9);border-radius:8px;margin-top:4px;">
+                            <span style="font-size:12px;">${escapeHtml(h.nama || u)}</span>
+                            <span class="badge ${warna}">${escapeHtml(h.status)}</span>
+                        </div>`;
+                    }
+                }
+
+                // Lock aktif untuk mapel ini
+                let lockList = '';
+                if (dataLock[mid]) {
+                    const locksArr = [];
+                    for (const nis in dataLock[mid]) locksArr.push({ nis, ...dataLock[mid][nis] });
+                    if (locksArr.length > 0) {
+                        lockList = `<div style="margin-top:8px;padding:8px;background:rgba(254,243,199,0.6);border-radius:10px;">
+                            <b style="font-size:12px;color:#7c4a03;">🔒 Lock Aktif (${locksArr.length}):</b>
+                            ${locksArr.map(l => `<div style="font-size:11px;color:#7c4a03;margin-top:4px;">
+                                NISN ${escapeHtml(l.nis)} — ${escapeHtml(l.nama || l.guru)} (${escapeHtml(l.waktu || '-')})
+                                <button class="btn-unlock" onclick="adminForceUnlock('${mid}','${escapeHtml(l.nis)}')" style="padding:3px 8px;font-size:11px;margin-left:6px;">🔓</button>
+                            </div>`).join('')}
+                        </div>`;
+                    }
+                }
+
+                // Jumlah nilai tersimpan
+                let jmlNilai = 0;
+                if (dataNilai[mid]) jmlNilai = Object.keys(dataNilai[mid]).length;
+
+                html += `<div class="card">
+                    <div class="card-header">
+                        <div>
+                            <b>${escapeHtml(namaMapel)}</b> ${statusBadge}
+                            <span>Pemilik: <b>${escapeHtml(c.nama_guru || c.pemilik)}</b></span>
+                            <span>Diminta: ${escapeHtml(c.waktu_minta || '-')}</span>
+                            <span>${jmlNilai} essay sudah dinilai</span>
+                        </div>
+                    </div>
+                    ${helperList ? `<div style="margin-top:6px;"><b style="font-size:12px;color:#14532d;">Helper:</b>${helperList}</div>` : '<div style="font-size:12px;color:#94a3b8;margin-top:4px;">Belum ada guru yang mengajukan.</div>'}
+                    ${lockList}
+                </div>`;
+            }
+
+            k.innerHTML = html;
+        } catch (e) {
+            k.innerHTML = '<p class="kosong">Gagal memuat data kolaborasi.</p>';
+        }
+    }
+
+    async function adminForceUnlock(mapelId, nisn) {
+        const ya = await konfirmasi(`Paksa lepas lock NISN ${nisn}?`, 'Force Unlock', 'Ya');
+        if (!ya) return;
+        try {
+            await fetch(`${FIREBASE_URL}/koreksi_lock/${mapelId}/${nisn}.json`, { method: 'DELETE' });
+            tampilkanStatus('Lock dilepas.', 'sukses');
+            muatMonitoringKolaborasi();
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+
+    // ============ EXPORT CSV ============
     async function unduhHasil(mapelId, namaMapel) {
         try {
             const [r, kunci] = await Promise.all([
@@ -955,6 +1241,7 @@
         document.getElementById('popup-export').classList.add('tampil');
     }
 
+    // ============ TAB KELAS ============
     async function muatKelas() {
         try {
             const r = await fetch(`${FIREBASE_URL}/daftar_kelas.json`);
@@ -1002,6 +1289,7 @@
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
+    // ============ EDIT KELAS + CASCADE UPDATE ============
     function bukaPopupEditKelas(id, nama) {
         document.getElementById('edit-kelas-lama').textContent = nama;
         document.getElementById('input-nama-kelas-baru').value = nama;
@@ -1028,10 +1316,22 @@
             const dUlang = await rUlang.json() || {};
 
             let nMapel = 0, nSiswa = 0, nHasil = 0, nUlang = 0;
-            for (const id in dMapel) if (parseKelasList(dMapel[id].kelas).includes(namaLama)) nMapel++;
-            for (const nisn in dSiswa) if ((dSiswa[nisn].kelas || '') === namaLama) nSiswa++;
-            for (const mid in dHasil) for (const nisn in dHasil[mid]) if ((dHasil[mid][nisn].kelas || '') === namaLama) nHasil++;
-            for (const mid in dUlang) for (const nisn in dUlang[mid]) if ((dUlang[mid][nisn].kelas || '') === namaLama) nUlang++;
+            for (const id in dMapel) {
+                if (parseKelasList(dMapel[id].kelas).includes(namaLama)) nMapel++;
+            }
+            for (const nisn in dSiswa) {
+                if ((dSiswa[nisn].kelas || '') === namaLama) nSiswa++;
+            }
+            for (const mid in dHasil) {
+                for (const nisn in dHasil[mid]) {
+                    if ((dHasil[mid][nisn].kelas || '') === namaLama) nHasil++;
+                }
+            }
+            for (const mid in dUlang) {
+                for (const nisn in dUlang[mid]) {
+                    if ((dUlang[mid][nisn].kelas || '') === namaLama) nUlang++;
+                }
+            }
             info.innerHTML = `<b>Ditemukan referensi:</b><br>
                 • ${nMapel} mapel memakai kelas ini<br>
                 • ${nSiswa} akun siswa di kelas ini<br>
@@ -1056,7 +1356,7 @@
         }
 
         const ya = await konfirmasi(
-            `Ganti nama kelas "${namaLama}" menjadi "${namaBaru}"?${updateRef ? '\n\nSemua referensi ke kelas lama juga akan di-update.' : '\n\n⚠️ Referensi di mapel/siswa TIDAK akan di-update. Kelas lama bisa muncul di data.'}`,
+            `Ganti nama kelas "${namaLama}" menjadi "${namaBaru}"?${updateRef ? '\n\nSemua referensi ke kelas lama juga akan di-update.' : '\n\n⚠️ Referensi di mapel/siswa TIDAK akan di-update.'}`,
             'Edit Kelas', 'Ya, Ganti'
         );
         if (!ya) return;
@@ -1102,9 +1402,25 @@
                 updates[`mapel/${id}/kelas`] = baru;
             }
         }
-        for (const nisn in dSiswa) if ((dSiswa[nisn].kelas || '') === namaLama) updates[`peserta_ujian/${nisn}/kelas`] = namaBaru;
-        for (const mid in dHasil) for (const nisn in dHasil[mid]) if ((dHasil[mid][nisn].kelas || '') === namaLama) updates[`hasil_ujian/${mid}/${nisn}/kelas`] = namaBaru;
-        for (const mid in dUlang) for (const nisn in dUlang[mid]) if ((dUlang[mid][nisn].kelas || '') === namaLama) updates[`pengajuan_ulang/${mid}/${nisn}/kelas`] = namaBaru;
+        for (const nisn in dSiswa) {
+            if ((dSiswa[nisn].kelas || '') === namaLama) {
+                updates[`peserta_ujian/${nisn}/kelas`] = namaBaru;
+            }
+        }
+        for (const mid in dHasil) {
+            for (const nisn in dHasil[mid]) {
+                if ((dHasil[mid][nisn].kelas || '') === namaLama) {
+                    updates[`hasil_ujian/${mid}/${nisn}/kelas`] = namaBaru;
+                }
+            }
+        }
+        for (const mid in dUlang) {
+            for (const nisn in dUlang[mid]) {
+                if ((dUlang[mid][nisn].kelas || '') === namaLama) {
+                    updates[`pengajuan_ulang/${mid}/${nisn}/kelas`] = namaBaru;
+                }
+            }
+        }
 
         const jumlah = Object.keys(updates).length;
         if (jumlah === 0) return 0;
@@ -1118,6 +1434,7 @@
         return jumlah;
     }
 
+    // ============ TAB AKUN ============
     function gantiSubTabAkun(t) {
         subTabAkun = t;
         ['admin','guru','siswa'].forEach(x => {
@@ -1191,8 +1508,11 @@
             const badgeClass = subTabAkun === 'admin' ? 'badge-admin' : (subTabAkun === 'guru' ? 'badge-guru' : 'badge-siswa');
             const badgeLabel = subTabAkun === 'admin' ? 'Admin' : (subTabAkun === 'guru' ? 'Guru' : 'Siswa');
             let detail = '';
-            if (subTabAkun === 'siswa') detail = `NISN: ${escapeHtml(a.nisn || a.kunci)} · Kelas: ${escapeHtml(a.kelas || '-')}`;
-            else detail = `Username: ${escapeHtml(a.username || a.kunci)}`;
+            if (subTabAkun === 'siswa') {
+                detail = `NISN: ${escapeHtml(a.nisn || a.kunci)} · Kelas: ${escapeHtml(a.kelas || '-')}`;
+            } else {
+                detail = `Username: ${escapeHtml(a.username || a.kunci)}`;
+            }
             return `
             <div class="card">
                 <div class="card-header">
@@ -1283,18 +1603,25 @@
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
+    // ============ IMPORT AKUN CSV ============
     function bukaImportAkunCSV() {
         const p = document.getElementById('petunjuk-import-akun');
-        if (subTabAkun === 'siswa') p.innerHTML = '<b>Format Siswa:</b> <code>Nama, NISN, Kelas</code><br>Baris pertama = header (diabaikan).';
-        else p.innerHTML = '<b>Format ' + (subTabAkun === 'admin' ? 'Admin' : 'Guru') + ':</b> <code>Nama, Username, Password</code><br>Baris pertama = header (diabaikan).';
+        if (subTabAkun === 'siswa') {
+            p.innerHTML = '<b>Format Siswa:</b> <code>Nama, NISN, Kelas</code><br>Baris pertama = header (diabaikan).';
+        } else {
+            p.innerHTML = '<b>Format ' + (subTabAkun === 'admin' ? 'Admin' : 'Guru') + ':</b> <code>Nama, Username, Password</code><br>Baris pertama = header (diabaikan).';
+        }
         document.getElementById('input-csv-akun').value = '';
         document.getElementById('popup-import-akun').classList.add('tampil');
     }
 
     function lihatTemplateAkun() {
         let contoh;
-        if (subTabAkun === 'siswa') contoh = [['Nama','NISN','Kelas'], ['Ahmad Fauzi','12345','X TKJ 1'], ['Rina Wati','12346','X TKJ 1']];
-        else contoh = [['Nama','Username','Password'], ['Budi Santoso','budi','budi123'], ['Siti Aminah','siti','siti456']];
+        if (subTabAkun === 'siswa') {
+            contoh = [['Nama','NISN','Kelas'], ['Ahmad Fauzi','12345','X TKJ 1'], ['Rina Wati','12346','X TKJ 1']];
+        } else {
+            contoh = [['Nama','Username','Password'], ['Budi Santoso','budi','budi123'], ['Siti Aminah','siti','siti456']];
+        }
         document.getElementById('isi-template-akun').value = contoh.map(r => r.map(escapeCSV).join(',')).join('\n');
         document.getElementById('popup-template-akun').classList.add('tampil');
     }
@@ -1348,12 +1675,12 @@
         muatAkunAll();
     }
 
+    // ============ INIT ============
     ambilParamAtauTanya();
     muatDaftarMapel();
     muatKelas();
     setTimeout(() => {
-        const el = document.getElementById('peringatan-guru');
-        if (el) el.style.display = 'block';
+        document.getElementById('peringatan-guru').style.display = 'block';
     }, 100);
 </script>
 </body>
