@@ -57,8 +57,9 @@
     .item-siswa span { font-size: 12px; color: #475569; }
     .statistik { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; color: #14532d; }
     .statistik span { background: rgba(255,255,255,0.85); padding: 3px 9px; border-radius: 8px; }
-    .kelas-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: rgba(255,255,255,0.6); border-radius: 12px; gap: 8px; }
+    .kelas-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: rgba(255,255,255,0.6); border-radius: 12px; gap: 8px; margin-bottom: 8px; }
     .kelas-item span { font-size: 14px; color: #0f172a; font-weight: 600; flex: 1; }
+    .kelas-item .jumlah { font-size: 12px; color: #166534; background: #dcfce7; padding: 4px 10px; border-radius: 999px; font-weight: 700; }
     .sub-tab { display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; }
     .sub-tab button { flex:1; min-width:80px; padding:8px; border:1px solid #1b5e20; background:#fff; color:#1b5e20; border-radius:10px; font-weight:600; font-size:13px; cursor:pointer; }
     .sub-tab button.aktif { background:#1b5e20; color:#fff; }
@@ -95,6 +96,7 @@
     .overlay-cetak iframe { flex: 1; border: 0; width: 100%; }
     #konten-cetak-print { display: none; padding: 15px; background: #fff; overflow-y: auto; flex: 1; }
     .search-akun { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #1b5e20; background: rgba(255,255,255,0.9); font-size: 14px; color: #0f172a; outline: none; font-family: inherit; margin-bottom: 10px; }
+    .info-rekap { background: rgba(219,234,254,0.6); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #1e40af; line-height: 1.5; }
     @media print {
         body > *:not(.overlay-cetak) { display: none !important; }
         .overlay-cetak { position: static !important; display: block !important; }
@@ -119,7 +121,7 @@
         <button id="tab-btn-kelas" onclick="gantiTab('kelas')">🏫 Kelas</button>
         <button id="tab-btn-akun" onclick="gantiTab('akun')">👥 Akun</button>
         <button id="tab-btn-kolab" onclick="gantiTab('kolab')">🤝 Kolaborasi</button>
-        <button id="tab-btn-transkrip" onclick="gantiTab('transkrip')">📋 Transkrip & Cetak</button>
+        <button id="tab-btn-transkrip" onclick="gantiTab('transkrip')">📋 Publikasi & Cetak</button>
     </div>
 
     <div id="tab-mapel" style="display:flex;flex-direction:column;gap:16px;">
@@ -128,12 +130,18 @@
         <div id="daftar-mapel"></div>
     </div>
 
+    <!-- TAB KELAS (VIEW ONLY) -->
     <div id="tab-kelas" style="display:none;flex-direction:column;gap:16px;">
         <div class="card">
-            <div class="field"><label>Nama Kelas</label><input type="text" id="input-nama-kelas" placeholder="Contoh: X TKJ 1"></div>
-            <button class="btn-utama" onclick="tambahKelas()">+ Tambah Kelas</button>
+            <b style="font-size:14px;color:#0f172a;">🏫 Rekap Kelas</b>
+            <div class="info-rekap">
+                ℹ️ Daftar kelas diambil otomatis dari <b>data akun siswa</b>.<br>
+                Untuk mengelola kelas, edit akun siswa di tab <b>👥 Akun</b>.
+            </div>
+            <input type="text" class="search-akun" id="input-cari-kelas" placeholder="🔍 Cari kelas..." oninput="renderRekapKelas()">
+            <span style="font-size:11px;color:#64748b;" id="info-jumlah-kelas">-</span>
         </div>
-        <div id="daftar-kelas"></div>
+        <div id="daftar-kelas-rekap"></div>
     </div>
 
     <div id="tab-akun" style="display:none;flex-direction:column;gap:16px;">
@@ -147,7 +155,7 @@
             ⚠️ <b>Penting untuk Guru:</b> Login guru di halaman login mencocokkan <b>Nama Lengkap</b> (bukan username). Pastikan tidak ada dua guru dengan nama yang sama persis.
         </div>
         <div class="peringatan-box" id="peringatan-siswa" style="display:none;">
-            ℹ️ <b>Login Siswa:</b> Siswa login dengan <b>NISN + Nama Lengkap</b> (tanpa password). NISN jadi kunci unik di Firebase.
+            ℹ️ <b>Login Siswa:</b> Siswa login dengan <b>NISN + Nama Lengkap</b> (tanpa password). NISN jadi kunci unik di Firebase. <b>Pastikan field Kelas diisi</b> agar siswa bisa akses ujian.
         </div>
 
         <div class="card">
@@ -166,7 +174,9 @@
             </div>
             <div class="field" id="field-kelas-akun" style="display:none;">
                 <label>Kelas</label>
-                <select id="input-kelas-akun"><option value="">-- Pilih Kelas --</option></select>
+                <input type="text" id="input-kelas-akun" placeholder="mis. X TKJ 1" list="daftar-kelas-datalist">
+                <datalist id="daftar-kelas-datalist"></datalist>
+                <p style="font-size:11px;color:#64748b;margin-top:4px;">Ketik nama kelas bebas. Kelas yang sama akan otomatis digabung di rekap.</p>
             </div>
             <div class="baris-tombol">
                 <button class="btn-sekunder" onclick="resetFormAkun()">Reset</button>
@@ -178,7 +188,6 @@
             </div>
         </div>
 
-        <!-- KOTAK HAPUS SEMUA (Muncul hanya di subtab tertentu) -->
         <div class="kotak-hapus-semua" id="kotak-hapus-semua-akun" style="display:none;">
             <b style="font-size:13px;color:#7f1d1d;">🗑️ Hapus Semua Akun</b>
             <span id="info-hapus-semua-akun">-</span>
@@ -186,7 +195,6 @@
             <span style="font-size:11px;">⚠️ Tindakan ini tidak dapat dibatalkan.</span>
         </div>
 
-        <!-- SEARCH BOX UNTUK AKUN -->
         <div class="card">
             <b style="font-size:14px;color:#0f172a;">🔍 Cari Akun</b>
             <input type="text" class="search-akun" id="input-cari-akun" placeholder="Cari nama atau username/NISN..." oninput="renderAkun()">
@@ -298,27 +306,6 @@
     </div>
 </div>
 
-<!-- POPUP EDIT KELAS -->
-<div class="popup-overlay" id="popup-edit-kelas">
-    <div class="popup-box">
-        <h3>✏️ Edit Nama Kelas</h3>
-        <p style="font-size:12px;color:#475569;">Nama lama: <b id="edit-kelas-lama"></b></p>
-        <div class="field">
-            <label>Nama Kelas Baru</label>
-            <input type="text" id="input-nama-kelas-baru" placeholder="Contoh: X TKJ A">
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#14532d;font-weight:600;cursor:pointer;padding:10px;background:rgba(219,234,254,0.5);border-radius:10px;">
-            <input type="checkbox" id="cb-update-referensi" checked style="width:18px;height:18px;accent-color:#1b5e20;">
-            <span>Update semua data yang menyebut kelas lama (mapel, siswa, hasil ujian)</span>
-        </label>
-        <div class="petunjuk-csv" id="info-referensi-kelas" style="display:none;"></div>
-        <div class="baris-tombol">
-            <button class="btn-sekunder" onclick="tutupPopup('popup-edit-kelas')">Batal</button>
-            <button class="btn-utama" onclick="simpanEditKelas()">Simpan</button>
-        </div>
-    </div>
-</div>
-
 <!-- POPUP CETAK PER KELAS -->
 <div class="popup-overlay" id="popup-cetak-kelas">
     <div class="popup-box">
@@ -336,6 +323,8 @@
             💡 <b>Pilih "Semua Mapel"</b> → tabel 1 kelas × semua mapel (mirip rekap).
             <br>
             💡 <b>Pilih mapel tertentu</b> → tabel detail: Benar PG, Nilai PG, Nilai Essay, Nilai Akhir.
+            <br>
+            💡 Opsi <b>📋 Semua Siswa</b> untuk cetak tanpa filter kelas.
         </div>
         <div class="baris-tombol">
             <button class="btn-sekunder" onclick="tutupPopup('popup-cetak-kelas')">Batal</button>
@@ -436,7 +425,7 @@
     }
 
     let usernameAdmin = "", namaAdmin = "";
-    let daftarMapel = [], daftarKelas = [];
+    let daftarMapel = [];
     let daftarAkun = { admin: [], guru: [], siswa: [] };
     let konteksNilaiEssay = { mapelId: null, nisn: null, soalEssay: [], nilaiPerSoal: {}, hasilSiswa: {}, lock: null, nilaiTersimpan: null };
     let rekapSekarang = { mapelId: null, namaMapel: '', semuaData: [], kunciCache: null, locks: {}, nilaiEssayMap: {} };
@@ -495,8 +484,8 @@
             document.getElementById('tab-btn-' + t).classList.toggle('aktif', t === tab);
             document.getElementById('tab-' + t).style.display = t === tab ? 'flex' : 'none';
         });
-        if (tab === 'kelas') muatKelas();
-        if (tab === 'akun') { muatAkunAll(); isiSelectKelasAkun(); }
+        if (tab === 'kelas') muatRekapKelas();
+        if (tab === 'akun') { muatAkunAll(); }
         if (tab === 'kolab') muatMonitoringKolaborasi();
         if (tab === 'transkrip') muatTranskrip();
     }
@@ -613,6 +602,85 @@
             tampilkanStatus('Dihapus.', 'sukses');
             muatDaftarMapel();
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+
+    // ============================================================
+    // TAB KELAS (VIEW ONLY)
+    // ============================================================
+    async function muatRekapKelas() {
+        const k = document.getElementById('daftar-kelas-rekap');
+        k.innerHTML = '<p class="kosong">Memuat...</p>';
+        try {
+            const r = await fetch(`${FIREBASE_URL}/peserta_ujian.json`);
+            const dSiswa = await r.json() || {};
+
+            // Hitung jumlah siswa per kelas
+            const petaKelas = {};
+            let totalTanpaKelas = 0;
+            for (const nisn in dSiswa) {
+                const kls = (dSiswa[nisn].kelas || '').trim();
+                if (!kls || kls === '-') {
+                    totalTanpaKelas++;
+                } else {
+                    if (!petaKelas[kls]) petaKelas[kls] = [];
+                    petaKelas[kls].push({ nisn, nama: dSiswa[nisn].nama || '-' });
+                }
+            }
+
+            // Simpan ke global
+            window._rekapKelasGlobal = { petaKelas, totalTanpaKelas };
+            renderRekapKelas();
+        } catch (e) {
+            document.getElementById('daftar-kelas-rekap').innerHTML = '<p class="kosong">Gagal memuat data kelas.</p>';
+        }
+    }
+
+    function renderRekapKelas() {
+        const k = document.getElementById('daftar-kelas-rekap');
+        const info = document.getElementById('info-jumlah-kelas');
+        const cari = (document.getElementById('input-cari-kelas').value || '').toLowerCase().trim();
+
+        if (!window._rekapKelasGlobal) { k.innerHTML = '<p class="kosong">Memuat...</p>'; return; }
+        const { petaKelas, totalTanpaKelas } = window._rekapKelasGlobal;
+
+        let listKelas = Object.keys(petaKelas).sort();
+        if (cari) listKelas = listKelas.filter(kls => kls.toLowerCase().includes(cari));
+
+        // Info jumlah
+        const totalSiswa = Object.values(petaKelas).reduce((sum, arr) => sum + arr.length, 0);
+        info.textContent = `${Object.keys(petaKelas).length} kelas · ${totalSiswa} siswa`;
+
+        let html = '';
+
+        // Info siswa tanpa kelas
+        if (totalTanpaKelas > 0) {
+            html += `<div class="peringatan-box" style="background: rgba(254,226,226,0.85); border-color: #dc2626; color: #7f1d1d;">
+                ⚠️ <b>${totalTanpaKelas} siswa belum memiliki kelas.</b><br>
+                Edit akun mereka di tab <b>👥 Akun</b> agar bisa mengakses ujian.
+            </div>`;
+        }
+
+        if (listKelas.length === 0) {
+            if (cari) {
+                html += '<p class="kosong">Tidak ada kelas yang cocok dengan pencarian.</p>';
+            } else {
+                html += '<p class="kosong">Belum ada kelas.<br>Isi field Kelas pada akun siswa di tab <b>👥 Akun</b>.</p>';
+            }
+            k.innerHTML = html;
+            return;
+        }
+
+        // Tampilkan daftar kelas
+        html += listKelas.map(kls => {
+            const siswaArr = petaKelas[kls];
+            const jml = siswaArr.length;
+            return `<div class="kelas-item">
+                <span>${escapeHtml(kls)}</span>
+                <span class="jumlah">${jml} siswa</span>
+            </div>`;
+        }).join('');
+
+        k.innerHTML = html;
     }
 
     // ============ REKAP NILAI ============
@@ -1319,199 +1387,6 @@
         document.getElementById('popup-export').classList.add('tampil');
     }
 
-    // ============ TAB KELAS ============
-    async function muatKelas() {
-        try {
-            const r = await fetch(`${FIREBASE_URL}/daftar_kelas.json`);
-            const data = await r.json();
-            daftarKelas = [];
-            if (data) for (const id in data) daftarKelas.push({ id, ...data[id] });
-            daftarKelas.sort((a,b) => (a.nama||'').localeCompare(b.nama||''));
-            renderKelas();
-        } catch (e) {}
-    }
-
-    function renderKelas() {
-        const k = document.getElementById('daftar-kelas');
-        if (daftarKelas.length === 0) { k.innerHTML = '<p class="kosong">Belum ada kelas.</p>'; return; }
-        k.innerHTML = daftarKelas.map(c => `
-            <div class="kelas-item">
-                <span>${escapeHtml(c.nama)}</span>
-                <button class="btn-edit-kecil" onclick="bukaPopupEditKelas('${c.id}', '${escapeHtml(c.nama)}')">✏️ Edit</button>
-                <button class="btn-bahaya" onclick="hapusKelas('${c.id}','${escapeHtml(c.nama)}')" style="flex:0;padding:8px 12px;">Hapus</button>
-            </div>`).join('');
-    }
-
-    async function tambahKelas() {
-        const nama = document.getElementById('input-nama-kelas').value.trim();
-        if (!nama) { tampilkanStatus('Isi nama kelas.', 'gagal'); return; }
-        if (daftarKelas.some(c => c.nama.toLowerCase() === nama.toLowerCase())) { tampilkanStatus('Sudah ada.', 'gagal'); return; }
-        try {
-            await fetch(`${FIREBASE_URL}/daftar_kelas.json`, {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ nama })
-            });
-            document.getElementById('input-nama-kelas').value = '';
-            tampilkanStatus('Ditambahkan.', 'sukses');
-            muatKelas();
-        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
-    }
-
-    async function hapusKelas(id, nama) {
-        const ya = await konfirmasi(`Hapus kelas "${nama}"?\n\nCatatan: referensi kelas ini di mapel & siswa tidak akan dihapus otomatis.`, 'Hapus', 'Ya');
-        if (!ya) return;
-        try {
-            await fetch(`${FIREBASE_URL}/daftar_kelas/${id}.json`, { method: 'DELETE' });
-            tampilkanStatus('Dihapus.', 'sukses');
-            muatKelas();
-        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
-    }
-
-    // ============ EDIT KELAS + CASCADE UPDATE ============
-    function bukaPopupEditKelas(id, nama) {
-        document.getElementById('edit-kelas-lama').textContent = nama;
-        document.getElementById('input-nama-kelas-baru').value = nama;
-        document.getElementById('cb-update-referensi').checked = true;
-        window._kelasEdit = { id, namaLama: nama };
-        hitungReferensiKelas(nama);
-        document.getElementById('popup-edit-kelas').classList.add('tampil');
-    }
-
-    async function hitungReferensiKelas(namaLama) {
-        const info = document.getElementById('info-referensi-kelas');
-        info.style.display = 'block';
-        info.innerHTML = '⏳ Menghitung referensi...';
-        try {
-            const [rMapel, rSiswa, rHasil, rUlang] = await Promise.all([
-                fetch(`${FIREBASE_URL}/mapel.json`),
-                fetch(`${FIREBASE_URL}/peserta_ujian.json`),
-                fetch(`${FIREBASE_URL}/hasil_ujian.json`),
-                fetch(`${FIREBASE_URL}/pengajuan_ulang.json`)
-            ]);
-            const dMapel = await rMapel.json() || {};
-            const dSiswa = await rSiswa.json() || {};
-            const dHasil = await rHasil.json() || {};
-            const dUlang = await rUlang.json() || {};
-
-            let nMapel = 0, nSiswa = 0, nHasil = 0, nUlang = 0;
-            for (const id in dMapel) {
-                if (parseKelasList(dMapel[id].kelas).includes(namaLama)) nMapel++;
-            }
-            for (const nisn in dSiswa) {
-                if ((dSiswa[nisn].kelas || '') === namaLama) nSiswa++;
-            }
-            for (const mid in dHasil) {
-                for (const nisn in dHasil[mid]) {
-                    if ((dHasil[mid][nisn].kelas || '') === namaLama) nHasil++;
-                }
-            }
-            for (const mid in dUlang) {
-                for (const nisn in dUlang[mid]) {
-                    if ((dUlang[mid][nisn].kelas || '') === namaLama) nUlang++;
-                }
-            }
-            info.innerHTML = `<b>Ditemukan referensi:</b><br>
-                • ${nMapel} mapel memakai kelas ini<br>
-                • ${nSiswa} akun siswa di kelas ini<br>
-                • ${nHasil} hasil ujian<br>
-                • ${nUlang} pengajuan ujian ulang`;
-        } catch (e) {
-            info.innerHTML = '⚠️ Gagal menghitung referensi. Lanjutkan dengan hati-hati.';
-        }
-    }
-
-    async function simpanEditKelas() {
-        const { id, namaLama } = window._kelasEdit || {};
-        if (!id) return;
-        const namaBaru = document.getElementById('input-nama-kelas-baru').value.trim();
-        const updateRef = document.getElementById('cb-update-referensi').checked;
-
-        if (!namaBaru) { alert('Nama kelas baru wajib diisi.'); return; }
-        if (namaBaru === namaLama) { alert('Nama kelas tidak berubah.'); return; }
-        if (daftarKelas.some(c => c.id !== id && c.nama.toLowerCase() === namaBaru.toLowerCase())) {
-            alert('Sudah ada kelas dengan nama itu.');
-            return;
-        }
-
-        const ya = await konfirmasi(
-            `Ganti nama kelas "${namaLama}" menjadi "${namaBaru}"?${updateRef ? '\n\nSemua referensi ke kelas lama juga akan di-update.' : '\n\n⚠️ Referensi di mapel/siswa TIDAK akan di-update.'}`,
-            'Edit Kelas', 'Ya, Ganti'
-        );
-        if (!ya) return;
-
-        try {
-            await fetch(`${FIREBASE_URL}/daftar_kelas/${id}.json`, {
-                method: 'PATCH', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ nama: namaBaru })
-            });
-
-            let jumlahUpdate = 0;
-            if (updateRef) {
-                tampilkanStatus('Memperbarui referensi...', 'info');
-                jumlahUpdate = await updateSemuaReferensiKelas(namaLama, namaBaru);
-            }
-
-            tutupPopup('popup-edit-kelas');
-            tampilkanStatus(`Kelas diganti. ${jumlahUpdate} referensi diperbarui.`, 'sukses');
-            muatKelas();
-            muatDaftarMapel();
-            if (subTabAkun) muatAkunAll();
-        } catch (e) { tampilkanStatus('Gagal mengganti nama kelas.', 'gagal'); }
-    }
-
-    async function updateSemuaReferensiKelas(namaLama, namaBaru) {
-        const updates = {};
-
-        const [rMapel, rSiswa, rHasil, rUlang] = await Promise.all([
-            fetch(`${FIREBASE_URL}/mapel.json`),
-            fetch(`${FIREBASE_URL}/peserta_ujian.json`),
-            fetch(`${FIREBASE_URL}/hasil_ujian.json`),
-            fetch(`${FIREBASE_URL}/pengajuan_ulang.json`)
-        ]);
-        const dMapel = await rMapel.json() || {};
-        const dSiswa = await rSiswa.json() || {};
-        const dHasil = await rHasil.json() || {};
-        const dUlang = await rUlang.json() || {};
-
-        for (const id in dMapel) {
-            const kelasList = parseKelasList(dMapel[id].kelas);
-            if (kelasList.includes(namaLama)) {
-                const baru = kelasList.map(k => k === namaLama ? namaBaru : k);
-                updates[`mapel/${id}/kelas`] = baru;
-            }
-        }
-        for (const nisn in dSiswa) {
-            if ((dSiswa[nisn].kelas || '') === namaLama) {
-                updates[`peserta_ujian/${nisn}/kelas`] = namaBaru;
-            }
-        }
-        for (const mid in dHasil) {
-            for (const nisn in dHasil[mid]) {
-                if ((dHasil[mid][nisn].kelas || '') === namaLama) {
-                    updates[`hasil_ujian/${mid}/${nisn}/kelas`] = namaBaru;
-                }
-            }
-        }
-        for (const mid in dUlang) {
-            for (const nisn in dUlang[mid]) {
-                if ((dUlang[mid][nisn].kelas || '') === namaLama) {
-                    updates[`pengajuan_ulang/${mid}/${nisn}/kelas`] = namaBaru;
-                }
-            }
-        }
-
-        const jumlah = Object.keys(updates).length;
-        if (jumlah === 0) return 0;
-
-        const r = await fetch(`${FIREBASE_URL}/.json`, {
-            method: 'PATCH',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify(updates)
-        });
-        if (!r.ok) throw new Error('Cascade update gagal');
-        return jumlah;
-    }
-
     // ============ TAB AKUN ============
     function gantiSubTabAkun(t) {
         subTabAkun = t;
@@ -1528,6 +1403,7 @@
             document.getElementById('input-username-akun').placeholder = 'mis. 12345';
             document.getElementById('input-nama-akun').placeholder = 'mis. Ahmad Fauzi';
             document.getElementById('judul-form-akun').textContent = 'Tambah Akun Siswa';
+            isiDatalistKelas();
         } else if (t === 'guru') {
             document.getElementById('field-kelas-akun').style.display = 'none';
             document.getElementById('field-password-akun').style.display = 'block';
@@ -1544,40 +1420,40 @@
             document.getElementById('judul-form-akun').textContent = 'Tambah Akun Admin';
         }
         resetFormAkun();
-        // Reset search & render
         document.getElementById('input-cari-akun').value = '';
         renderAkun();
     }
 
+    // Isi datalist kelas dari data siswa yang ada
+    function isiDatalistKelas() {
+        const dl = document.getElementById('daftar-kelas-datalist');
+        const setKelas = new Set();
+        (daftarAkun.siswa || []).forEach(s => {
+            const kls = (s.kelas || '').trim();
+            if (kls && kls !== '-') setKelas.add(kls);
+        });
+        dl.innerHTML = [...setKelas].sort().map(k => `<option value="${escapeHtml(k)}"></option>`).join('');
+    }
+
     async function muatAkunAll() {
         try {
-            const [ra, rg, rs, rk] = await Promise.all([
+            const [ra, rg, rs] = await Promise.all([
                 fetch(`${FIREBASE_URL}/${PATH_AKUN.admin}.json`),
                 fetch(`${FIREBASE_URL}/${PATH_AKUN.guru}.json`),
-                fetch(`${FIREBASE_URL}/${PATH_AKUN.siswa}.json`),
-                fetch(`${FIREBASE_URL}/daftar_kelas.json`)
+                fetch(`${FIREBASE_URL}/${PATH_AKUN.siswa}.json`)
             ]);
             const da = await ra.json();
             const dg = await rg.json();
             const ds = await rs.json();
-            const dk = await rk.json();
             daftarAkun.admin = [];
             daftarAkun.guru = [];
             daftarAkun.siswa = [];
             if (da) for (const k in da) daftarAkun.admin.push({ kunci: k, ...da[k] });
             if (dg) for (const k in dg) daftarAkun.guru.push({ kunci: k, ...dg[k] });
             if (ds) for (const k in ds) daftarAkun.siswa.push({ kunci: k, ...ds[k] });
-            daftarKelas = [];
-            if (dk) for (const id in dk) daftarKelas.push({ id, ...dk[id] });
-            daftarKelas.sort((a,b) => (a.nama||'').localeCompare(b.nama||''));
+            isiDatalistKelas();
             renderAkun();
         } catch (e) { tampilkanStatus('Gagal memuat akun.', 'gagal'); }
-    }
-
-    function isiSelectKelasAkun() {
-        const sel = document.getElementById('input-kelas-akun');
-        sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
-            daftarKelas.map(k => `<option value="${escapeHtml(k.nama)}">${escapeHtml(k.nama)}</option>`).join('');
     }
 
     function renderAkun() {
@@ -1586,7 +1462,6 @@
 
         let list = (daftarAkun[subTabAkun] || []).slice();
 
-        // Filter pencarian
         if (cari) {
             list = list.filter(a =>
                 (a.nama || '').toLowerCase().includes(cari) ||
@@ -1597,7 +1472,6 @@
         }
         list.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
 
-        // Update info jumlah & tombol hapus semua
         const infoJumlah = document.getElementById('info-jumlah-akun');
         if (infoJumlah) {
             const total = (daftarAkun[subTabAkun] || []).length;
@@ -1606,7 +1480,6 @@
                 : `Total: ${total} akun`;
         }
 
-        // Tampilkan/sembunyikan kotak hapus semua
         const kotakHapus = document.getElementById('kotak-hapus-semua-akun');
         const infoHapus = document.getElementById('info-hapus-semua-akun');
         const btnHapus = document.getElementById('btn-hapus-semua-akun');
@@ -1683,14 +1556,14 @@
         const nama = document.getElementById('input-nama-akun').value.trim();
         const kunciBaru = document.getElementById('input-username-akun').value.trim();
         const password = document.getElementById('input-password-akun').value.trim();
-        const kelas = document.getElementById('input-kelas-akun').value;
+        const kelas = document.getElementById('input-kelas-akun').value.trim();
 
         if (!nama || !kunciBaru) { tampilkanStatus('Nama & username/NISN wajib diisi.', 'gagal'); return; }
 
         const path = PATH_AKUN[subTabAkun];
         const kunciFinal = subTabAkun === 'siswa' ? kunciBaru : kunciBaru.toLowerCase();
 
-        if (subTabAkun === 'siswa' && !kelas) { tampilkanStatus('Pilih kelas siswa.', 'gagal'); return; }
+        if (subTabAkun === 'siswa' && !kelas) { tampilkanStatus('Kelas wajib diisi.', 'gagal'); return; }
         if (subTabAkun !== 'siswa' && !password) { tampilkanStatus('Password wajib diisi.', 'gagal'); return; }
 
         let dataSimpan;
@@ -1724,21 +1597,19 @@
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
-    // HAPUS SEMUA AKUN (BARU)
     async function hapusSemuaAkun() {
         const list = daftarAkun[subTabAkun] || [];
         if (list.length === 0) { alert('Tidak ada akun untuk dihapus.'); return; }
 
         const labelTipe = subTabAkun === 'admin' ? 'Admin' : (subTabAkun === 'guru' ? 'Guru' : 'Siswa');
         const ya1 = await konfirmasi(
-            `Hapus SEMUA ${list.length} akun ${labelTipe}?\n\nTindakan ini TIDAK BISA DIBATALKAN.\n\nAkun yang dihapus tidak akan bisa login lagi.`,
+            `Hapus SEMUA ${list.length} akun ${labelTipe}?\n\nTindakan ini TIDAK BISA DIBATALKAN.`,
             '⚠️ Peringatan', 'Ya, Lanjutkan'
         );
         if (!ya1) return;
 
-        // Konfirmasi kedua
         const ya2 = await konfirmasi(
-            `Konfirmasi terakhir:\n\nYakin ingin menghapus ${list.length} akun ${labelTipe}?\n\nKetik "HAPUS" di halaman chat App Inventor kalau benar-benar yakin, atau klik "Ya, Hapus Semua" kalau sudah yakin.`,
+            `Konfirmasi terakhir:\n\nYakin ingin menghapus ${list.length} akun ${labelTipe}?`,
             '⚠️ Konfirmasi Terakhir', 'Ya, Hapus Semua'
         );
         if (!ya2) return;
@@ -1836,22 +1707,20 @@
     }
 
     // ============================================================
-    // TRANSKRIP & CETAK
+    // PUBLIKASI & CETAK
     // ============================================================
     async function muatTranskrip() {
         try {
-            const [rSiswa, rMapel, rHasil, rPub, rKelas] = await Promise.all([
+            const [rSiswa, rMapel, rHasil, rPub] = await Promise.all([
                 fetch(`${FIREBASE_URL}/peserta_ujian.json`),
                 fetch(`${FIREBASE_URL}/mapel.json`),
                 fetch(`${FIREBASE_URL}/hasil_ujian.json`),
-                fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`),
-                fetch(`${FIREBASE_URL}/daftar_kelas.json`).catch(() => null)
+                fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`)
             ]);
             const dSiswa = await rSiswa.json() || {};
             const dMapel = await rMapel.json() || {};
             const dHasil = await rHasil.json() || {};
             const dPub = await rPub.json();
-            const dKelas = rKelas ? (await rKelas.json() || {}) : {};
 
             semuaSiswaGlobal = Object.keys(dSiswa).map(kunci => ({ kunci, ...dSiswa[kunci] }));
             semuaMapelGlobal = Object.keys(dMapel).map(id => ({ id, ...dMapel[id] }));
@@ -1859,9 +1728,8 @@
 
             updateStatusPublikasi(dPub === true);
 
-            // Kumpulkan kelas dari 2 sumber
+            // Kumpulkan kelas dari data siswa
             const setKelas = new Set();
-            for (const id in dKelas) if (dKelas[id].nama) setKelas.add(dKelas[id].nama);
             semuaSiswaGlobal.forEach(s => {
                 const kls = (s.kelas || '').trim();
                 if (kls && kls !== '-') setKelas.add(kls);
@@ -2084,14 +1952,8 @@
 <h2>DAFTAR NILAI UJIAN</h2>
 <h3>Mapel: <b>${escapeHtml(mapel.nama_mapel || '')}</b> · ${escapeHtml(kelas)}${mapel.guru ? ' · Guru: ' + escapeHtml(mapel.guru) : ''}</h3>
 <table><thead><tr>
-    <th>No</th>
-    <th>Nama Siswa</th>
-    <th>NISN</th>
-    <th>Benar PG</th>
-    <th>Nilai PG</th>
-    <th>Nilai Essay</th>
-    <th>Nilai Akhir</th>
-    <th>Status</th>
+    <th>No</th><th>Nama Siswa</th><th>NISN</th>
+    <th>Benar PG</th><th>Nilai PG</th><th>Nilai Essay</th><th>Nilai Akhir</th><th>Status</th>
 </tr></thead><tbody>`;
 
         siswa.forEach((s, i) => {
@@ -2132,7 +1994,6 @@
     // ============ INIT ============
     ambilParamAtauTanya();
     muatDaftarMapel();
-    muatKelas();
     setTimeout(() => {
         document.getElementById('peringatan-guru').style.display = 'block';
     }, 100);
