@@ -1,6 +1,45 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   PAGAR CEPAT — TAHAP 1
+   Halaman hanya boleh dibuka dari aplikasi App Inventor.
+   Untuk uji di laptop: ubah IZINKAN_BROWSER_UNTUK_UJI jadi true.
+   ═══════════════════════════════════════════════════════════════ */
+(function () {
+    var IZINKAN_BROWSER_UNTUK_UJI = false;   // ← ganti true HANYA saat uji lokal
+
+    if (IZINKAN_BROWSER_UNTUK_UJI) return;
+
+    var diAppInventor = (typeof window.AppInventor !== 'undefined');
+    var ua = navigator.userAgent || '';
+    var uaWebView = /;\s*wv\)/i.test(ua);
+    var bolehLanjut = diAppInventor || uaWebView;
+
+    if (!bolehLanjut) {
+        var htmlTolak =
+            '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8">' +
+            '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+            '<title>Akses Ditolak</title></head>' +
+            '<body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;' +
+            'background:linear-gradient(135deg,#fee2e2,#fecaca);' +
+            'margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">' +
+            '<div style="background:#fff;border-radius:20px;padding:32px 24px;' +
+            'box-shadow:0 10px 40px rgba(185,28,28,.25);text-align:center;max-width:380px;width:100%;">' +
+            '<div style="font-size:56px;line-height:1;">🚫</div>' +
+            '<h1 style="font-size:20px;color:#991b1b;margin:16px 0 8px;">Akses Ditolak</h1>' +
+            '<p style="font-size:14px;color:#475569;line-height:1.6;margin:0;">' +
+            'Halaman ini hanya dapat dibuka melalui <b>aplikasi ujian</b>.<br><br>' +
+            'Silakan buka aplikasi di HP Anda, bukan melalui browser.' +
+            '</p></div></body></html>';
+
+        try { document.open(); document.write(htmlTolak); document.close(); } catch (e) {}
+        try { window.stop(); } catch (e) {}
+        throw new Error('BLOCKED_BY_GUARD');
+    }
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Halaman Admin</title>
@@ -507,7 +546,13 @@
         const p = new URLSearchParams(window.location.search);
         usernameAdmin = (p.get('username') || '').trim().toLowerCase();
         namaAdmin = p.get('nama') || '';
-        if (!usernameAdmin) { usernameAdmin = (prompt('Testing: username admin') || '').trim().toLowerCase(); namaAdmin = usernameAdmin; }
+        if (!usernameAdmin) {
+            document.body.innerHTML =
+                '<div style="padding:40px 20px;text-align:center;font-family:sans-serif;">' +
+                '<h2 style="color:#991b1b;">Akses Ditolak</h2>' +
+                '<p style="color:#475569;">Data login tidak lengkap.</p></div>';
+            throw new Error('NO_LOGIN');
+        }
         document.getElementById('info-admin').textContent = 'Selamat datang, ' + (namaAdmin || usernameAdmin);
     }
     function tampilkanStatus(p, j) { j = j || 'info'; const k = document.getElementById('pesan-status'); k.textContent = p; k.className = 'pesan-status tampil ' + j; setTimeout(() => k.classList.remove('tampil'), 4000); }
@@ -1797,11 +1842,7 @@
         alert('⚠️ Print tidak didukung di perangkat ini.\n\nAlternatif: Screenshot tampilan preview.');
     }
 
-    // ============================================================
-    // CETAK PER KELAS SEMUA MAPEL — sudah difilter hanya siswa yang ujian
-    // ============================================================
     function cetakPerKelasSemuaMapel(kelas, siswa) {
-        // ⬇️ FILTER: hanya siswa yang punya minimal 1 hasil ujian
         const siswaFiltered = siswa.filter(s => {
             const nisn = s.nisn || s.kunci;
             return semuaMapelGlobal.some(m =>
@@ -1843,13 +1884,9 @@
         tampilkanOverlayCetak(html, 'Nilai ' + kelas);
     }
 
-    // ============================================================
-    // CETAK PER KELAS PER MAPEL — sudah difilter hanya siswa yang ujian mapel tsb
-    // ============================================================
     function cetakPerKelasPerMapel(kelas, mapel, siswa) {
         const dataHasilMapel = hasilUjianGlobal[mapel.id] || {};
 
-        // ⬇️ FILTER: hanya siswa yang sudah mengerjakan mapel ini
         const siswaFiltered = siswa.filter(s => dataHasilMapel[s.nisn || s.kunci]);
 
         if (siswaFiltered.length === 0) {
