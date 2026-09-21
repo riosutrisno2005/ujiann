@@ -47,15 +47,9 @@
     .opsi-pilihan { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: rgba(255,255,255,0.6); border-radius: 12px; border: 2px solid transparent; cursor: pointer; margin-bottom: 8px; }
     .opsi-pilihan.terpilih { border-color: #1b5e20; background: rgba(220,252,231,0.7); }
     .opsi-pilihan span { font-size: 14px; color: #0f172a; }
-    .radio-custom {
-        width: 22px; height: 22px; border-radius: 50%; border: 2px solid #1b5e20;
-        background: #fff; flex-shrink: 0; position: relative; display: inline-block;
-    }
+    .radio-custom { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #1b5e20; background: #fff; flex-shrink: 0; position: relative; display: inline-block; }
     .radio-custom.terisi { background: #1b5e20; }
-    .radio-custom.terisi::after {
-        content: ''; width: 8px; height: 8px; border-radius: 50%; background: #fff;
-        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    }
+    .radio-custom.terisi::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #fff; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
     .jawaban-essay { width: 100%; min-height: 120px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.9); background: rgba(255,255,255,0.8); font-family: inherit; font-size: 14px; resize: vertical; outline: none; }
     .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; padding: 20px; z-index: 999; }
     .popup-overlay.tampil { display: flex; }
@@ -71,14 +65,7 @@
     .tab-nav button { padding: 10px; border: none; border-radius: 10px; font-weight: 600; font-size: 12px; background: transparent; color: #14532d; cursor: pointer; flex: 1; min-width: 90px; }
     .tab-nav button.aktif { background: #1b5e20; color: #fff; }
     .grid-soal { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 4px; }
-    .nomor-soal {
-        aspect-ratio: 1 / 1;
-        display: flex; align-items: center; justify-content: center;
-        border-radius: 10px; font-weight: 700; font-size: 14px;
-        cursor: pointer; border: 2px solid transparent;
-        background: #fee2e2; color: #991b1b;
-        user-select: none;
-    }
+    .nomor-soal { aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; border: 2px solid transparent; background: #fee2e2; color: #991b1b; user-select: none; }
     .nomor-soal.sudah { background: #dcfce7; color: #166534; }
     .nomor-soal.aktif { border-color: #0f172a; box-shadow: 0 0 0 2px #fff inset; }
     .legenda { display: flex; gap: 12px; justify-content: center; font-size: 11px; color: #475569; margin-top: 4px; flex-wrap: wrap; }
@@ -86,220 +73,8 @@
     .kotak-legenda { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
 
     /* ============================================================ */
-    /* DESAIN HASIL UJIAN YANG MENARIK */
+    /* TAB HASIL UJIAN - TOMBOL MATA */
     /* ============================================================ */
-    .hasil-wrapper { display: flex; flex-direction: column; gap: 14px; }
-
-    /* Kartu identitas siswa */
-    .kartu-identitas {
-        background: linear-gradient(135deg, #1b5e20, #2e7d32);
-        color: #fff;
-        border-radius: 18px;
-        padding: 18px 16px;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(27,94,32,0.35);
-    }
-    .kartu-identitas::before {
-        content: '';
-        position: absolute;
-        top: -50px; right: -50px;
-        width: 140px; height: 140px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.08);
-    }
-    .kartu-identitas::after {
-        content: '';
-        position: absolute;
-        bottom: -60px; left: -30px;
-        width: 120px; height: 120px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.05);
-    }
-    .kartu-identitas .label-kecil {
-        font-size: 10px;
-        letter-spacing: 1.5px;
-        opacity: 0.75;
-        text-transform: uppercase;
-        margin-bottom: 6px;
-    }
-    .kartu-identitas .nama-siswa {
-        font-size: 20px;
-        font-weight: 700;
-        margin-bottom: 10px;
-        position: relative;
-        z-index: 1;
-    }
-    .kartu-identitas .detail-row {
-        display: flex;
-        gap: 16px;
-        font-size: 12px;
-        opacity: 0.9;
-        position: relative;
-        z-index: 1;
-        flex-wrap: wrap;
-    }
-    .kartu-identitas .detail-row span {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-
-    /* Kartu nilai rata-rata besar */
-    .kartu-rata {
-        background: linear-gradient(135deg, #fbbf24, #f59e0b);
-        color: #fff;
-        border-radius: 18px;
-        padding: 22px 18px;
-        text-align: center;
-        box-shadow: 0 10px 30px rgba(245,158,11,0.35);
-        position: relative;
-        overflow: hidden;
-    }
-    .kartu-rata::before {
-        content: '🏆';
-        position: absolute;
-        top: 8px;
-        right: 14px;
-        font-size: 32px;
-        opacity: 0.3;
-    }
-    .kartu-rata .label {
-        font-size: 11px;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        opacity: 0.9;
-        margin-bottom: 4px;
-    }
-    .kartu-rata .angka {
-        font-size: 52px;
-        font-weight: 800;
-        line-height: 1;
-        text-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    }
-    .kartu-rata .info {
-        font-size: 12px;
-        opacity: 0.9;
-        margin-top: 4px;
-    }
-
-    /* Grid statistik */
-    .grid-stat {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-    }
-    .stat-box {
-        background: rgba(255,255,255,0.85);
-        border-radius: 14px;
-        padding: 12px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        box-shadow: 0 4px 12px rgba(0,100,0,0.08);
-    }
-    .stat-box .ikon {
-        width: 38px;
-        height: 38px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 18px;
-        flex-shrink: 0;
-    }
-    .stat-box .ikon.hijau { background: #dcfce7; }
-    .stat-box .ikon.biru { background: #dbeafe; }
-    .stat-box .ikon.kuning { background: #fef3c7; }
-    .stat-box .ikon.ungu { background: #e0e7ff; }
-    .stat-box .teks {
-        display: flex;
-        flex-direction: column;
-    }
-    .stat-box .teks .nilai {
-        font-size: 17px;
-        font-weight: 700;
-        color: #0f172a;
-        line-height: 1.1;
-    }
-    .stat-box .teks .label {
-        font-size: 10px;
-        color: #475569;
-        margin-top: 2px;
-    }
-
-    /* Daftar nilai per mapel */
-    .judul-seksi {
-        font-size: 14px;
-        font-weight: 700;
-        color: #0f172a;
-        margin-top: 4px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .nilai-mapel-card {
-        background: rgba(255,255,255,0.9);
-        border-radius: 14px;
-        padding: 14px;
-        box-shadow: 0 4px 14px rgba(0,100,0,0.08);
-        border-left: 4px solid #1b5e20;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-    .nilai-mapel-card .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 10px;
-    }
-    .nilai-mapel-card .nama-mapel {
-        font-size: 14px;
-        font-weight: 700;
-        color: #0f172a;
-        flex: 1;
-    }
-    .nilai-mapel-card .nilai-bulat {
-        width: 52px;
-        height: 52px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 18px;
-        font-weight: 800;
-        color: #fff;
-        flex-shrink: 0;
-    }
-    .nilai-bulat.tinggi { background: linear-gradient(135deg, #16a34a, #22c55e); }
-    .nilai-bulat.sedang { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
-    .nilai-bulat.rendah { background: linear-gradient(135deg, #dc2626, #ef4444); }
-    .nilai-bulat.kosong { background: linear-gradient(135deg, #94a3b8, #cbd5e1); font-size: 14px; }
-
-    .nilai-mapel-card .detail-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 6px;
-    }
-    .nilai-mapel-card .detail-item {
-        background: rgba(241,245,249,0.9);
-        padding: 7px 8px;
-        border-radius: 8px;
-        text-align: center;
-    }
-    .nilai-mapel-card .detail-item .angka {
-        font-size: 14px;
-        font-weight: 700;
-        color: #0f172a;
-    }
-    .nilai-mapel-card .detail-item .label {
-        font-size: 9px;
-        color: #64748b;
-        margin-top: 1px;
-    }
-
-    /* Pesan belum tersedia */
     .pesan-tunggu {
         background: rgba(255,255,255,0.9);
         border-radius: 18px;
@@ -317,16 +92,190 @@
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.1); }
     }
-    .pesan-tunggu h3 {
-        font-size: 18px;
-        color: #0f172a;
-        margin-bottom: 10px;
+    .pesan-tunggu h3 { font-size: 18px; color: #0f172a; margin-bottom: 10px; }
+    .pesan-tunggu p { font-size: 13px; color: #475569; line-height: 1.6; margin-bottom: 16px; }
+
+    .kartu-tombol-mata {
+        background: rgba(255,255,255,0.9);
+        border-radius: 18px;
+        padding: 30px 22px;
+        text-align: center;
+        box-shadow: 0 8px 24px rgba(0,100,0,0.1);
     }
-    .pesan-tunggu p {
-        font-size: 13px;
+    .kartu-tombol-mata .teks-info {
+        font-size: 14px;
         color: #475569;
-        line-height: 1.6;
-        margin-bottom: 16px;
+        margin-bottom: 20px;
+        line-height: 1.5;
+    }
+    .kartu-tombol-mata .teks-info b { color: #0f172a; }
+
+    .btn-mata {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 18px 36px;
+        background: linear-gradient(135deg, #1b5e20, #2e7d32);
+        color: #fff;
+        border: none;
+        border-radius: 50px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 8px 20px rgba(27,94,32,0.35);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        width: 100%;
+        max-width: 280px;
+    }
+    .btn-mata:active {
+        transform: scale(0.96);
+        box-shadow: 0 4px 12px rgba(27,94,32,0.4);
+    }
+    .btn-mata svg {
+        width: 26px;
+        height: 26px;
+        flex-shrink: 0;
+    }
+
+    /* ============================================================ */
+    /* TABEL REKAP NILAI (background putih) */
+    /* ============================================================ */
+    .kartu-tabel-nilai {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 18px 14px;
+        box-shadow: 0 8px 24px rgba(0,100,0,0.12);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .kartu-tabel-nilai .header-tabel {
+        text-align: center;
+        padding-bottom: 12px;
+        border-bottom: 3px solid #1b5e20;
+    }
+    .kartu-tabel-nilai .header-tabel .judul {
+        font-size: 17px;
+        font-weight: 800;
+        color: #0f172a;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+    .kartu-tabel-nilai .header-tabel .sub {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 3px;
+        letter-spacing: 0.3px;
+    }
+    .kartu-tabel-nilai .info-siswa-tabel {
+        background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+        border-radius: 10px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+    .kartu-tabel-nilai .info-siswa-tabel .nama {
+        font-size: 14px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .kartu-tabel-nilai .info-siswa-tabel .detail {
+        font-size: 11px;
+        color: #475569;
+    }
+
+    .tabel-rekap {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .tabel-rekap thead tr {
+        background: linear-gradient(135deg, #1b5e20, #2e7d32);
+        color: #fff;
+    }
+    .tabel-rekap th {
+        padding: 10px 6px;
+        font-weight: 700;
+        font-size: 10px;
+        text-align: center;
+        border: 1px solid #1b5e20;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    .tabel-rekap th.kiri { text-align: left; }
+    .tabel-rekap td {
+        padding: 9px 6px;
+        border: 1px solid #e2e8f0;
+        text-align: center;
+        color: #0f172a;
+        font-size: 11px;
+    }
+    .tabel-rekap td.kiri {
+        text-align: left;
+        font-weight: 600;
+        color: #1e293b;
+    }
+    .tabel-rekap td.no {
+        font-weight: 700;
+        color: #64748b;
+        width: 26px;
+    }
+    .tabel-rekap td.angka {
+        font-weight: 700;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+    }
+    .tabel-rekap tbody tr:nth-child(even) {
+        background: #f8fafc;
+    }
+    .tabel-rekap tbody tr:nth-child(odd) {
+        background: #ffffff;
+    }
+
+    /* Warna nilai berdasarkan range */
+    .nilai-hijau { color: #16a34a !important; }
+    .nilai-kuning { color: #d97706 !important; }
+    .nilai-merah { color: #dc2626 !important; }
+    .nilai-kosong { color: #94a3b8 !important; font-style: italic; font-weight: 500 !important; }
+
+    .footer-tabel {
+        text-align: center;
+        padding-top: 8px;
+    }
+    .kotak-rata {
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        color: #fff;
+        border-radius: 12px;
+        padding: 12px;
+        display: inline-block;
+        min-width: 180px;
+    }
+    .kotak-rata .label {
+        font-size: 10px;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        opacity: 0.9;
+    }
+    .kotak-rata .angka {
+        font-size: 30px;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-top: 2px;
+    }
+    .kotak-rata .sub {
+        font-size: 10px;
+        opacity: 0.9;
+        margin-top: 2px;
+    }
+    .tanggal-cetak {
+        font-size: 9px;
+        color: #94a3b8;
+        text-align: right;
+        margin-top: 4px;
+        font-style: italic;
     }
 </style>
 </head>
@@ -490,11 +439,7 @@
         const bersih = {};
         for (const sid in sumber) {
             const s = sumber[sid];
-            bersih[sid] = {
-                tipe: s.tipe === 'essay' ? 'essay' : 'pg',
-                pertanyaan: s.pertanyaan || '',
-                pilihan: s.pilihan || []
-            };
+            bersih[sid] = { tipe: s.tipe === 'essay' ? 'essay' : 'pg', pertanyaan: s.pertanyaan || '', pilihan: s.pilihan || [] };
         }
         return bersih;
     }
@@ -507,6 +452,7 @@
     let aksiKunciSaatIni = 'online';
     let timestampKeluar = null;
     let nilaiDipublikasikan = false;
+    let tabelNilaiTerbuka = false;
 
     let resolveKonfirmasi = null;
     function konfirmasi(pesan, judul, labelOk) {
@@ -535,15 +481,10 @@
         try {
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), timeoutMs);
-            const r = await fetch(`${FIREBASE_URL}/.json?shallow=true&t=${Date.now()}`, {
-                cache: 'no-store',
-                signal: controller.signal
-            });
+            const r = await fetch(`${FIREBASE_URL}/.json?shallow=true&t=${Date.now()}`, { cache: 'no-store', signal: controller.signal });
             clearTimeout(timer);
             return r.ok;
-        } catch (e) {
-            return false;
-        }
+        } catch (e) { return false; }
     }
 
     function resetSemuaJawaban() {
@@ -585,32 +526,24 @@
         try {
             const r = await fetch(`${FIREBASE_URL}/peserta_ujian/${nisnSiswa}.json`);
             const data = await r.json();
-
             if (!data) {
-                document.getElementById('daftar-mapel-saya').innerHTML =
-                    '<p class="kosong">❌ Data akun tidak ditemukan.<br>Hubungi admin.</p>';
+                document.getElementById('daftar-mapel-saya').innerHTML = '<p class="kosong">❌ Data akun tidak ditemukan.<br>Hubungi admin.</p>';
                 return;
             }
-
             const kelasDariDB = (data.kelas || '').trim();
             if (!kelasDariDB || kelasDariDB === '-') {
-                document.getElementById('daftar-mapel-saya').innerHTML =
-                    '<p class="kosong">❌ Akunmu belum memiliki kelas.<br>Hubungi admin untuk melengkapi data.</p>';
+                document.getElementById('daftar-mapel-saya').innerHTML = '<p class="kosong">❌ Akunmu belum memiliki kelas.<br>Hubungi admin untuk melengkapi data.</p>';
                 return;
             }
-
             namaSiswa = data.nama || namaSiswa;
             kelasSiswa = kelasDariDB;
-
             document.getElementById('info-siswa').textContent = 'Halo, ' + namaSiswa;
             document.getElementById('nama-siswa-header').textContent = namaSiswa;
             document.getElementById('nisn-header').textContent = nisnSiswa;
             document.getElementById('kelas-header').textContent = kelasSiswa;
-
             await muatSemuaData();
         } catch (e) {
-            document.getElementById('daftar-mapel-saya').innerHTML =
-                '<p class="kosong">❌ Gagal memuat data.<br>Periksa koneksi internet.</p>';
+            document.getElementById('daftar-mapel-saya').innerHTML = '<p class="kosong">❌ Gagal memuat data.<br>Periksa koneksi internet.</p>';
         }
     }
 
@@ -628,10 +561,7 @@
                 for (const id in data) {
                     const { soal: _soalLama, ...m } = data[id];
                     const kelasList = parseKelasList(m.kelas);
-                    semuaMapel.push({
-                        id, ...m, kelasList, sudah_selesai: false, pengajuan: null,
-                        untuk_kelas_saya: kelasList.includes(kelasSiswa)
-                    });
+                    semuaMapel.push({ id, ...m, kelasList, sudah_selesai: false, pengajuan: null, untuk_kelas_saya: kelasList.includes(kelasSiswa) });
                 }
             }
             await Promise.all(semuaMapel.filter(m => m.untuk_kelas_saya).map(async m => {
@@ -671,43 +601,33 @@
 
         if (m.sudah_selesai && !bolehKerjakanUlang) {
             badge = '<span class="badge badge-selesai">Sudah Dikerjakan</span>';
-            if (statusPengajuan === 'menunggu') {
-                tombolAksi = `<button class="btn-sekunder" disabled>⏳ Menunggu Persetujuan</button>`;
-            } else {
-                tombolAksi = `<button class="btn-bahaya" onclick="bukaPopupUlang('${m.id}')">Ajukan Ujian Ulang</button>`;
-            }
+            if (statusPengajuan === 'menunggu') tombolAksi = `<button class="btn-sekunder" disabled>⏳ Menunggu Persetujuan</button>`;
+            else tombolAksi = `<button class="btn-bahaya" onclick="bukaPopupUlang('${m.id}')">Ajukan Ujian Ulang</button>`;
         } else if (m.status_aktif || bolehKerjakanUlang) {
-            badge = bolehKerjakanUlang
-                ? '<span class="badge badge-aktif">Disetujui Ujian Ulang</span>'
-                : '<span class="badge badge-aktif">Aktif</span>';
-            if (m.untuk_kelas_saya) {
-                tombolAksi = `<button class="btn-utama" onclick="bukaPopupToken('${m.id}')">Kerjakan Ujian</button>`;
-            } else {
-                tombolAksi = `<button class="btn-sekunder" disabled>Bukan kelas kamu</button>`;
-            }
+            badge = bolehKerjakanUlang ? '<span class="badge badge-aktif">Disetujui Ujian Ulang</span>' : '<span class="badge badge-aktif">Aktif</span>';
+            if (m.untuk_kelas_saya) tombolAksi = `<button class="btn-utama" onclick="bukaPopupToken('${m.id}')">Kerjakan Ujian</button>`;
+            else tombolAksi = `<button class="btn-sekunder" disabled>Bukan kelas kamu</button>`;
         } else {
             tombolAksi = `<button class="btn-sekunder" disabled>Belum aktif</button>`;
         }
 
-        const tandaBukanKelasSaya = (!m.untuk_kelas_saya && mode === 'semua')
-            ? `<span class="badge-other">Bukan kelas kamu</span>` : '';
+        const tandaBukanKelasSaya = (!m.untuk_kelas_saya && mode === 'semua') ? `<span class="badge-other">Bukan kelas kamu</span>` : '';
 
-        return `
-            <div class="card item-mapel">
-                <div class="item-mapel-atas">
-                    <div class="item-mapel-info">
-                        <b>${escapeHtml(m.nama_mapel)}</b>
-                        <span>Kelas: ${m.kelasList.map(escapeHtml).join(', ') || '-'}</span>
-                    </div>
-                    ${badge}
+        return `<div class="card item-mapel">
+            <div class="item-mapel-atas">
+                <div class="item-mapel-info">
+                    <b>${escapeHtml(m.nama_mapel)}</b>
+                    <span>Kelas: ${m.kelasList.map(escapeHtml).join(', ') || '-'}</span>
                 </div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                    <span class="badge-soal">📝 ${jumlahPg} PG</span>
-                    <span class="badge-soal">✍️ ${jumlahEssay} Essay</span>
-                    ${tandaBukanKelasSaya}
-                </div>
-                ${tombolAksi}
-            </div>`;
+                ${badge}
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <span class="badge-soal">📝 ${jumlahPg} PG</span>
+                <span class="badge-soal">✍️ ${jumlahEssay} Essay</span>
+                ${tandaBukanKelasSaya}
+            </div>
+            ${tombolAksi}
+        </div>`;
     }
 
     function renderDuaTab() {
@@ -717,14 +637,8 @@
             return m.status_aktif || m.sudah_selesai || bolehUlang || m.pengajuan;
         });
         const semua = semuaMapel.slice();
-
-        document.getElementById('daftar-mapel-saya').innerHTML = saya.length
-            ? saya.map(m => buatKartuMapel(m, 'saya')).join('')
-            : '<p class="kosong">Belum ada ujian untuk kelas kamu.</p>';
-
-        document.getElementById('daftar-mapel-semua').innerHTML = semua.length
-            ? semua.map(m => buatKartuMapel(m, 'semua')).join('')
-            : '<p class="kosong">Belum ada mapel.</p>';
+        document.getElementById('daftar-mapel-saya').innerHTML = saya.length ? saya.map(m => buatKartuMapel(m, 'saya')).join('') : '<p class="kosong">Belum ada ujian untuk kelas kamu.</p>';
+        document.getElementById('daftar-mapel-semua').innerHTML = semua.length ? semua.map(m => buatKartuMapel(m, 'semua')).join('') : '<p class="kosong">Belum ada mapel.</p>';
     }
 
     function bukaPopupToken(mapelId) {
@@ -749,12 +663,7 @@
             if (data) {
                 for (const id in data) {
                     const s = data[id];
-                    daftarSoal.push({
-                        id,
-                        tipe: s.tipe === 'essay' ? 'essay' : 'pg',
-                        pertanyaan: s.pertanyaan || '',
-                        pilihan: s.pilihan || []
-                    });
+                    daftarSoal.push({ id, tipe: s.tipe === 'essay' ? 'essay' : 'pg', pertanyaan: s.pertanyaan || '', pilihan: s.pilihan || [] });
                 }
             }
             if (daftarSoal.length === 0) { alert('Soal belum tersedia.'); return; }
@@ -770,17 +679,10 @@
         const teksAsli = btn.textContent;
         btn.disabled = true;
         btn.textContent = 'Memeriksa koneksi...';
-
         const online = await cekOnlineCepat();
-
         btn.disabled = false;
         btn.textContent = teksAsli;
-
-        if (online) {
-            alert('⚠️ Internet kamu masih nyala!\n\nMatikan Wi-Fi DAN data seluler dulu, lalu klik tombol "Internet Sudah Dimatikan, Mulai" lagi.');
-            return;
-        }
-
+        if (online) { alert('⚠️ Internet kamu masih nyala!\n\nMatikan Wi-Fi DAN data seluler dulu.'); return; }
         resetSemuaJawaban();
         sedangUjian = true;
         timestampKeluar = null;
@@ -793,12 +695,9 @@
     function mulaiMonitorPelanggaran() {
         if (monitorInterval) clearInterval(monitorInterval);
         monitorInterval = setInterval(async () => {
-            if (!sedangUjian) return;
-            if (document.hidden) return;
+            if (!sedangUjian || document.hidden) return;
             const online = await cekOnlineCepat(2500);
-            if (online && sedangUjian && !document.hidden) {
-                tanganiPelanggaran('online_saat_aktif');
-            }
+            if (online && sedangUjian && !document.hidden) tanganiPelanggaran('online_saat_aktif');
         }, INTERVAL_CEK_ONLINE_MS);
     }
 
@@ -829,31 +728,20 @@
 
     document.addEventListener('visibilitychange', function () {
         if (!sedangUjian) return;
-        if (document.hidden) {
-            timestampKeluar = Date.now();
-        } else {
+        if (document.hidden) timestampKeluar = Date.now();
+        else {
             if (timestampKeluar == null) return;
             const durasiDetik = (Date.now() - timestampKeluar) / 1000;
             timestampKeluar = null;
-
             cekOnlineCepat(2500).then(online => {
                 if (!sedangUjian) return;
-                if (online) {
-                    tanganiPelanggaran('online_saat_kembali');
-                    return;
-                }
-                if (durasiDetik > BATAS_DETIK_KELUAR) {
-                    tanganiPelanggaran('keluar_lama', durasiDetik);
-                }
+                if (online) { tanganiPelanggaran('online_saat_kembali'); return; }
+                if (durasiDetik > BATAS_DETIK_KELUAR) tanganiPelanggaran('keluar_lama', durasiDetik);
             });
         }
     });
 
-    window.addEventListener('online', function () {
-        if (sedangUjian) {
-            tanganiPelanggaran('online_saat_aktif');
-        }
-    });
+    window.addEventListener('online', function () { if (sedangUjian) tanganiPelanggaran('online_saat_aktif'); });
 
     function tanganiPelanggaran(jenis, durasiDetik) {
         if (!sedangUjian) return;
@@ -861,25 +749,11 @@
         if (monitorInterval) { clearInterval(monitorInterval); monitorInterval = null; }
         if (statusInterval) { clearInterval(statusInterval); statusInterval = null; }
         timestampKeluar = null;
-
         resetSemuaJawaban();
-
         let pesan = '';
-        if (jenis === 'online_saat_aktif') {
-            pesan = 'Internet kamu terdeteksi nyala saat ujian berlangsung. ' +
-                    'Semua jawaban kamu dihapus dan kamu dikembalikan ke soal nomor 1. ' +
-                    'Matikan Wi-Fi dan data seluler dulu, lalu klik tombol di bawah.';
-        } else if (jenis === 'online_saat_kembali') {
-            pesan = 'Saat kamu kembali ke aplikasi, internet kamu terdeteksi nyala. ' +
-                    'Semua jawaban kamu dihapus dan kamu dikembalikan ke soal nomor 1. ' +
-                    'Matikan Wi-Fi dan data seluler dulu, lalu klik tombol di bawah.';
-        } else if (jenis === 'keluar_lama') {
-            const d = Math.round(durasiDetik);
-            pesan = `Kamu terdeteksi keluar dari aplikasi selama ${d} detik. ` +
-                    'Semua jawaban kamu dihapus dan kamu dikembalikan ke soal nomor 1. ' +
-                    'Jangan keluar aplikasi selama ujian. Klik tombol di bawah untuk mulai lagi.';
-        }
-
+        if (jenis === 'online_saat_aktif') pesan = 'Internet kamu terdeteksi nyala saat ujian berlangsung. Semua jawaban kamu dihapus dan kamu dikembalikan ke soal nomor 1.';
+        else if (jenis === 'online_saat_kembali') pesan = 'Saat kamu kembali ke aplikasi, internet kamu terdeteksi nyala. Semua jawaban kamu dihapus dan kamu dikembalikan ke soal nomor 1.';
+        else if (jenis === 'keluar_lama') pesan = `Kamu terdeteksi keluar dari aplikasi selama ${Math.round(durasiDetik)} detik. Semua jawaban kamu dihapus dan kamu dikembalikan ke soal nomor 1.`;
         aksiKunciSaatIni = 'online';
         document.getElementById('judul-kunci').textContent = '🛑 Terdeteksi Pelanggaran';
         document.getElementById('pesan-kunci').textContent = pesan;
@@ -889,28 +763,15 @@
 
     async function aksiKunci() {
         document.getElementById('kunci-curang').classList.remove('tampil');
-
-        if (aksiKunciSaatIni === 'nonaktif') {
-            pindahLayar('layar-daftar-mapel');
-            muatSemuaData();
-            return;
-        }
-
+        if (aksiKunciSaatIni === 'nonaktif') { pindahLayar('layar-daftar-mapel'); muatSemuaData(); return; }
         const btn = document.getElementById('btn-kunci');
         const teksAsli = btn.textContent;
         btn.disabled = true;
         btn.textContent = 'Memeriksa koneksi...';
-
         const online = await cekOnlineCepat();
-
         btn.disabled = false;
         btn.textContent = teksAsli;
-
-        if (online) {
-            alert('⚠️ Internet masih nyala. Matikan Wi-Fi dan data seluler dulu, lalu klik tombol lagi.');
-            document.getElementById('kunci-curang').classList.add('tampil');
-            return;
-        }
+        if (online) { alert('⚠️ Internet masih nyala.'); document.getElementById('kunci-curang').classList.add('tampil'); return; }
         resetSemuaJawaban();
         sedangUjian = true;
         timestampKeluar = null;
@@ -923,25 +784,17 @@
     function tampilkanSoal() {
         const soal = daftarSoal[indexSoalSekarang];
         if (!soal) return;
-
         document.getElementById('progres-info').textContent = `Soal ${indexSoalSekarang + 1} dari ${daftarSoal.length}`;
-        document.getElementById('tag-tipe-soal').innerHTML = soal.tipe === 'essay'
-            ? '<span class="tag-tipe tag-essay">✍️ ESSAY</span>'
-            : '<span class="tag-tipe tag-pg">📝 PILIHAN GANDA</span>';
+        document.getElementById('tag-tipe-soal').innerHTML = soal.tipe === 'essay' ? '<span class="tag-tipe tag-essay">✍️ ESSAY</span>' : '<span class="tag-tipe tag-pg">📝 PILIHAN GANDA</span>';
         document.getElementById('teks-soal').textContent = soal.pertanyaan;
-
         const c = document.getElementById('daftar-opsi');
         c.innerHTML = '';
-
         if (soal.tipe === 'essay') {
             const jwb = jawabanSiswa[soal.id] || '';
             c.innerHTML = `<textarea class="jawaban-essay" id="input-jawaban-essay" placeholder="Tulis jawaban..."></textarea>`;
             const ta = document.getElementById('input-jawaban-essay');
             ta.value = jwb;
-            ta.addEventListener('input', (e) => {
-                jawabanSiswa[soal.id] = e.target.value;
-                updateHitungTerjawab();
-            });
+            ta.addEventListener('input', (e) => { jawabanSiswa[soal.id] = e.target.value; updateHitungTerjawab(); });
         } else {
             const H = ['A','B','C','D','E'];
             c.innerHTML = soal.pilihan.map((t, i) => {
@@ -953,42 +806,28 @@
                 </div>`;
             }).join('');
         }
-
         document.getElementById('btn-sebelumnya').disabled = indexSoalSekarang === 0;
         document.getElementById('btn-selanjutnya').textContent = indexSoalSekarang === daftarSoal.length - 1 ? 'Selesai Mengerjakan' : 'Selanjutnya →';
         updateHitungTerjawab();
     }
 
-    function pilihJawaban(sid, h) {
-        jawabanSiswa[sid] = h;
-        tampilkanSoal();
-    }
+    function pilihJawaban(sid, h) { jawabanSiswa[sid] = h; tampilkanSoal(); }
     function soalSebelumnya() { if (indexSoalSekarang > 0) { indexSoalSekarang--; tampilkanSoal(); } }
 
-    function bukaSemuaSoal() {
-        renderGridSemuaSoal();
-        document.getElementById('popup-semua-soal').classList.add('tampil');
-    }
+    function bukaSemuaSoal() { renderGridSemuaSoal(); document.getElementById('popup-semua-soal').classList.add('tampil'); }
     function renderGridSemuaSoal() {
         const grid = document.getElementById('grid-semua-soal');
         grid.innerHTML = daftarSoal.map((s, i) => {
             const sudah = sudahDijawab(s);
             const aktif = i === indexSoalSekarang;
-            return `<div class="nomor-soal ${sudah ? 'sudah' : ''} ${aktif ? 'aktif' : ''}"
-                        onclick="lompatKeSoal(${i})">${i + 1}</div>`;
+            return `<div class="nomor-soal ${sudah ? 'sudah' : ''} ${aktif ? 'aktif' : ''}" onclick="lompatKeSoal(${i})">${i + 1}</div>`;
         }).join('');
     }
-    function lompatKeSoal(i) {
-        if (i < 0 || i >= daftarSoal.length) return;
-        indexSoalSekarang = i;
-        tutupPopup('popup-semua-soal');
-        tampilkanSoal();
-    }
+    function lompatKeSoal(i) { if (i < 0 || i >= daftarSoal.length) return; indexSoalSekarang = i; tutupPopup('popup-semua-soal'); tampilkanSoal(); }
 
     function bukaPopupBelumLengkap() {
         const kosong = daftarIndexKosong();
-        document.getElementById('info-belum-lengkap').textContent =
-            `Masih ada ${kosong.length} soal yang belum dijawab. Kamu harus mengisi semua soal sebelum bisa mengirim jawaban.`;
+        document.getElementById('info-belum-lengkap').textContent = `Masih ada ${kosong.length} soal yang belum dijawab.`;
         const grid = document.getElementById('grid-nomor-kosong');
         grid.innerHTML = kosong.map(i => {
             const aktif = i === indexSoalSekarang;
@@ -996,10 +835,7 @@
         }).join('');
         document.getElementById('popup-belum-lengkap').classList.add('tampil');
     }
-    function lompatKeSoalDariPopupKosong(i) {
-        tutupPopup('popup-belum-lengkap');
-        lompatKeSoal(i);
-    }
+    function lompatKeSoalDariPopupKosong(i) { tutupPopup('popup-belum-lengkap'); lompatKeSoal(i); }
     function lompatKeKosongPertama() {
         const kosong = daftarIndexKosong();
         if (kosong.length === 0) { tutupPopup('popup-belum-lengkap'); return; }
@@ -1007,11 +843,7 @@
     }
 
     async function soalSelanjutnya() {
-        if (indexSoalSekarang < daftarSoal.length - 1) {
-            indexSoalSekarang++;
-            tampilkanSoal();
-            return;
-        }
+        if (indexSoalSekarang < daftarSoal.length - 1) { indexSoalSekarang++; tampilkanSoal(); return; }
         const kosong = daftarIndexKosong();
         if (kosong.length > 0) { bukaPopupBelumLengkap(); return; }
         const ya = await konfirmasi('Semua soal sudah dijawab. Selesaikan ujian sekarang?', 'Konfirmasi', 'Ya, Selesai');
@@ -1027,17 +859,10 @@
         const teksAsli = btn.textContent;
         btn.disabled = true;
         btn.textContent = 'Memeriksa koneksi...';
-
         const online = await cekOnlineCepat(3000);
-
         btn.disabled = false;
         btn.textContent = teksAsli;
-
-        if (!online) {
-            alert('⚠️ Internet belum nyala!\n\nNyalakan Wi-Fi atau data seluler dulu, lalu klik "Kirim Jawaban" lagi.');
-            return;
-        }
-
+        if (!online) { alert('⚠️ Internet belum nyala!'); return; }
         const kosong = daftarIndexKosong();
         if (kosong.length > 0) {
             sedangUjian = true;
@@ -1048,66 +873,34 @@
             bukaPopupBelumLengkap();
             return;
         }
-
         const jp = {}, je = {};
         let tp = 0, te = 0;
         daftarSoal.forEach(s => {
             if (s.tipe === 'essay') { te++; je[s.id] = jawabanSiswa[s.id] || ''; }
             else { tp++; jp[s.id] = jawabanSiswa[s.id] || ''; }
         });
-
         const status = te > 0 ? 'menunggu_penilaian' : 'menunggu_dinilai';
-
-        const data = {
-            nama: namaSiswa,
-            nisn: nisnSiswa,
-            kelas: kelasSiswa,
-            jawaban_pg: jp,
-            jawaban_essay: je,
-            total_pg: tp,
-            total_essay: te,
-            waktu_kirim: new Date().toLocaleString('id-ID'),
-            status
-        };
+        const data = { nama: namaSiswa, nisn: nisnSiswa, kelas: kelasSiswa, jawaban_pg: jp, jawaban_essay: je, total_pg: tp, total_essay: te, waktu_kirim: new Date().toLocaleString('id-ID'), status };
         try {
-            await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelDipilih.id}/${nisnSiswa}.json`, {
-                method: 'PUT', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify(data)
-            });
-            try {
-                await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mapelDipilih.id}/${nisnSiswa}.json`, { method: 'DELETE' });
-            } catch (e) {}
-
-            document.getElementById('pesan-terkirim').textContent = te > 0
-                ? 'Jawaban sudah terkirim. Nilai PG dan essay akan dihitung oleh guru.'
-                : 'Jawaban sudah terkirim. Nilai akan dihitung oleh guru.';
+            await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelDipilih.id}/${nisnSiswa}.json`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+            try { await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mapelDipilih.id}/${nisnSiswa}.json`, { method: 'DELETE' }); } catch (e) {}
+            document.getElementById('pesan-terkirim').textContent = te > 0 ? 'Jawaban sudah terkirim. Nilai PG dan essay akan dihitung oleh guru.' : 'Jawaban sudah terkirim. Nilai akan dihitung oleh guru.';
             pindahLayar('layar-terkirim');
         } catch (e) { alert('Gagal mengirim. Coba lagi.'); }
     }
-    function kembaliKeDaftarSetelahKirim() {
-        pindahLayar('layar-daftar-mapel');
-        muatSemuaData();
-    }
+    function kembaliKeDaftarSetelahKirim() { pindahLayar('layar-daftar-mapel'); muatSemuaData(); }
 
     function bukaPopupUlang(mapelId) {
         mapelUntukUlang = semuaMapel.find(m => m.id === mapelId);
-        document.getElementById('teks-popup-ulang').textContent =
-            `Ajukan ujian ulang untuk "${mapelUntukUlang.nama_mapel}"?`;
+        document.getElementById('teks-popup-ulang').textContent = `Ajukan ujian ulang untuk "${mapelUntukUlang.nama_mapel}"?`;
         document.getElementById('input-alasan-ulang').value = '';
         document.getElementById('popup-ulang').classList.add('tampil');
     }
     async function kirimPengajuanUlang() {
         if (!mapelUntukUlang) return;
-        const data = {
-            nama: namaSiswa, nisn: nisnSiswa, kelas: kelasSiswa,
-            alasan: document.getElementById('input-alasan-ulang').value.trim(),
-            status: 'menunggu', waktu: new Date().toLocaleString('id-ID')
-        };
+        const data = { nama: namaSiswa, nisn: nisnSiswa, kelas: kelasSiswa, alasan: document.getElementById('input-alasan-ulang').value.trim(), status: 'menunggu', waktu: new Date().toLocaleString('id-ID') };
         try {
-            await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mapelUntukUlang.id}/${nisnSiswa}.json`, {
-                method: 'PUT', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify(data)
-            });
+            await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mapelUntukUlang.id}/${nisnSiswa}.json`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
             tutupPopup('popup-ulang');
             alert('Pengajuan terkirim. Tunggu persetujuan admin.');
             muatSemuaData();
@@ -1115,32 +908,28 @@
     }
 
     // ============================================================
-    // HASIL UJIAN SISWA — LANGSUNG TAMPIL
+    // HASIL UJIAN SISWA — TOMBOL MATA + TABEL SIMPLE
     // ============================================================
     async function cekPublikasiNilai() {
         try {
             const r = await fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`);
             const pub = await r.json();
             nilaiDipublikasikan = pub === true;
-        } catch (e) {
-            nilaiDipublikasikan = false;
-        }
+        } catch (e) { nilaiDipublikasikan = false; }
     }
 
-    function warnaNilai(n) {
-        if (n == null) return 'kosong';
-        if (n >= 80) return 'tinggi';
-        if (n >= 60) return 'sedang';
-        return 'rendah';
+    function warnaNilaiTeks(n) {
+        if (n == null || typeof n !== 'number') return 'nilai-kosong';
+        if (n >= 80) return 'nilai-hijau';
+        if (n >= 60) return 'nilai-kuning';
+        return 'nilai-merah';
     }
 
     async function muatTranskripSiswa() {
         const k = document.getElementById('transkrip-siswa-container');
         k.innerHTML = '<div class="card"><p class="kosong">Memuat...</p></div>';
-
         await cekPublikasiNilai();
 
-        // Kalau belum dipublikasikan
         if (!nilaiDipublikasikan) {
             k.innerHTML = `<div class="pesan-tunggu">
                 <div class="ikon-besar">⏳</div>
@@ -1155,6 +944,29 @@
             return;
         }
 
+        // Tampilkan tombol mata
+        k.innerHTML = `<div class="kartu-tombol-mata">
+            <div class="teks-info">
+                🎉 Nilai ujianmu sudah tersedia!<br>
+                Klik tombol di bawah untuk melihat <b>rekapan nilai</b> lengkap.
+            </div>
+            <button class="btn-mata" onclick="tampilkanTabelNilai()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                Lihat Hasil Ujian
+            </button>
+            <p style="font-size:11px;color:#94a3b8;margin-top:14px;">
+                💡 Screenshot tampilan hasil untuk menyimpan rekapan nilaimu.
+            </p>
+        </div>`;
+    }
+
+    async function tampilkanTabelNilai() {
+        const k = document.getElementById('transkrip-siswa-container');
+        k.innerHTML = '<div class="card"><p class="kosong">Memuat nilai...</p></div>';
+
         try {
             const [rMapel, rHasil] = await Promise.all([
                 fetch(`${FIREBASE_URL}/mapel.json`),
@@ -1166,148 +978,97 @@
             const listMapel = Object.keys(dMapel).map(id => ({ id, ...dMapel[id] }))
                 .sort((a, b) => (a.nama_mapel || '').localeCompare(b.nama_mapel || ''));
 
-            // Hitung nilai setiap mapel
-            const hasilPerMapel = [];
             let totalNilai = 0, jmlNilai = 0;
-            let totalBenar = 0, totalPG = 0;
-            let totalEssayDinilai = 0, jmlEssayMapel = 0;
 
-            listMapel.forEach(m => {
+            let html = `<div class="kartu-tabel-nilai">
+                <div class="header-tabel">
+                    <div class="judul">📊 Rekap Nilai Ujian</div>
+                    <div class="sub">Hasil Ujian Semester</div>
+                </div>
+
+                <div class="info-siswa-tabel">
+                    <div class="nama">${escapeHtml(namaSiswa)}</div>
+                    <div class="detail">NISN: ${escapeHtml(nisnSiswa)} &nbsp;·&nbsp; Kelas: ${escapeHtml(kelasSiswa)}</div>
+                </div>
+
+                <div style="overflow-x:auto;">
+                <table class="tabel-rekap">
+                    <thead>
+                        <tr>
+                            <th style="width:24px;">No</th>
+                            <th class="kiri">Mata Pelajaran</th>
+                            <th style="width:46px;">Benar<br>PG</th>
+                            <th style="width:36px;">Nilai<br>PG</th>
+                            <th style="width:36px;">Nilai<br>Essay</th>
+                            <th style="width:40px;">Nilai<br>Akhir</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+            listMapel.forEach((m, i) => {
                 const h = dHasil[m.id] && dHasil[m.id][nisnSiswa];
-                let benarPg = null, totalPg = null, nilaiPg = null, nilaiEssay = null, nilaiAkhir = null;
+                let benarPg = '—', nilaiPg = '—', nilaiEssay = '—', nilaiAkhir = '—';
+                let kelasAkhir = 'nilai-kosong';
+
                 if (h) {
-                    benarPg = h.benar_pg != null ? h.benar_pg : 0;
-                    totalPg = h.total_pg != null ? h.total_pg : 0;
-                    nilaiPg = h.nilai_pg != null ? h.nilai_pg : 0;
-                    nilaiEssay = h.nilai_essay != null ? h.nilai_essay : null;
+                    const benar = h.benar_pg != null ? h.benar_pg : 0;
+                    const total = h.total_pg != null ? h.total_pg : 0;
+                    benarPg = `${benar}/${total}`;
+                    nilaiPg = h.nilai_pg != null ? h.nilai_pg : '—';
+                    nilaiEssay = h.nilai_essay != null ? h.nilai_essay : '—';
 
+                    const nilaiPgNum = h.nilai_pg != null ? h.nilai_pg : 0;
+                    const nilaiEssayNum = h.nilai_essay != null ? h.nilai_essay : null;
+                    const totalPg = h.total_pg || 0;
                     const totalEssay = h.total_essay || 0;
-                    if (nilaiEssay != null) {
-                        nilaiAkhir = (totalPg + totalEssay) === 0 ? 0 : Math.round((nilaiPg * totalPg + nilaiEssay * totalEssay) / (totalPg + totalEssay));
-                        totalEssayDinilai++;
-                        jmlEssayMapel++;
-                    } else if (totalPg > 0 && totalEssay === 0) {
-                        nilaiAkhir = nilaiPg;
-                    } else if (totalEssay > 0) {
-                        jmlEssayMapel++;
-                    }
 
-                    if (typeof nilaiAkhir === 'number') {
+                    if (nilaiEssayNum != null) {
+                        nilaiAkhir = (totalPg + totalEssay) === 0 ? 0 : Math.round((nilaiPgNum * totalPg + nilaiEssayNum * totalEssay) / (totalPg + totalEssay));
+                        kelasAkhir = warnaNilaiTeks(nilaiAkhir);
+                        totalNilai += nilaiAkhir;
+                        jmlNilai++;
+                    } else if (totalPg > 0 && totalEssay === 0) {
+                        nilaiAkhir = nilaiPgNum;
+                        kelasAkhir = warnaNilaiTeks(nilaiAkhir);
                         totalNilai += nilaiAkhir;
                         jmlNilai++;
                     }
-                    totalBenar += benarPg;
-                    totalPG += totalPg;
                 }
-                hasilPerMapel.push({
-                    id: m.id,
-                    nama: m.nama_mapel || '-',
-                    sudahDikerjakan: !!h,
-                    benarPg, totalPg, nilaiPg, nilaiEssay, nilaiAkhir
-                });
+
+                html += `<tr>
+                    <td class="no">${i+1}</td>
+                    <td class="kiri">${escapeHtml(m.nama_mapel || '-')}</td>
+                    <td class="angka">${escapeHtml(String(benarPg))}</td>
+                    <td class="angka ${warnaNilaiTeks(typeof nilaiPg === 'number' ? nilaiPg : null)}">${escapeHtml(String(nilaiPg))}</td>
+                    <td class="angka ${warnaNilaiTeks(typeof nilaiEssay === 'number' ? nilaiEssay : null)}">${escapeHtml(String(nilaiEssay))}</td>
+                    <td class="angka ${kelasAkhir}">${escapeHtml(String(nilaiAkhir))}</td>
+                </tr>`;
             });
 
-            const rataRata = jmlNilai > 0 ? Math.round(totalNilai / jmlNilai) : null;
+            const rata = jmlNilai > 0 ? Math.round(totalNilai / jmlNilai) : null;
 
-            // Bangun HTML
-            let html = `<div class="hasil-wrapper">`;
+            html += `</tbody></table></div>
 
-            // 1. Kartu identitas
-            html += `<div class="kartu-identitas">
-                <div class="label-kecil">Hasil Ujian</div>
-                <div class="nama-siswa">${escapeHtml(namaSiswa)}</div>
-                <div class="detail-row">
-                    <span>📋 NISN: ${escapeHtml(nisnSiswa)}</span>
-                    <span>🏫 ${escapeHtml(kelasSiswa)}</span>
+                <div class="footer-tabel">
+                    <div class="kotak-rata">
+                        <div class="label">Rata-rata Nilai</div>
+                        <div class="angka">${rata != null ? rata : '—'}</div>
+                        <div class="sub">dari ${jmlNilai} mapel dinilai</div>
+                    </div>
+                    <div class="tanggal-cetak">Dicetak: ${new Date().toLocaleString('id-ID')}</div>
                 </div>
+
+                <button class="btn-sekunder" style="margin-top:8px;" onclick="tampilkanTombolMataKembali()">← Kembali</button>
             </div>`;
-
-            // 2. Kartu rata-rata
-            if (rataRata != null) {
-                html += `<div class="kartu-rata">
-                    <div class="label">Nilai Rata-rata</div>
-                    <div class="angka">${rataRata}</div>
-                    <div class="info">dari ${jmlNilai} mapel</div>
-                </div>`;
-            } else {
-                html += `<div class="kartu-rata" style="background: linear-gradient(135deg, #94a3b8, #64748b); box-shadow: 0 10px 30px rgba(100,116,139,0.3);">
-                    <div class="label">Nilai Rata-rata</div>
-                    <div class="angka" style="font-size: 32px;">Belum Ada</div>
-                    <div class="info">nilai belum lengkap</div>
-                </div>`;
-            }
-
-            // 3. Grid statistik
-            html += `<div class="grid-stat">
-                <div class="stat-box">
-                    <div class="ikon hijau">📚</div>
-                    <div class="teks">
-                        <div class="nilai">${jmlNilai}</div>
-                        <div class="label">Mapel Dinilai</div>
-                    </div>
-                </div>
-                <div class="stat-box">
-                    <div class="ikon biru">✅</div>
-                    <div class="teks">
-                        <div class="nilai">${totalBenar}/${totalPG}</div>
-                        <div class="label">Total PG Benar</div>
-                    </div>
-                </div>
-                <div class="stat-box">
-                    <div class="ikon kuning">✍️</div>
-                    <div class="teks">
-                        <div class="nilai">${totalEssayDinilai}/${jmlEssayMapel}</div>
-                        <div class="label">Essay Dinilai</div>
-                    </div>
-                </div>
-                <div class="stat-box">
-                    <div class="ikon ungu">🏆</div>
-                    <div class="teks">
-                        <div class="nilai">${rataRata != null ? rataRata : '-'}</div>
-                        <div class="label">Rata-rata</div>
-                    </div>
-                </div>
-            </div>`;
-
-            // 4. Judul seksi
-            html += `<div class="judul-seksi">📖 Rincian Nilai per Mapel</div>`;
-
-            // 5. Kartu nilai per mapel
-            hasilPerMapel.forEach(m => {
-                const kelasWarna = warnaNilai(m.nilaiAkhir);
-                const tampilNilai = typeof m.nilaiAkhir === 'number' ? m.nilaiAkhir : '—';
-                const benarPg = m.benarPg != null ? `${m.benarPg}/${m.totalPg}` : '-';
-                const nilaiPg = m.nilaiPg != null ? m.nilaiPg : '-';
-                const nilaiEssay = m.nilaiEssay != null ? m.nilaiEssay : '-';
-
-                html += `<div class="nilai-mapel-card">
-                    <div class="header">
-                        <div class="nama-mapel">${escapeHtml(m.nama)}</div>
-                        <div class="nilai-bulat ${kelasWarna}">${tampilNilai}</div>
-                    </div>
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <div class="angka">${benarPg}</div>
-                            <div class="label">Benar PG</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="angka">${nilaiPg}</div>
-                            <div class="label">Nilai PG</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="angka">${nilaiEssay}</div>
-                            <div class="label">Nilai Essay</div>
-                        </div>
-                    </div>
-                </div>`;
-            });
-
-            html += `</div>`;
 
             k.innerHTML = html;
         } catch (e) {
             k.innerHTML = '<div class="card"><p class="kosong">Gagal memuat nilai.</p></div>';
         }
+    }
+
+    function tampilkanTombolMataKembali() {
+        muatTranskripSiswa();
     }
 
     // ============ INIT ============
