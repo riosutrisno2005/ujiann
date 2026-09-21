@@ -94,6 +94,7 @@
     .overlay-cetak-header .btn-close { background: rgba(255,255,255,0.2); color: #fff; }
     .overlay-cetak iframe { flex: 1; border: 0; width: 100%; }
     #konten-cetak-print { display: none; padding: 15px; background: #fff; overflow-y: auto; flex: 1; }
+    .search-akun { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #1b5e20; background: rgba(255,255,255,0.9); font-size: 14px; color: #0f172a; outline: none; font-family: inherit; margin-bottom: 10px; }
     @media print {
         body > *:not(.overlay-cetak) { display: none !important; }
         .overlay-cetak { position: static !important; display: block !important; }
@@ -176,6 +177,22 @@
                 <button class="btn-sekunder" onclick="lihatTemplateAkun()">📄 Template</button>
             </div>
         </div>
+
+        <!-- KOTAK HAPUS SEMUA (Muncul hanya di subtab tertentu) -->
+        <div class="kotak-hapus-semua" id="kotak-hapus-semua-akun" style="display:none;">
+            <b style="font-size:13px;color:#7f1d1d;">🗑️ Hapus Semua Akun</b>
+            <span id="info-hapus-semua-akun">-</span>
+            <button class="btn-bahaya-solid" onclick="hapusSemuaAkun()" id="btn-hapus-semua-akun">🗑️ Hapus Semua</button>
+            <span style="font-size:11px;">⚠️ Tindakan ini tidak dapat dibatalkan.</span>
+        </div>
+
+        <!-- SEARCH BOX UNTUK AKUN -->
+        <div class="card">
+            <b style="font-size:14px;color:#0f172a;">🔍 Cari Akun</b>
+            <input type="text" class="search-akun" id="input-cari-akun" placeholder="Cari nama atau username/NISN..." oninput="renderAkun()">
+            <span style="font-size:11px;color:#64748b;" id="info-jumlah-akun">-</span>
+        </div>
+
         <div id="daftar-akun"></div>
     </div>
 
@@ -1527,6 +1544,8 @@
             document.getElementById('judul-form-akun').textContent = 'Tambah Akun Admin';
         }
         resetFormAkun();
+        // Reset search & render
+        document.getElementById('input-cari-akun').value = '';
         renderAkun();
     }
 
@@ -1563,8 +1582,49 @@
 
     function renderAkun() {
         const k = document.getElementById('daftar-akun');
-        const list = daftarAkun[subTabAkun] || [];
-        if (list.length === 0) { k.innerHTML = `<p class="kosong">Belum ada akun ${subTabAkun}.</p>`; return; }
+        const cari = (document.getElementById('input-cari-akun').value || '').toLowerCase().trim();
+
+        let list = (daftarAkun[subTabAkun] || []).slice();
+
+        // Filter pencarian
+        if (cari) {
+            list = list.filter(a =>
+                (a.nama || '').toLowerCase().includes(cari) ||
+                (a.username || a.kunci || '').toLowerCase().includes(cari) ||
+                (a.nisn || a.kunci || '').toLowerCase().includes(cari) ||
+                (a.kelas || '').toLowerCase().includes(cari)
+            );
+        }
+        list.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
+
+        // Update info jumlah & tombol hapus semua
+        const infoJumlah = document.getElementById('info-jumlah-akun');
+        if (infoJumlah) {
+            const total = (daftarAkun[subTabAkun] || []).length;
+            infoJumlah.textContent = cari
+                ? `Menampilkan ${list.length} dari ${total} akun`
+                : `Total: ${total} akun`;
+        }
+
+        // Tampilkan/sembunyikan kotak hapus semua
+        const kotakHapus = document.getElementById('kotak-hapus-semua-akun');
+        const infoHapus = document.getElementById('info-hapus-semua-akun');
+        const btnHapus = document.getElementById('btn-hapus-semua-akun');
+        const totalAkun = (daftarAkun[subTabAkun] || []).length;
+        if (totalAkun > 0) {
+            kotakHapus.style.display = 'flex';
+            const labelTipe = subTabAkun === 'admin' ? 'Admin' : (subTabAkun === 'guru' ? 'Guru' : 'Siswa');
+            infoHapus.innerHTML = `Menghapus <b>${totalAkun} akun ${labelTipe}</b> dari Firebase.<br>Tindakan ini tidak bisa dibatalkan.`;
+            btnHapus.textContent = `🗑️ Hapus Semua Akun (${totalAkun})`;
+        } else {
+            kotakHapus.style.display = 'none';
+        }
+
+        if (list.length === 0) {
+            k.innerHTML = `<p class="kosong">${cari ? 'Tidak ada akun yang cocok dengan pencarian.' : `Belum ada akun ${subTabAkun}.`}</p>`;
+            return;
+        }
+
         k.innerHTML = list.map(a => {
             const badgeClass = subTabAkun === 'admin' ? 'badge-admin' : (subTabAkun === 'guru' ? 'badge-guru' : 'badge-siswa');
             const badgeLabel = subTabAkun === 'admin' ? 'Admin' : (subTabAkun === 'guru' ? 'Guru' : 'Siswa');
@@ -1664,6 +1724,45 @@
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
+    // HAPUS SEMUA AKUN (BARU)
+    async function hapusSemuaAkun() {
+        const list = daftarAkun[subTabAkun] || [];
+        if (list.length === 0) { alert('Tidak ada akun untuk dihapus.'); return; }
+
+        const labelTipe = subTabAkun === 'admin' ? 'Admin' : (subTabAkun === 'guru' ? 'Guru' : 'Siswa');
+        const ya1 = await konfirmasi(
+            `Hapus SEMUA ${list.length} akun ${labelTipe}?\n\nTindakan ini TIDAK BISA DIBATALKAN.\n\nAkun yang dihapus tidak akan bisa login lagi.`,
+            '⚠️ Peringatan', 'Ya, Lanjutkan'
+        );
+        if (!ya1) return;
+
+        // Konfirmasi kedua
+        const ya2 = await konfirmasi(
+            `Konfirmasi terakhir:\n\nYakin ingin menghapus ${list.length} akun ${labelTipe}?\n\nKetik "HAPUS" di halaman chat App Inventor kalau benar-benar yakin, atau klik "Ya, Hapus Semua" kalau sudah yakin.`,
+            '⚠️ Konfirmasi Terakhir', 'Ya, Hapus Semua'
+        );
+        if (!ya2) return;
+
+        tampilkanStatus(`Menghapus ${list.length} akun ${labelTipe}...`, 'info');
+
+        let sukses = 0, gagal = 0;
+        const path = PATH_AKUN[subTabAkun];
+
+        for (const a of list) {
+            try {
+                const r = await fetch(`${FIREBASE_URL}/${path}/${a.kunci}.json`, { method: 'DELETE' });
+                if (r.ok) sukses++; else gagal++;
+            } catch (e) { gagal++; }
+        }
+
+        if (gagal > 0) {
+            tampilkanStatus(`${sukses} dihapus, ${gagal} gagal.`, 'info');
+        } else {
+            tampilkanStatus(`✅ ${sukses} akun ${labelTipe} berhasil dihapus.`, 'sukses');
+        }
+        muatAkunAll();
+    }
+
     // ============ IMPORT AKUN CSV ============
     function bukaImportAkunCSV() {
         const p = document.getElementById('petunjuk-import-akun');
@@ -1737,7 +1836,7 @@
     }
 
     // ============================================================
-    // TRANSKRIP & CETAK (HANYA UNTUK CETAK PER KELAS)
+    // TRANSKRIP & CETAK
     // ============================================================
     async function muatTranskrip() {
         try {
@@ -1760,7 +1859,7 @@
 
             updateStatusPublikasi(dPub === true);
 
-            // Kumpulkan kelas dari 2 sumber: daftar_kelas + kelas unik siswa
+            // Kumpulkan kelas dari 2 sumber
             const setKelas = new Set();
             for (const id in dKelas) if (dKelas[id].nama) setKelas.add(dKelas[id].nama);
             semuaSiswaGlobal.forEach(s => {
@@ -1894,7 +1993,6 @@
             return;
         }
 
-        // Metode 1: Print iframe langsung
         try {
             const cw = iframe.contentWindow;
             if (cw && typeof cw.print === 'function') {
@@ -1904,7 +2002,6 @@
             }
         } catch (e) { console.log('Iframe print gagal:', e); }
 
-        // Metode 2: Print via window.open
         try {
             const w = window.open('', '_blank');
             if (w) {
@@ -1917,13 +2014,11 @@
             }
         } catch (e) { console.log('Window.open gagal:', e); }
 
-        // Metode 3: Print halaman utama
         try {
             window.print();
             return;
         } catch (e) { console.log('Window.print gagal:', e); }
 
-        // Metode 4: Fallback
         alert('⚠️ Print tidak didukung di perangkat ini.\n\nAlternatif:\n• Screenshot tampilan preview langsung dari HP\n• Buka halaman ini di Chrome desktop untuk cetak/PDF\n• Gunakan tombol "Export CSV" untuk data mentah');
     }
 
