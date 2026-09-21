@@ -50,7 +50,7 @@
     .baris-tombol { display: flex; gap: 8px; flex-wrap: wrap; }
     .baris-tombol > * { flex: 1; min-width: 110px; }
     .tab-nav { display: flex; gap: 6px; background: rgba(255,255,255,0.55); padding: 6px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.8); flex-wrap: wrap; }
-    .tab-nav button { padding: 10px; border: none; border-radius: 10px; font-weight: 600; font-size: 13px; background: transparent; color: #14532d; cursor: pointer; flex: 1; min-width: 90px; }
+    .tab-nav button { padding: 10px; border: none; border-radius: 10px; font-weight: 600; font-size: 12px; background: transparent; color: #14532d; cursor: pointer; flex: 1; min-width: 80px; }
     .tab-nav button.aktif { background: #1b5e20; color: #fff; }
     .item-siswa { background: rgba(241,245,249,0.9); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
     .item-siswa b { font-size: 14px; color: #0f172a; }
@@ -80,6 +80,13 @@
     .kotak-essay .input-nilai label { font-size: 12px; font-weight: 600; color: #14532d; flex-shrink: 0; }
     .kotak-essay .input-nilai input { width: 80px; padding: 8px 10px; border-radius: 10px; border: 1px solid #1b5e20; text-align: center; font-weight: 700; font-size: 15px; background: #fff; }
     .info-nilai-tersimpan { background: rgba(220,252,231,0.7); border-radius: 10px; padding: 8px 10px; font-size: 12px; color: #166534; line-height: 1.5; }
+    /* CSS Transkrip & Cetak */
+    .print-btn { background: #1e40af; color: #fff; border: none; border-radius: 12px; padding: 12px 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .publish-btn { background: #7c3aed; color: #fff; border: none; border-radius: 12px; padding: 12px 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .status-publikasi { padding: 12px; border-radius: 12px; margin: 8px 0; font-size: 13px; font-weight: 600; text-align: center; }
+    .status-publikasi.aktif { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .status-publikasi.nonaktif { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .search-box { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.9); background: rgba(255,255,255,0.85); font-size: 15px; outline: none; font-family: inherit; }
 </style>
 </head>
 <body>
@@ -97,6 +104,7 @@
         <button id="tab-btn-kelas" onclick="gantiTab('kelas')">🏫 Kelas</button>
         <button id="tab-btn-akun" onclick="gantiTab('akun')">👥 Akun</button>
         <button id="tab-btn-kolab" onclick="gantiTab('kolab')">🤝 Kolaborasi</button>
+        <button id="tab-btn-transkrip" onclick="gantiTab('transkrip')">📋 Transkrip & Cetak</button>
     </div>
 
     <div id="tab-mapel" style="display:flex;flex-direction:column;gap:16px;">
@@ -157,7 +165,6 @@
         <div id="daftar-akun"></div>
     </div>
 
-    <!-- TAB KOLABORASI (BARU) -->
     <div id="tab-kolab" style="display:none;flex-direction:column;gap:16px;">
         <div class="card">
             <b style="font-size:14px;color:#0f172a;">🤝 Monitoring Kolaborasi Koreksi</b>
@@ -165,6 +172,36 @@
             <button class="btn-sekunder" onclick="muatMonitoringKolaborasi()">🔄 Refresh Data</button>
         </div>
         <div id="daftar-kolab"></div>
+    </div>
+
+    <!-- TAB TRANSKRIP & CETAK -->
+    <div id="tab-transkrip" style="display:none;flex-direction:column;gap:16px;">
+        <div class="card">
+            <b style="font-size:14px;color:#0f172a;">📋 Transkrip & Cetak Nilai</b>
+            <div style="background:rgba(219,234,254,0.6);padding:8px 10px;border-radius:8px;font-size:12px;color:#1e40af;line-height:1.5;margin:6px 0;">
+                💡 <b>Cara Simpan PDF:</b> Setelah klik tombol cetak, dialog akan muncul. Pilih <b>"Save as PDF"</b> atau <b>"Simpan sebagai PDF"</b> di kolom printer, lalu klik Simpan.
+            </div>
+            <span style="font-size:12px;color:#475569;">Lihat, cetak, dan publikasikan nilai ujian ke siswa.</span>
+            <div id="status-publikasi" class="status-publikasi nonaktif">Memuat status...</div>
+            <div class="baris-tombol">
+                <button class="btn-sekunder" onclick="muatTranskrip()">🔄 Refresh</button>
+                <button class="publish-btn" id="btn-publish" onclick="togglePublikasi()">📤 Kirim Semua Nilai ke Siswa</button>
+            </div>
+            <div class="baris-tombol">
+                <button class="print-btn" onclick="bukaCetakPerKelas()">🖨️ Cetak / Simpan PDF Per Kelas</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <b style="font-size:14px;color:#0f172a;">🔍 Cari & Filter Siswa</b>
+            <input type="text" class="search-box" id="input-cari-siswa" placeholder="Cari nama atau NISN..." oninput="filterDaftarSiswa()">
+            <div class="field" style="margin-top:8px;">
+                <label>Filter Kelas</label>
+                <select id="filter-kelas-transkrip" onchange="filterDaftarSiswa()"><option value="">Semua Kelas</option></select>
+            </div>
+        </div>
+
+        <div id="daftar-siswa-transkrip"></div>
     </div>
 </div>
 
@@ -263,6 +300,31 @@
     </div>
 </div>
 
+<!-- POPUP CETAK PER KELAS -->
+<div class="popup-overlay" id="popup-cetak-kelas">
+    <div class="popup-box">
+        <h3>🖨️ Cetak Nilai</h3>
+        <p style="font-size:12px;color:#475569;">Pilih kelas dan mapel yang ingin dicetak.</p>
+        <div class="field">
+            <label>Kelas (wajib)</label>
+            <select id="pilih-kelas-cetak"><option value="">-- Pilih Kelas --</option></select>
+        </div>
+        <div class="field">
+            <label>Mapel (opsional)</label>
+            <select id="pilih-mapel-cetak"><option value="">📚 Semua Mapel (Tabel Lengkap)</option></select>
+        </div>
+        <div style="background:rgba(219,234,254,0.6);padding:8px 10px;border-radius:8px;font-size:11px;color:#1e40af;line-height:1.5;">
+            💡 <b>Pilih "Semua Mapel"</b> → tabel 1 kelas × semua mapel (mirip rekap).
+            <br>
+            💡 <b>Pilih mapel tertentu</b> → tabel 1 kelas × 1 mapel (lebih detail, ada nilai PG & Essay).
+        </div>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupPopup('popup-cetak-kelas')">Batal</button>
+            <button class="btn-utama" onclick="prosesCetakPerKelas()">🖨️ Cetak / PDF</button>
+        </div>
+    </div>
+</div>
+
 <!-- POPUP KONFIRMASI -->
 <div class="popup-overlay" id="popup-konfirmasi">
     <div class="popup-box" style="text-align:center;">
@@ -344,10 +406,13 @@
     let usernameAdmin = "", namaAdmin = "";
     let daftarMapel = [], daftarKelas = [];
     let daftarAkun = { admin: [], guru: [], siswa: [] };
-    let konteksNilaiEssay = { mapelId: null, nisn: null, soalEssay: [], nilaiPerSoal: {}, hasilSiswa: {}, lock: null };
+    let konteksNilaiEssay = { mapelId: null, nisn: null, soalEssay: [], nilaiPerSoal: {}, hasilSiswa: {}, lock: null, nilaiTersimpan: null };
     let rekapSekarang = { mapelId: null, namaMapel: '', semuaData: [], kunciCache: null, locks: {}, nilaiEssayMap: {} };
     let subTabAkun = 'guru';
     let sedangEditAkun = null;
+    let semuaSiswaGlobal = [];
+    let semuaMapelGlobal = [];
+    let hasilUjianGlobal = {};
 
     let resolveKonfirmasi = null;
     function konfirmasi(pesan, judul, labelOk) {
@@ -394,13 +459,14 @@
     function buatTokenAcak() { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let h = ''; for (let i = 0; i < 6; i++) h += c.charAt(Math.floor(Math.random() * c.length)); return h; }
 
     function gantiTab(tab) {
-        ['mapel','kelas','akun','kolab'].forEach(t => {
+        ['mapel','kelas','akun','kolab','transkrip'].forEach(t => {
             document.getElementById('tab-btn-' + t).classList.toggle('aktif', t === tab);
             document.getElementById('tab-' + t).style.display = t === tab ? 'flex' : 'none';
         });
         if (tab === 'kelas') muatKelas();
         if (tab === 'akun') { muatAkunAll(); isiSelectKelasAkun(); }
         if (tab === 'kolab') muatMonitoringKolaborasi();
+        if (tab === 'transkrip') muatTranskrip();
     }
 
     // ============ TAB MAPEL ============
@@ -517,7 +583,7 @@
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
-    // ============ REKAP NILAI (dengan info lock & kolaborasi) ============
+    // ============ REKAP NILAI ============
     async function lihatRekapNilai(mapelId, namaMapel) {
         document.getElementById('judul-pengerjaan').textContent = 'Rekap: ' + namaMapel;
         const k = document.getElementById('daftar-pengerjaan');
@@ -570,7 +636,6 @@
             return;
         }
 
-        // Info kolaborasi
         let infoKolab = '';
         if (rekapSekarang.kolab && rekapSekarang.kolab.status === 'aktif') {
             const helperDisetujui = [];
@@ -604,7 +669,6 @@
             const nisn = h.nisn || h.nis || '';
             const nama = h.nama || '-';
 
-            // Cek lock
             const lock = rekapSekarang.locks ? rekapSekarang.locks[nisn] : null;
             let badgeLock = '';
             let tombolUnlock = '';
@@ -613,7 +677,6 @@
                 tombolUnlock = `<button class="btn-unlock" onclick="forceUnlock('${escapeHtml(nisn)}', '${escapeHtml(nama)}')">🔓 Force Unlock</button>`;
             }
 
-            // Cek guru yang sudah menilai (dari nilai_essay)
             const nilaiData = rekapSekarang.nilaiEssayMap ? rekapSekarang.nilaiEssayMap[nisn] : null;
             let infoPenilai = '';
             if (nilaiData && nilaiData.nama_guru) {
@@ -645,7 +708,6 @@
         try {
             await fetch(`${FIREBASE_URL}/koreksi_lock/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' });
             tampilkanStatus('Lock dilepas.', 'sukses');
-            // Refresh rekap
             lihatRekapNilai(rekapSekarang.mapelId, rekapSekarang.namaMapel);
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
@@ -743,7 +805,7 @@
         muatDaftarMapel();
     }
 
-    // ============ NILAI ESSAY ADMIN (SEMUA SEKALIGUS) ============
+    // ============ NILAI ESSAY ADMIN ============
     async function bukaNilaiEssay(mapelId, nisn) {
         konteksNilaiEssay = {
             mapelId, nisn, soalEssay: [], nilaiPerSoal: {}, hasilSiswa: {}, lock: null, nilaiTersimpan: null
@@ -767,7 +829,6 @@
             konteksNilaiEssay.lock = rLock;
             konteksNilaiEssay.nilaiTersimpan = rNilai;
 
-            // Info lock & penilai
             let infoHtml = '';
             if (rLock && rLock.guru) {
                 infoHtml += `<div class="info-nilai-tersimpan" style="background:rgba(254,243,199,0.9);color:#7c4a03;border:1px solid #f59e0b;">
@@ -785,7 +846,6 @@
             }
             document.getElementById('info-lock-essay-admin').innerHTML = infoHtml;
 
-            // Kumpulkan soal essay
             const je = (hasil && hasil.jawaban_essay) || {};
             const listEssay = [];
             let no = 0;
@@ -801,14 +861,12 @@
             }
             konteksNilaiEssay.soalEssay = listEssay;
 
-            // Isi nilai per soal dari rNilai (jika ada)
             if (rNilai && typeof rNilai === 'object') {
                 for (const sid in rNilai) {
                     if (sid === 'nilai_akhir' || sid === 'guru' || sid === 'nama_guru' || sid === 'waktu') continue;
                     if (typeof rNilai[sid] === 'number') konteksNilaiEssay.nilaiPerSoal[sid] = rNilai[sid];
                 }
             }
-            // Fallback: jika nilai per soal tidak ada tapi nilai_essay ada, pakai nilai_essay sebagai nilai awal semua soal
             if (Object.keys(konteksNilaiEssay.nilaiPerSoal).length === 0 && hasil && hasil.nilai_essay != null) {
                 for (const s of listEssay) konteksNilaiEssay.nilaiPerSoal[s.id] = hasil.nilai_essay;
             }
@@ -818,7 +876,6 @@
                 return;
             }
 
-            // Render semua essay sekaligus
             const html = listEssay.map(s => {
                 const nilaiVal = (konteksNilaiEssay.nilaiPerSoal[s.id] != null) ? konteksNilaiEssay.nilaiPerSoal[s.id] : '';
                 return `<div class="kotak-essay">
@@ -899,7 +956,6 @@
             if (!ya) return;
         }
 
-        // Hitung rata-rata
         let total = 0, jml = 0;
         for (const s of soalEssay) {
             const v = nilaiPerSoal[s.id];
@@ -907,7 +963,6 @@
         }
         const nilaiRata = jml > 0 ? Math.round(total / jml) : null;
 
-        // Data untuk Firebase
         const dataNilai = {
             guru: usernameAdmin,
             nama_guru: (namaAdmin || usernameAdmin) + ' (Admin)',
@@ -919,13 +974,11 @@
         }
 
         try {
-            // Simpan nilai per soal
             await fetch(`${FIREBASE_URL}/nilai_essay/${mapelId}/${nisn}.json`, {
                 method: 'PUT', headers: {'Content-Type':'application/json'},
                 body: JSON.stringify(dataNilai)
             });
 
-            // Update hasil_ujian
             const [rHasil, kunci] = await Promise.all([
                 fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`),
                 ambilKunci(mapelId)
@@ -945,7 +998,6 @@
                 })
             });
 
-            // Lepas lock jika admin yang pegang
             try {
                 const rLock = await fetch(`${FIREBASE_URL}/koreksi_lock/${mapelId}/${nisn}.json`).then(x => x.json());
                 if (rLock && rLock.guru === usernameAdmin) {
@@ -1096,14 +1148,12 @@
             const dataNilai = rNilai || {};
             const dataMapel = rMapel || {};
 
-            // Hitung total lock aktif
             let totalLock = 0;
             for (const mid in dataLock) {
                 for (const nis in dataLock[mid]) totalLock++;
             }
 
             let html = '';
-            // Summary
             const jmlKolabAktif = Object.keys(dataKolab).filter(mid => dataKolab[mid].status === 'aktif').length;
             html += `<div class="card">
                 <b style="font-size:14px;color:#0f172a;">📊 Ringkasan</b>
@@ -1119,7 +1169,6 @@
                 return;
             }
 
-            // Daftar kolaborasi
             for (const mid in dataKolab) {
                 const c = dataKolab[mid];
                 const mapel = dataMapel[mid];
@@ -1128,7 +1177,6 @@
                     ? '<span class="badge badge-nonaktif">Selesai</span>'
                     : '<span class="badge badge-aktif">Aktif</span>';
 
-                // Helper list
                 let helperList = '';
                 if (c.helper) {
                     for (const u in c.helper) {
@@ -1141,7 +1189,6 @@
                     }
                 }
 
-                // Lock aktif untuk mapel ini
                 let lockList = '';
                 if (dataLock[mid]) {
                     const locksArr = [];
@@ -1157,7 +1204,6 @@
                     }
                 }
 
-                // Jumlah nilai tersimpan
                 let jmlNilai = 0;
                 if (dataNilai[mid]) jmlNilai = Object.keys(dataNilai[mid]).length;
 
@@ -1673,6 +1719,316 @@
         if (ok === 0) alert('Tidak ada akun berhasil diimport.');
         else tampilkanStatus(`${ok} akun diimport${skip ? `, ${skip} dilewati` : ''}.`, 'sukses');
         muatAkunAll();
+    }
+
+    // ============================================================
+    // TRANSKRIP & CETAK
+    // ============================================================
+    async function muatTranskrip() {
+        const k = document.getElementById('daftar-siswa-transkrip');
+        k.innerHTML = '<p class="kosong">Memuat...</p>';
+        try {
+            const [rSiswa, rMapel, rHasil, rPub] = await Promise.all([
+                fetch(`${FIREBASE_URL}/peserta_ujian.json`),
+                fetch(`${FIREBASE_URL}/mapel.json`),
+                fetch(`${FIREBASE_URL}/hasil_ujian.json`),
+                fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`)
+            ]);
+            const dSiswa = await rSiswa.json() || {};
+            const dMapel = await rMapel.json() || {};
+            const dHasil = await rHasil.json() || {};
+            const dPub = await rPub.json();
+
+            semuaSiswaGlobal = Object.keys(dSiswa).map(kunci => ({ kunci, ...dSiswa[kunci] }));
+            semuaMapelGlobal = Object.keys(dMapel).map(id => ({ id, ...dMapel[id] }));
+            hasilUjianGlobal = dHasil;
+
+            updateStatusPublikasi(dPub === true);
+
+            const kelasUnik = [...new Set(semuaSiswaGlobal.map(s => s.kelas).filter(Boolean))].sort();
+            document.getElementById('filter-kelas-transkrip').innerHTML =
+                '<option value="">Semua Kelas</option>' +
+                kelasUnik.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+            document.getElementById('pilih-kelas-cetak').innerHTML =
+                '<option value="">-- Pilih Kelas --</option>' +
+                kelasUnik.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+            document.getElementById('pilih-mapel-cetak').innerHTML =
+                '<option value="">📚 Semua Mapel (Tabel Lengkap)</option>' +
+                semuaMapelGlobal
+                    .sort((a, b) => (a.nama_mapel || '').localeCompare(b.nama_mapel || ''))
+                    .map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.nama_mapel || '')}</option>`).join('');
+
+            filterDaftarSiswa();
+        } catch (e) { k.innerHTML = '<p class="kosong">Gagal memuat data.</p>'; }
+    }
+
+    function updateStatusPublikasi(published) {
+        const el = document.getElementById('status-publikasi');
+        const btn = document.getElementById('btn-publish');
+        if (published) {
+            el.className = 'status-publikasi aktif';
+            el.textContent = '✅ Nilai sudah dipublikasikan ke siswa';
+            btn.textContent = '🔒 Tarik Nilai dari Siswa';
+            btn.style.background = '#b91c1c';
+        } else {
+            el.className = 'status-publikasi nonaktif';
+            el.textContent = '⚠️ Nilai belum dipublikasikan ke siswa';
+            btn.textContent = '📤 Kirim Semua Nilai ke Siswa';
+            btn.style.background = '#7c3aed';
+        }
+    }
+
+    async function togglePublikasi() {
+        try {
+            const r = await fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`);
+            const current = await r.json();
+            const next = current !== true;
+            const pesan = next
+                ? 'Kirim semua nilai ke siswa?\n\nSiswa akan bisa melihat transkrip nilai mereka di halaman ujian.'
+                : 'Tarik nilai dari siswa?\n\nSiswa tidak akan bisa melihat nilai lagi sampai dipublikasikan ulang.';
+            const ya = await konfirmasi(pesan, next ? 'Publikasikan' : 'Tarik Nilai', 'Ya');
+            if (!ya) return;
+
+            await fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`, {
+                method: 'PUT', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(next)
+            });
+            await fetch(`${FIREBASE_URL}/pengaturan/waktu_publikasi.json`, {
+                method: 'PUT', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(next ? new Date().toLocaleString('id-ID') : '')
+            });
+            updateStatusPublikasi(next);
+            tampilkanStatus(next ? '✅ Nilai dipublikasikan ke siswa.' : 'Nilai ditarik dari siswa.', 'sukses');
+        } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
+    }
+
+    function filterDaftarSiswa() {
+        const cari = (document.getElementById('input-cari-siswa').value || '').toLowerCase().trim();
+        const kelas = document.getElementById('filter-kelas-transkrip').value;
+        let list = semuaSiswaGlobal.slice();
+        if (kelas) list = list.filter(s => (s.kelas || '') === kelas);
+        if (cari) list = list.filter(s =>
+            (s.nama || '').toLowerCase().includes(cari) ||
+            (s.nisn || s.kunci || '').toLowerCase().includes(cari)
+        );
+        list.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
+
+        const k = document.getElementById('daftar-siswa-transkrip');
+        if (list.length === 0) { k.innerHTML = '<p class="kosong">Tidak ada siswa.</p>'; return; }
+
+        k.innerHTML = list.map(s => {
+            let jmlMapel = 0;
+            semuaMapelGlobal.forEach(m => {
+                if (hasilUjianGlobal[m.id] && hasilUjianGlobal[m.id][s.nisn || s.kunci]) jmlMapel++;
+            });
+            const nisn = s.nisn || s.kunci;
+            return `<div class="card">
+                <div class="card-header">
+                    <div>
+                        <b>${escapeHtml(s.nama || '-')}</b>
+                        <span>NISN: ${escapeHtml(nisn || '-')}</span>
+                        <span>Kelas: ${escapeHtml(s.kelas || '-')}</span>
+                    </div>
+                    <span class="badge badge-info">${jmlMapel} mapel</span>
+                </div>
+                <div class="baris-tombol">
+                    <button class="btn-sekunder" onclick="cetakTranskripSiswa('${escapeHtml(nisn)}')">🖨️ Cetak / Simpan PDF</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function hitungNilaiAkhirSiswa(h) {
+        if (!h) return '-';
+        const nilaiPg = h.nilai_pg != null ? h.nilai_pg : 0;
+        const nilaiEssay = h.nilai_essay != null ? h.nilai_essay : null;
+        const totalPg = h.total_pg || 0;
+        const totalEssay = h.total_essay || 0;
+        if (nilaiEssay != null) {
+            return (totalPg + totalEssay) === 0 ? 0 : Math.round((nilaiPg * totalPg + nilaiEssay * totalEssay) / (totalPg + totalEssay));
+        }
+        if (totalPg > 0 && totalEssay === 0) return nilaiPg;
+        return 'Belum dinilai';
+    }
+
+    function bukaCetakPerKelas() {
+        if (semuaMapelGlobal.length === 0) { alert('Belum ada mapel.'); return; }
+        document.getElementById('popup-cetak-kelas').classList.add('tampil');
+    }
+
+    function prosesCetakPerKelas() {
+        const kelas = document.getElementById('pilih-kelas-cetak').value;
+        const mapelId = document.getElementById('pilih-mapel-cetak').value;
+        if (!kelas) { alert('Pilih kelas dulu.'); return; }
+        tutupPopup('popup-cetak-kelas');
+
+        let siswa = semuaSiswaGlobal.filter(s => (s.kelas || '') === kelas);
+        siswa.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
+        if (siswa.length === 0) { alert('Tidak ada siswa di kelas ini.'); return; }
+
+        if (mapelId) {
+            const mapel = semuaMapelGlobal.find(m => m.id === mapelId);
+            if (!mapel) { alert('Mapel tidak ditemukan.'); return; }
+            cetakPerKelasPerMapel(kelas, mapel, siswa);
+        } else {
+            cetakPerKelasSemuaMapel(kelas, siswa);
+        }
+    }
+
+    function cetakPerKelasSemuaMapel(kelas, siswa) {
+        let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Nilai ${escapeHtml(kelas)}</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; padding: 20px; font-size: 12px; }
+    h2 { text-align: center; margin-bottom: 18px; font-size: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #333; padding: 6px 8px; font-size: 11px; }
+    th { background: #f0f0f0; font-weight: bold; text-align: center; }
+    td.no { text-align: center; width: 30px; }
+    td.nama { min-width: 150px; }
+    td.nisn { width: 80px; text-align: center; }
+    td.nilai { text-align: center; width: 50px; }
+    @media print { body { padding: 10px; } }
+</style></head><body>
+<h2>DAFTAR NILAI UJIAN - KELAS ${escapeHtml(kelas)}</h2>
+<table><thead><tr><th>No</th><th>Nama Siswa</th><th>NISN</th>`;
+
+        semuaMapelGlobal.forEach(m => {
+            html += `<th>${escapeHtml(m.nama_mapel || '')}</th>`;
+        });
+        html += `</tr></thead><tbody>`;
+
+        siswa.forEach((s, i) => {
+            const nisn = s.nisn || s.kunci;
+            html += `<tr><td class="no">${i+1}</td><td class="nama">${escapeHtml(s.nama || '-')}</td><td class="nisn">${escapeHtml(nisn || '-')}</td>`;
+            semuaMapelGlobal.forEach(m => {
+                const h = hasilUjianGlobal[m.id] && hasilUjianGlobal[m.id][nisn];
+                html += `<td class="nilai">${escapeHtml(String(hitungNilaiAkhirSiswa(h)))}</td>`;
+            });
+            html += `</tr>`;
+        });
+
+        html += `</tbody></table>
+<p style="font-size:10px;color:#666;margin-top:15px;">Dicetak: ${new Date().toLocaleString('id-ID')}</p>
+<script>window.onload = () => { setTimeout(() => window.print(), 300); };<\/script>
+</body></html>`;
+
+        const w = window.open('', '_blank');
+        w.document.write(html);
+        w.document.close();
+    }
+
+    function cetakPerKelasPerMapel(kelas, mapel, siswa) {
+        const dataHasilMapel = hasilUjianGlobal[mapel.id] || {};
+
+        let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Nilai ${escapeHtml(mapel.nama_mapel)} - ${escapeHtml(kelas)}</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; padding: 20px; font-size: 12px; }
+    h2 { text-align: center; margin-bottom: 6px; font-size: 16px; }
+    h3 { text-align: center; margin-bottom: 18px; font-size: 13px; font-weight: normal; color: #555; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #333; padding: 6px 8px; font-size: 11px; }
+    th { background: #f0f0f0; font-weight: bold; text-align: center; }
+    td.no { text-align: center; width: 30px; }
+    td.nama { min-width: 150px; }
+    td.nisn { width: 80px; text-align: center; }
+    td.nilai { text-align: center; width: 55px; }
+    td.status { text-align: center; width: 90px; font-size: 10px; }
+    @media print { body { padding: 10px; } }
+</style></head><body>
+<h2>DAFTAR NILAI UJIAN</h2>
+<h3>Mapel: <b>${escapeHtml(mapel.nama_mapel || '')}</b> · Kelas: <b>${escapeHtml(kelas)}</b>${mapel.guru ? ' · Guru: ' + escapeHtml(mapel.guru) : ''}</h3>
+<table><thead><tr>
+    <th>No</th>
+    <th>Nama Siswa</th>
+    <th>NISN</th>
+    <th>Nilai PG</th>
+    <th>Nilai Essay</th>
+    <th>Nilai Akhir</th>
+    <th>Status</th>
+</tr></thead><tbody>`;
+
+        siswa.forEach((s, i) => {
+            const nisn = s.nisn || s.kunci;
+            const h = dataHasilMapel[nisn] || null;
+            let nilaiPg = '-', nilaiEssay = '-', nilaiAkhir = '-', statusTeks = 'Belum Ujian';
+            if (h) {
+                nilaiPg = h.nilai_pg != null ? h.nilai_pg : '-';
+                nilaiEssay = h.nilai_essay != null ? h.nilai_essay : '-';
+                nilaiAkhir = hitungNilaiAkhirSiswa(h);
+                if (h.status === 'dinilai_guru') statusTeks = 'Sudah Dinilai';
+                else if (h.status === 'selesai') statusTeks = 'Selesai';
+                else if (h.status === 'menunggu_penilaian') statusTeks = 'Menunggu Essay';
+                else statusTeks = h.status || '-';
+            }
+            html += `<tr>
+                <td class="no">${i+1}</td>
+                <td class="nama">${escapeHtml(s.nama || '-')}</td>
+                <td class="nisn">${escapeHtml(nisn || '-')}</td>
+                <td class="nilai">${escapeHtml(String(nilaiPg))}</td>
+                <td class="nilai">${escapeHtml(String(nilaiEssay))}</td>
+                <td class="nilai"><b>${escapeHtml(String(nilaiAkhir))}</b></td>
+                <td class="status">${escapeHtml(statusTeks)}</td>
+            </tr>`;
+        });
+
+        html += `</tbody></table>
+<p style="font-size:10px;color:#666;margin-top:15px;">Dicetak: ${new Date().toLocaleString('id-ID')}</p>
+<script>window.onload = () => { setTimeout(() => window.print(), 300); };<\/script>
+</body></html>`;
+
+        const w = window.open('', '_blank');
+        w.document.write(html);
+        w.document.close();
+    }
+
+    function cetakTranskripSiswa(nisn) {
+        const siswa = semuaSiswaGlobal.find(s => (s.nisn || s.kunci) === nisn);
+        if (!siswa) { alert('Siswa tidak ditemukan.'); return; }
+
+        let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Transkrip ${escapeHtml(siswa.nama)}</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; padding: 30px; font-size: 13px; }
+    h2 { text-align: center; margin-bottom: 20px; font-size: 16px; }
+    .info-box { margin-bottom: 20px; padding: 12px; background: #f8f9fa; border-radius: 6px; }
+    .info-row { margin: 4px 0; }
+    .info-row b { display: inline-block; width: 80px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #333; padding: 8px 12px; font-size: 12px; }
+    th { background: #f0f0f0; }
+    td.no { text-align: center; width: 40px; }
+    td.nilai { text-align: center; width: 80px; font-weight: bold; }
+    .summary { margin-top: 15px; padding: 12px; background: #f0f8ff; border-radius: 6px; text-align: center; font-size: 13px; }
+    @media print { body { padding: 15px; } }
+</style></head><body>
+<h2>TRANSKRIP NILAI UJIAN</h2>
+<div class="info-box">
+    <div class="info-row"><b>Nama</b> : ${escapeHtml(siswa.nama || '-')}</div>
+    <div class="info-row"><b>NISN</b> : ${escapeHtml(siswa.nisn || siswa.kunci || '-')}</div>
+    <div class="info-row"><b>Kelas</b> : ${escapeHtml(siswa.kelas || '-')}</div>
+</div>
+<table><thead><tr><th>No</th><th>Mata Pelajaran</th><th>Nilai</th></tr></thead><tbody>`;
+
+        let totalNilai = 0, jmlNilai = 0;
+        semuaMapelGlobal.forEach((m, i) => {
+            const h = hasilUjianGlobal[m.id] && hasilUjianGlobal[m.id][nisn];
+            const nilai = hitungNilaiAkhirSiswa(h);
+            if (typeof nilai === 'number') { totalNilai += nilai; jmlNilai++; }
+            html += `<tr><td class="no">${i+1}</td><td>${escapeHtml(m.nama_mapel || '')}</td><td class="nilai">${escapeHtml(String(nilai))}</td></tr>`;
+        });
+
+        const rata = jmlNilai > 0 ? Math.round(totalNilai / jmlNilai) : '-';
+        html += `</tbody></table>
+<div class="summary"><b>Rata-rata Nilai: ${rata}</b> dari ${jmlNilai} mapel</div>
+<p style="font-size:10px;color:#666;margin-top:20px;text-align:right;">Dicetak: ${new Date().toLocaleString('id-ID')}</p>
+<script>window.onload = () => { setTimeout(() => window.print(), 300); };<\/script>
+</body></html>`;
+
+        const w = window.open('', '_blank');
+        w.document.write(html);
+        w.document.close();
     }
 
     // ============ INIT ============
