@@ -1,6 +1,45 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   PAGAR CEPAT — TAHAP 1
+   Halaman hanya boleh dibuka dari aplikasi App Inventor.
+   Untuk uji di laptop: ubah IZINKAN_BROWSER_UNTUK_UJI jadi true.
+   ═══════════════════════════════════════════════════════════════ */
+(function () {
+    var IZINKAN_BROWSER_UNTUK_UJI = false;
+
+    if (IZINKAN_BROWSER_UNTUK_UJI) return;
+
+    var diAppInventor = (typeof window.AppInventor !== 'undefined');
+    var ua = navigator.userAgent || '';
+    var uaWebView = /;\s*wv\)/i.test(ua);
+    var bolehLanjut = diAppInventor || uaWebView;
+
+    if (!bolehLanjut) {
+        var htmlTolak =
+            '<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8">' +
+            '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+            '<title>Akses Ditolak</title></head>' +
+            '<body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;' +
+            'background:linear-gradient(135deg,#fee2e2,#fecaca);' +
+            'margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;">' +
+            '<div style="background:#fff;border-radius:20px;padding:32px 24px;' +
+            'box-shadow:0 10px 40px rgba(185,28,28,.25);text-align:center;max-width:380px;width:100%;">' +
+            '<div style="font-size:56px;line-height:1;">🚫</div>' +
+            '<h1 style="font-size:20px;color:#991b1b;margin:16px 0 8px;">Akses Ditolak</h1>' +
+            '<p style="font-size:14px;color:#475569;line-height:1.6;margin:0;">' +
+            'Halaman ini hanya dapat dibuka melalui <b>aplikasi ujian</b>.<br><br>' +
+            'Silakan buka aplikasi di HP Anda, bukan melalui browser.' +
+            '</p></div></body></html>';
+
+        try { document.open(); document.write(htmlTolak); document.close(); } catch (e) {}
+        try { window.stop(); } catch (e) {}
+        throw new Error('BLOCKED_BY_GUARD');
+    }
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ujian Siswa</title>
@@ -72,9 +111,7 @@
     .legenda span { display: flex; align-items: center; gap: 4px; }
     .kotak-legenda { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
 
-    /* ============================================================ */
-    /* DESAIN HASIL UJIAN (seperti sebelumnya) */
-    /* ============================================================ */
+    /* DESAIN HASIL UJIAN */
     .hasil-wrapper { display: flex; flex-direction: column; gap: 14px; }
 
     .kartu-identitas {
@@ -302,9 +339,7 @@
     .pesan-tunggu h3 { font-size: 18px; color: #0f172a; margin-bottom: 10px; }
     .pesan-tunggu p { font-size: 13px; color: #475569; line-height: 1.6; margin-bottom: 16px; }
 
-    /* ============================================================ */
-    /* TOMBOL MATA (BARU - ditambahkan) */
-    /* ============================================================ */
+    /* TOMBOL MATA */
     .tombol-mata-wrapper {
         display: flex;
         justify-content: flex-end;
@@ -328,9 +363,7 @@
     .btn-mata-kecil:active { transform: scale(0.95); }
     .btn-mata-kecil svg { width: 18px; height: 18px; }
 
-    /* ============================================================ */
-    /* TABEL REKAP SIMPLE (BARU) */
-    /* ============================================================ */
+    /* TABEL REKAP SIMPLE */
     .kartu-tabel-nilai {
         background: #ffffff;
         border-radius: 16px;
@@ -637,7 +670,7 @@
     let aksiKunciSaatIni = 'online';
     let timestampKeluar = null;
     let nilaiDipublikasikan = false;
-    let modeTampilanHasil = 'kartu'; // 'kartu' atau 'tabel'
+    let modeTampilanHasil = 'kartu';
 
     let resolveKonfirmasi = null;
     function konfirmasi(pesan, judul, labelOk) {
@@ -701,9 +734,11 @@
         nisnSiswa = (p.get('nomor_ujian') || '').trim();
         kelasSiswa = p.get('kelas') || '';
         if (!nisnSiswa) {
-            nisnSiswa = (prompt('Testing: NISN') || '').trim();
-            namaSiswa = prompt('Testing: nama') || '';
-            kelasSiswa = prompt('Testing: kelas') || '';
+            document.body.innerHTML =
+                '<div style="padding:40px 20px;text-align:center;font-family:sans-serif;">' +
+                '<h2 style="color:#991b1b;">Akses Ditolak</h2>' +
+                '<p style="color:#475569;">Data login tidak lengkap.</p></div>';
+            throw new Error('NO_LOGIN');
         }
     }
 
@@ -1093,7 +1128,7 @@
     }
 
     // ============================================================
-    // HASIL UJIAN SISWA — DESAIN KARTU + TOMBOL MATA
+    // HASIL UJIAN SISWA
     // ============================================================
     async function cekPublikasiNilai() {
         try {
@@ -1135,7 +1170,6 @@
             return;
         }
 
-        // Ambil data dulu
         try {
             const [rMapel, rHasil] = await Promise.all([
                 fetch(`${FIREBASE_URL}/mapel.json`),
@@ -1180,7 +1214,6 @@
             const rataRata = jmlNilai > 0 ? Math.round(totalNilai / jmlNilai) : null;
 
             if (modeTampilanHasil === 'tabel') {
-                // TAMPILKAN TABEL SIMPLE
                 let html = `<div class="tombol-mata-wrapper">
                     <button class="btn-mata-kecil" onclick="gantiModeHasil('kartu')">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1249,10 +1282,9 @@
                 return;
             }
 
-            // ================== MODE KARTU (DEFAULT) ==================
+            // MODE KARTU (DEFAULT)
             let html = `<div class="hasil-wrapper">`;
 
-            // 1. Kartu identitas
             html += `<div class="kartu-identitas">
                 <div class="label-kecil">Hasil Ujian</div>
                 <div class="nama-siswa">${escapeHtml(namaSiswa)}</div>
@@ -1262,7 +1294,6 @@
                 </div>
             </div>`;
 
-            // Tombol mata untuk ke tabel
             html += `<div class="tombol-mata-wrapper">
                 <button class="btn-mata-kecil" onclick="gantiModeHasil('tabel')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1273,7 +1304,6 @@
                 </button>
             </div>`;
 
-            // 2. Kartu rata-rata
             if (rataRata != null) {
                 html += `<div class="kartu-rata">
                     <div class="label">Nilai Rata-rata</div>
@@ -1288,7 +1318,6 @@
                 </div>`;
             }
 
-            // 3. Grid statistik
             html += `<div class="grid-stat">
                 <div class="stat-box">
                     <div class="ikon hijau">📚</div>
@@ -1320,10 +1349,8 @@
                 </div>
             </div>`;
 
-            // 4. Judul seksi
             html += `<div class="judul-seksi">📖 Rincian Nilai per Mapel</div>`;
 
-            // 5. Kartu nilai per mapel
             hasilPerMapel.forEach(m => {
                 const kelasWarna = warnaNilai(m.nilaiAkhir);
                 const tampilNilai = typeof m.nilaiAkhir === 'number' ? m.nilaiAkhir : '—';
