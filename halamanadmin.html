@@ -86,6 +86,14 @@
     .status-publikasi.aktif { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
     .status-publikasi.nonaktif { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
     .search-box { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.9); background: rgba(255,255,255,0.85); font-size: 15px; outline: none; font-family: inherit; }
+    .overlay-cetak { position: fixed; inset: 0; background: #fff; z-index: 2000; display: none; flex-direction: column; }
+    .overlay-cetak.tampil { display: flex; }
+    .overlay-cetak-header { padding: 10px 14px; background: #1b5e20; color: #fff; display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .overlay-cetak-header b { font-size: 14px; }
+    .overlay-cetak-header button { padding: 8px 14px; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; }
+    .overlay-cetak-header .btn-print { background: #f59e0b; color: #fff; }
+    .overlay-cetak-header .btn-close { background: rgba(255,255,255,0.2); color: #fff; }
+    .overlay-cetak iframe { flex: 1; border: 0; width: 100%; }
 </style>
 </head>
 <body>
@@ -226,7 +234,7 @@
     </div>
 </div>
 
-<!-- POPUP NILAI ESSAY (ADMIN - SEMUA SEKALIGUS) -->
+<!-- POPUP NILAI ESSAY -->
 <div class="popup-overlay" id="popup-nilai-essay">
     <div class="popup-box">
         <h3 id="judul-nilai-essay">Nilai Essay</h3>
@@ -314,7 +322,7 @@
         <div style="background:rgba(219,234,254,0.6);padding:8px 10px;border-radius:8px;font-size:11px;color:#1e40af;line-height:1.5;">
             💡 <b>Pilih "Semua Mapel"</b> → tabel 1 kelas × semua mapel (mirip rekap).
             <br>
-            💡 <b>Pilih mapel tertentu</b> → tabel 1 kelas × 1 mapel (lebih detail, ada nilai PG & Essay).
+            💡 <b>Pilih mapel tertentu</b> → tabel detail: Benar PG, Nilai PG, Nilai Essay, Nilai Akhir.
         </div>
         <div class="baris-tombol">
             <button class="btn-sekunder" onclick="tutupPopup('popup-cetak-kelas')">Batal</button>
@@ -333,6 +341,18 @@
             <button class="btn-utama" id="btn-ok-konfirmasi" onclick="tutupKonfirmasi(true)">Ya</button>
         </div>
     </div>
+</div>
+
+<!-- OVERLAY CETAK -->
+<div class="overlay-cetak" id="overlay-cetak">
+    <div class="overlay-cetak-header">
+        <b id="judul-overlay-cetak">Preview Cetak</b>
+        <div style="display:flex;gap:8px;">
+            <button class="btn-print" onclick="jalankanPrint()">🖨️ Cetak / Simpan PDF</button>
+            <button class="btn-close" onclick="tutupOverlayCetak()">✕ Tutup</button>
+        </div>
+    </div>
+    <iframe id="iframe-cetak"></iframe>
 </div>
 
 <script>
@@ -1726,16 +1746,18 @@
         const k = document.getElementById('daftar-siswa-transkrip');
         k.innerHTML = '<p class="kosong">Memuat...</p>';
         try {
-            const [rSiswa, rMapel, rHasil, rPub] = await Promise.all([
+            const [rSiswa, rMapel, rHasil, rPub, rKelas] = await Promise.all([
                 fetch(`${FIREBASE_URL}/peserta_ujian.json`),
                 fetch(`${FIREBASE_URL}/mapel.json`),
                 fetch(`${FIREBASE_URL}/hasil_ujian.json`),
-                fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`)
+                fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`),
+                fetch(`${FIREBASE_URL}/daftar_kelas.json`).catch(() => null)
             ]);
             const dSiswa = await rSiswa.json() || {};
             const dMapel = await rMapel.json() || {};
             const dHasil = await rHasil.json() || {};
             const dPub = await rPub.json();
+            const dKelas = rKelas ? (await rKelas.json() || {}) : {};
 
             semuaSiswaGlobal = Object.keys(dSiswa).map(kunci => ({ kunci, ...dSiswa[kunci] }));
             semuaMapelGlobal = Object.keys(dMapel).map(id => ({ id, ...dMapel[id] }));
@@ -1743,7 +1765,11 @@
 
             updateStatusPublikasi(dPub === true);
 
-            const kelasUnik = [...new Set(semuaSiswaGlobal.map(s => s.kelas).filter(Boolean))].sort();
+            const setKelas = new Set();
+            for (const id in dKelas) if (dKelas[id].nama) setKelas.add(dKelas[id].nama);
+            semuaSiswaGlobal.forEach(s => { if (s.kelas) setKelas.add(s.kelas); });
+            const kelasUnik = [...setKelas].sort();
+
             document.getElementById('filter-kelas-transkrip').innerHTML =
                 '<option value="">Semua Kelas</option>' +
                 kelasUnik.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
@@ -1873,20 +1899,41 @@
         }
     }
 
+    function tampilkanOverlayCetak(htmlIsi, judul) {
+        document.getElementById('judul-overlay-cetak').textContent = judul || 'Preview Cetak';
+        const iframe = document.getElementById('iframe-cetak');
+        iframe.srcdoc = htmlIsi;
+        document.getElementById('overlay-cetak').classList.add('tampil');
+    }
+
+    function tutupOverlayCetak() {
+        document.getElementById('overlay-cetak').classList.remove('tampil');
+        document.getElementById('iframe-cetak').srcdoc = '';
+    }
+
+    function jalankanPrint() {
+        try {
+            const iframe = document.getElementById('iframe-cetak');
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        } catch (e) {
+            alert('Print tidak didukung di perangkat ini. Silakan screenshot tampilan cetak.');
+        }
+    }
+
     function cetakPerKelasSemuaMapel(kelas, siswa) {
-        let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Nilai ${escapeHtml(kelas)}</title>
+        let html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; padding: 20px; font-size: 12px; }
-    h2 { text-align: center; margin-bottom: 18px; font-size: 16px; }
+    body { font-family: Arial, sans-serif; padding: 15px; font-size: 12px; }
+    h2 { text-align: center; margin-bottom: 15px; font-size: 15px; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #333; padding: 6px 8px; font-size: 11px; }
+    th, td { border: 1px solid #333; padding: 5px 7px; font-size: 10px; }
     th { background: #f0f0f0; font-weight: bold; text-align: center; }
-    td.no { text-align: center; width: 30px; }
-    td.nama { min-width: 150px; }
-    td.nisn { width: 80px; text-align: center; }
-    td.nilai { text-align: center; width: 50px; }
-    @media print { body { padding: 10px; } }
+    td.no { text-align: center; width: 25px; }
+    td.nama { min-width: 130px; }
+    td.nisn { width: 75px; text-align: center; }
+    td.nilai { text-align: center; width: 45px; }
 </style></head><body>
 <h2>DAFTAR NILAI UJIAN - KELAS ${escapeHtml(kelas)}</h2>
 <table><thead><tr><th>No</th><th>Nama Siswa</th><th>NISN</th>`;
@@ -1907,33 +1954,31 @@
         });
 
         html += `</tbody></table>
-<p style="font-size:10px;color:#666;margin-top:15px;">Dicetak: ${new Date().toLocaleString('id-ID')}</p>
-<script>window.onload = () => { setTimeout(() => window.print(), 300); };<\/script>
+<p style="font-size:9px;color:#666;margin-top:10px;">Dicetak: ${new Date().toLocaleString('id-ID')}</p>
 </body></html>`;
 
-        const w = window.open('', '_blank');
-        w.document.write(html);
-        w.document.close();
+        tampilkanOverlayCetak(html, 'Nilai ' + kelas);
     }
 
     function cetakPerKelasPerMapel(kelas, mapel, siswa) {
         const dataHasilMapel = hasilUjianGlobal[mapel.id] || {};
 
-        let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Nilai ${escapeHtml(mapel.nama_mapel)} - ${escapeHtml(kelas)}</title>
+        let html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; padding: 20px; font-size: 12px; }
-    h2 { text-align: center; margin-bottom: 6px; font-size: 16px; }
-    h3 { text-align: center; margin-bottom: 18px; font-size: 13px; font-weight: normal; color: #555; }
+    body { font-family: Arial, sans-serif; padding: 12px; font-size: 11px; }
+    h2 { text-align: center; margin-bottom: 4px; font-size: 14px; }
+    h3 { text-align: center; margin-bottom: 12px; font-size: 11px; font-weight: normal; color: #555; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #333; padding: 6px 8px; font-size: 11px; }
+    th, td { border: 1px solid #333; padding: 4px 5px; font-size: 10px; }
     th { background: #f0f0f0; font-weight: bold; text-align: center; }
-    td.no { text-align: center; width: 30px; }
-    td.nama { min-width: 150px; }
-    td.nisn { width: 80px; text-align: center; }
-    td.nilai { text-align: center; width: 55px; }
-    td.status { text-align: center; width: 90px; font-size: 10px; }
-    @media print { body { padding: 10px; } }
+    td.no { text-align: center; width: 22px; }
+    td.nama { min-width: 120px; }
+    td.nisn { width: 70px; text-align: center; }
+    td.nilai { text-align: center; width: 45px; }
+    td.benar { text-align: center; width: 55px; font-size: 9px; }
+    td.status { text-align: center; width: 75px; font-size: 9px; }
+    @media print { body { padding: 8px; } }
 </style></head><body>
 <h2>DAFTAR NILAI UJIAN</h2>
 <h3>Mapel: <b>${escapeHtml(mapel.nama_mapel || '')}</b> · Kelas: <b>${escapeHtml(kelas)}</b>${mapel.guru ? ' · Guru: ' + escapeHtml(mapel.guru) : ''}</h3>
@@ -1941,6 +1986,7 @@
     <th>No</th>
     <th>Nama Siswa</th>
     <th>NISN</th>
+    <th>Benar PG</th>
     <th>Nilai PG</th>
     <th>Nilai Essay</th>
     <th>Nilai Akhir</th>
@@ -1950,8 +1996,11 @@
         siswa.forEach((s, i) => {
             const nisn = s.nisn || s.kunci;
             const h = dataHasilMapel[nisn] || null;
-            let nilaiPg = '-', nilaiEssay = '-', nilaiAkhir = '-', statusTeks = 'Belum Ujian';
+            let benarPg = '-', nilaiPg = '-', nilaiEssay = '-', nilaiAkhir = '-', statusTeks = 'Belum Ujian';
             if (h) {
+                const benar = h.benar_pg != null ? h.benar_pg : 0;
+                const total = h.total_pg != null ? h.total_pg : 0;
+                benarPg = `${benar}/${total}`;
                 nilaiPg = h.nilai_pg != null ? h.nilai_pg : '-';
                 nilaiEssay = h.nilai_essay != null ? h.nilai_essay : '-';
                 nilaiAkhir = hitungNilaiAkhirSiswa(h);
@@ -1964,6 +2013,7 @@
                 <td class="no">${i+1}</td>
                 <td class="nama">${escapeHtml(s.nama || '-')}</td>
                 <td class="nisn">${escapeHtml(nisn || '-')}</td>
+                <td class="benar"><b>${escapeHtml(benarPg)}</b></td>
                 <td class="nilai">${escapeHtml(String(nilaiPg))}</td>
                 <td class="nilai">${escapeHtml(String(nilaiEssay))}</td>
                 <td class="nilai"><b>${escapeHtml(String(nilaiAkhir))}</b></td>
@@ -1972,34 +2022,33 @@
         });
 
         html += `</tbody></table>
-<p style="font-size:10px;color:#666;margin-top:15px;">Dicetak: ${new Date().toLocaleString('id-ID')}</p>
-<script>window.onload = () => { setTimeout(() => window.print(), 300); };<\/script>
+<p style="font-size:8px;color:#666;margin-top:8px;">Dicetak: ${new Date().toLocaleString('id-ID')}</p>
 </body></html>`;
 
-        const w = window.open('', '_blank');
-        w.document.write(html);
-        w.document.close();
+        tampilkanOverlayCetak(html, mapel.nama_mapel + ' - ' + kelas);
     }
 
     function cetakTranskripSiswa(nisn) {
         const siswa = semuaSiswaGlobal.find(s => (s.nisn || s.kunci) === nisn);
         if (!siswa) { alert('Siswa tidak ditemukan.'); return; }
 
-        let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Transkrip ${escapeHtml(siswa.nama)}</title>
+        let html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; padding: 30px; font-size: 13px; }
-    h2 { text-align: center; margin-bottom: 20px; font-size: 16px; }
-    .info-box { margin-bottom: 20px; padding: 12px; background: #f8f9fa; border-radius: 6px; }
-    .info-row { margin: 4px 0; }
-    .info-row b { display: inline-block; width: 80px; }
+    body { font-family: Arial, sans-serif; padding: 15px; font-size: 11px; }
+    h2 { text-align: center; margin-bottom: 15px; font-size: 14px; }
+    .info-box { margin-bottom: 12px; padding: 8px; background: #f8f9fa; border-radius: 6px; }
+    .info-row { margin: 2px 0; font-size: 11px; }
+    .info-row b { display: inline-block; width: 60px; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #333; padding: 8px 12px; font-size: 12px; }
+    th, td { border: 1px solid #333; padding: 5px 6px; font-size: 10px; }
     th { background: #f0f0f0; }
-    td.no { text-align: center; width: 40px; }
-    td.nilai { text-align: center; width: 80px; font-weight: bold; }
-    .summary { margin-top: 15px; padding: 12px; background: #f0f8ff; border-radius: 6px; text-align: center; font-size: 13px; }
-    @media print { body { padding: 15px; } }
+    td.no { text-align: center; width: 25px; }
+    td.mapel { min-width: 100px; }
+    td.nilai { text-align: center; width: 45px; }
+    td.benar { text-align: center; width: 50px; font-size: 9px; }
+    .summary { margin-top: 10px; padding: 8px; background: #f0f8ff; border-radius: 6px; text-align: center; font-size: 11px; }
+    @media print { body { padding: 10px; } }
 </style></head><body>
 <h2>TRANSKRIP NILAI UJIAN</h2>
 <div class="info-box">
@@ -2007,26 +2056,45 @@
     <div class="info-row"><b>NISN</b> : ${escapeHtml(siswa.nisn || siswa.kunci || '-')}</div>
     <div class="info-row"><b>Kelas</b> : ${escapeHtml(siswa.kelas || '-')}</div>
 </div>
-<table><thead><tr><th>No</th><th>Mata Pelajaran</th><th>Nilai</th></tr></thead><tbody>`;
+<table><thead><tr>
+    <th>No</th>
+    <th>Mata Pelajaran</th>
+    <th>Benar PG</th>
+    <th>Nilai PG</th>
+    <th>Nilai Essay</th>
+    <th>Nilai Akhir</th>
+</tr></thead><tbody>`;
 
         let totalNilai = 0, jmlNilai = 0;
         semuaMapelGlobal.forEach((m, i) => {
             const h = hasilUjianGlobal[m.id] && hasilUjianGlobal[m.id][nisn];
-            const nilai = hitungNilaiAkhirSiswa(h);
-            if (typeof nilai === 'number') { totalNilai += nilai; jmlNilai++; }
-            html += `<tr><td class="no">${i+1}</td><td>${escapeHtml(m.nama_mapel || '')}</td><td class="nilai">${escapeHtml(String(nilai))}</td></tr>`;
+            let benarPg = '-', nilaiPg = '-', nilaiEssay = '-', nilaiAkhir = '-';
+            if (h) {
+                const benar = h.benar_pg != null ? h.benar_pg : 0;
+                const total = h.total_pg != null ? h.total_pg : 0;
+                benarPg = `${benar}/${total}`;
+                nilaiPg = h.nilai_pg != null ? h.nilai_pg : '-';
+                nilaiEssay = h.nilai_essay != null ? h.nilai_essay : '-';
+                nilaiAkhir = hitungNilaiAkhirSiswa(h);
+                if (typeof nilaiAkhir === 'number') { totalNilai += nilaiAkhir; jmlNilai++; }
+            }
+            html += `<tr>
+                <td class="no">${i+1}</td>
+                <td class="mapel">${escapeHtml(m.nama_mapel || '')}</td>
+                <td class="benar"><b>${escapeHtml(benarPg)}</b></td>
+                <td class="nilai">${escapeHtml(String(nilaiPg))}</td>
+                <td class="nilai">${escapeHtml(String(nilaiEssay))}</td>
+                <td class="nilai"><b>${escapeHtml(String(nilaiAkhir))}</b></td>
+            </tr>`;
         });
 
         const rata = jmlNilai > 0 ? Math.round(totalNilai / jmlNilai) : '-';
         html += `</tbody></table>
-<div class="summary"><b>Rata-rata Nilai: ${rata}</b> dari ${jmlNilai} mapel</div>
-<p style="font-size:10px;color:#666;margin-top:20px;text-align:right;">Dicetak: ${new Date().toLocaleString('id-ID')}</p>
-<script>window.onload = () => { setTimeout(() => window.print(), 300); };<\/script>
+<div class="summary"><b>Rata-rata Nilai Akhir: ${rata}</b> dari ${jmlNilai} mapel</div>
+<p style="font-size:8px;color:#666;margin-top:12px;text-align:right;">Dicetak: ${new Date().toLocaleString('id-ID')}</p>
 </body></html>`;
 
-        const w = window.open('', '_blank');
-        w.document.write(html);
-        w.document.close();
+        tampilkanOverlayCetak(html, 'Transkrip - ' + (siswa.nama || nisn));
     }
 
     // ============ INIT ============
