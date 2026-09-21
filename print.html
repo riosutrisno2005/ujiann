@@ -187,8 +187,8 @@
     // KONFIGURASI
     // ============================================================
     const FIREBASE_URL = "https://admin-ffded-default-rtdb.firebaseio.com";
-    const NAMA_SEKOLAH = "SMK Swasta Nusa Indah Secanggang";   // ← ganti sesuai sekolah
-    const KEPALA_SEKOLAH = "";                                  // ← opsional, isi nama kepala sekolah
+    const NAMA_SEKOLAH = "SMK Swasta Nusa Indah Secanggang";
+    const KEPALA_SEKOLAH = "";
 
     // ============================================================
     // STATE
@@ -208,15 +208,6 @@
         return d.innerHTML;
     }
 
-    // Sortir abjad: case-insensitive, abaikan spasi, natural numeric
-    function urutkanAbjad(arr, key) {
-        return arr.slice().sort((a, b) => {
-            const va = (a[key] || '').toString().trim();
-            const vb = (b[key] || '').toString().trim();
-            return va.localeCompare(vb, 'id', { sensitivity: 'base', numeric: true });
-        });
-    }
-
     function parseKelasList(k) {
         if (!k) return [];
         if (Array.isArray(k)) return k.filter(x => x && typeof x === 'string');
@@ -232,7 +223,6 @@
         const nilaiPg = h.nilai_pg != null ? h.nilai_pg : 0;
         const nilaiEssay = h.nilai_essay != null ? h.nilai_essay : null;
 
-        // Prioritas: pakai nilai_akhir yang sudah tersimpan
         if (h.nilai_akhir != null && typeof h.nilai_akhir === 'number') return h.nilai_akhir;
 
         if (nilaiEssay != null) {
@@ -240,7 +230,7 @@
             return Math.round((nilaiPg * totalPg + nilaiEssay * totalEssay) / (totalPg + totalEssay));
         }
         if (totalPg > 0 && totalEssay === 0) return nilaiPg;
-        return null; // belum dinilai
+        return null;
     }
 
     function statusTeks(h) {
@@ -280,15 +270,12 @@
     // ISI DROPDOWN FILTER
     // ============================================================
     function isiFilter() {
-        // ---- Kelas unik dari data siswa ----
         const setKelas = new Set();
         for (const nisn in dataSiswa) {
             const k = (dataSiswa[nisn].kelas || '').trim();
             if (k && k !== '-') setKelas.add(k);
         }
-        daftarKelas = [...setKelas].sort((a, b) =>
-            a.localeCompare(b, 'id', { sensitivity: 'base', numeric: true })
-        );
+        daftarKelas = [...setKelas].sort();
 
         const pKelas = document.getElementById('pilih-kelas');
         const nilaiKelasLama = pKelas.value;
@@ -303,11 +290,10 @@
             pKelas.value = daftarKelas[0];
         }
 
-        // ---- Mapel ----
         const pMapel = document.getElementById('pilih-mapel');
         const nilaiMapelLama = pMapel.value;
-        let listMapel = Object.keys(dataMapel).map(id => ({ id, ...dataMapel[id] }));
-        listMapel = urutkanAbjad(listMapel, 'nama_mapel');
+        const listMapel = Object.keys(dataMapel).map(id => ({ id, ...dataMapel[id] }));
+        listMapel.sort((a, b) => (a.nama_mapel || '').localeCompare(b.nama_mapel || ''));
         let opsiMapel = '<option value="">📚 Semua Mapel (Tabel Rekap)</option>';
         opsiMapel += listMapel.map(m => `<option value="${esc(m.id)}">${esc(m.nama_mapel || '')}</option>`).join('');
         pMapel.innerHTML = opsiMapel;
@@ -333,20 +319,17 @@
             return;
         }
 
-        // Ambil daftar siswa
         let siswaList = [];
         for (const nisn in dataSiswa) {
             const s = dataSiswa[nisn];
             const kS = (s.kelas || '').trim();
             if (kelas === '__SEMUA__') {
-                if (kS && kS !== '-') siswaList.push({ nisn, ...s });
+                if (kS && kS !== '-') siswaList.push({ nisn, ...s, nisn });
             } else {
-                if (kS === kelas) siswaList.push({ nisn, ...s });
+                if (kS === kelas) siswaList.push({ nisn, ...s, nisn });
             }
         }
-
-        // ===== SORTIR ABJAD NAMA SISWA =====
-        siswaList = urutkanAbjad(siswaList, 'nama');
+        siswaList.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
 
         if (siswaList.length === 0) {
             area.innerHTML = '<p class="kosong">Tidak ada siswa di kelas ini.<br>Pastikan admin sudah mengisi kelas pada akun siswa.</p>';
@@ -366,6 +349,15 @@
     function renderPerMapel(kelas, mapelId, siswaList) {
         const mapel = dataMapel[mapelId] || {};
         const dataHasilMapel = dataHasil[mapelId] || {};
+
+        // ⬇️ FILTER: hanya siswa yang sudah mengerjakan ujian ini
+        const siswaListFiltered = siswaList.filter(s => dataHasilMapel[s.nisn]);
+
+        if (siswaListFiltered.length === 0) {
+            document.getElementById('print-area').innerHTML =
+                '<p class="kosong">Belum ada siswa yang mengerjakan ujian ini.<br>Siswa yang tidak/belum ujian tidak ditampilkan.</p>';
+            return;
+        }
 
         let html = `
             <div class="header-cetak">
@@ -394,7 +386,7 @@
         let totalNilai = 0;
         let jmlNilai = 0;
 
-        siswaList.forEach((s, i) => {
+        siswaListFiltered.forEach((s, i) => {
             const h = dataHasilMapel[s.nisn];
             let benarPg = '-', nilaiPg = '-', nilaiEssay = '-', nilaiAkhir = '-', status = 'Belum Ujian';
 
@@ -428,13 +420,13 @@
         const rata = jmlNilai > 0 ? Math.round(totalNilai / jmlNilai) : '-';
         html += `
             <div class="info-total">
-                <span>Total Siswa: <b>${siswaList.length}</b></span>
+                <span>Total Siswa (yang ujian): <b>${siswaListFiltered.length}</b></span>
                 <span>Sudah Ujian: <b>${jmlSudah}</b></span>
                 <span>Sudah Dinilai: <b>${jmlNilai}</b></span>
                 <span>Rata-rata Nilai: <b>${rata}</b></span>
                 <span>Dicetak: ${new Date().toLocaleString('id-ID')}</span>
             </div>
-            <p class="catatan">Catatan: Nilai akhir dihitung dari nilai PG dan nilai Essay. Tanda "—" berarti belum ada nilai.</p>
+            <p class="catatan">Catatan: Hanya siswa yang sudah mengerjakan ujian ini yang ditampilkan. Tanda "—" berarti belum ada nilai.</p>
         `;
 
         document.getElementById('print-area').innerHTML = html;
@@ -444,12 +436,9 @@
     // RENDER: PER KELAS SEMUA MAPEL
     // ============================================================
     function renderSemuaMapel(kelas, siswaList) {
-        let listMapel = Object.keys(dataMapel).map(id => ({ id, ...dataMapel[id] }));
+        const listMapel = Object.keys(dataMapel).map(id => ({ id, ...dataMapel[id] }));
+        listMapel.sort((a, b) => (a.nama_mapel || '').localeCompare(b.nama_mapel || ''));
 
-        // ===== SORTIR ABJAD MAPEL =====
-        listMapel = urutkanAbjad(listMapel, 'nama_mapel');
-
-        // Filter mapel yang mencakup kelas ini
         let mapelTampil = listMapel;
         if (kelas !== '__SEMUA__') {
             mapelTampil = listMapel.filter(m => {
@@ -461,6 +450,18 @@
         if (mapelTampil.length === 0) {
             document.getElementById('print-area').innerHTML =
                 '<p class="kosong">Tidak ada mapel untuk kelas ini.</p>';
+            return;
+        }
+
+        // ⬇️ FILTER: hanya siswa yang punya minimal 1 hasil ujian di mapel yang ditampilkan
+        const siswaListFiltered = siswaList.filter(s => {
+            const nisn = s.nisn;
+            return mapelTampil.some(m => dataHasil[m.id] && dataHasil[m.id][nisn]);
+        });
+
+        if (siswaListFiltered.length === 0) {
+            document.getElementById('print-area').innerHTML =
+                '<p class="kosong">Belum ada siswa yang mengerjakan ujian.<br>Siswa yang tidak/belum ujian tidak ditampilkan.</p>';
             return;
         }
 
@@ -482,7 +483,7 @@
                 <tbody>
         `;
 
-        siswaList.forEach((s, i) => {
+        siswaListFiltered.forEach((s, i) => {
             html += `<tr>
                 <td class="no">${i + 1}</td>
                 <td class="nama">${esc(s.nama || '-')}</td>
@@ -498,11 +499,11 @@
         html += `</tbody></table>`;
         html += `
             <div class="info-total">
-                <span>Total Siswa: <b>${siswaList.length}</b></span>
+                <span>Total Siswa (yang ujian): <b>${siswaListFiltered.length}</b></span>
                 <span>Total Mapel: <b>${mapelTampil.length}</b></span>
                 <span>Dicetak: ${new Date().toLocaleString('id-ID')}</span>
             </div>
-            <p class="catatan">Catatan: Nilai yang ditampilkan adalah nilai akhir tiap mapel. Tanda "—" berarti belum ada nilai.</p>
+            <p class="catatan">Catatan: Hanya siswa yang sudah mengerjakan ujian yang ditampilkan. Tanda "—" berarti belum ada nilai.</p>
         `;
 
         document.getElementById('print-area').innerHTML = html;
