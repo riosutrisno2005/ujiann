@@ -4,6 +4,88 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Halaman Guru</title>
+<script>
+(function(){
+  var IZINKAN_BROWSER_UNTUK_UJI = false;
+  var KEY_DATA = 'username';
+  var MAX_TUNGGU_MS = 2500;
+
+  window.__AKSES_DITOLAK = false;
+  window.__AKSES_OK = false;
+  var queue = [];
+  var _fetch = window.fetch ? window.fetch.bind(window) : null;
+
+  window.fetch = function(){
+    if (window.__AKSES_DITOLAK) return Promise.reject(new Error('AKSES_DITOLAK'));
+    if (window.__AKSES_OK && _fetch) return _fetch.apply(null, arguments);
+    var args = arguments;
+    return new Promise(function(res, rej){ queue.push({ a: args, r: res, j: rej }); });
+  };
+  function flush(ok){
+    var q = queue; queue = [];
+    for (var i = 0; i < q.length; i++) {
+      var it = q[i];
+      if (ok && _fetch) { try { it.r(_fetch.apply(null, it.a)); } catch(e) { it.j(e); } }
+      else it.j(new Error('AKSES_DITOLAK'));
+    }
+  }
+  function getData(){
+    try { var p = new URLSearchParams(location.search).get(KEY_DATA); if (p) return p.trim(); } catch(e){}
+    try {
+      if (window.AppInventor && typeof window.AppInventor.getWebViewString === 'function'){
+        var w = window.AppInventor.getWebViewString();
+        if (w) {
+          try { var o = JSON.parse(w); if (o && o[KEY_DATA]) return String(o[KEY_DATA]).trim(); } catch(e){}
+          return String(w).trim();
+        }
+      }
+    } catch(e){}
+    return '';
+  }
+  function isAI(){
+    return !!(window.AppInventor && typeof window.AppInventor.getWebViewString === 'function');
+  }
+  function deny(){
+    if (window.__AKSES_DITOLAK) return;
+    window.__AKSES_DITOLAK = true;
+    flush(false);
+    function apply(){
+      if (document.getElementById('__deny')) return true;
+      if (!document.body) return false;
+      var s = document.createElement('style');
+      s.textContent = 'html,body{overflow:hidden !important;}';
+      document.head.appendChild(s);
+      var d = document.createElement('div');
+      d.id = '__deny';
+      d.style.cssText = 'position:fixed;inset:0;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;z-index:2147483647;font-family:-apple-system,sans-serif;padding:20px;text-align:center;';
+      d.innerHTML = '<div><h1 style="font-size:22px;margin:0 0 8px;">Akses ditolak</h1><p style="color:#999;font-size:14px;margin:0;">Halaman ini hanya bisa dibuka dari dalam aplikasi.</p></div>';
+      document.body.appendChild(d);
+      return true;
+    }
+    if (!apply()) {
+      document.addEventListener('DOMContentLoaded', apply);
+      var iv = setInterval(function(){ if (apply()) clearInterval(iv); }, 50);
+      setTimeout(function(){ clearInterval(iv); }, 5000);
+    }
+  }
+  function ok(){ window.__AKSES_OK = true; flush(true); }
+  function check(){
+    if (IZINKAN_BROWSER_UNTUK_UJI) {
+      if (!getData()) { deny(); return true; }
+      ok(); return true;
+    }
+    if (!isAI()) { deny(); return true; }
+    if (getData()) { ok(); return true; }
+    return false;
+  }
+  if (check()) return;
+  var t0 = Date.now();
+  var iv = setInterval(function(){
+    if (check()) { clearInterval(iv); return; }
+    if (Date.now() - t0 > MAX_TUNGGU_MS) { clearInterval(iv); if (!window.__AKSES_OK) deny(); }
+  }, 100);
+})();
+</script>
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #b9fbc0 0%, #70e000 100%); min-height: 100vh; color: #1C1C1E; padding: 16px; }
@@ -78,7 +160,6 @@
 
     <div class="pesan-status" id="pesan-status"></div>
 
-    <!-- LAYAR 1 -->
     <div id="layar-daftar-mapel" style="display:flex;flex-direction:column;gap:16px;">
         <div class="card">
             <div class="field"><label>Nama Mapel</label><input type="text" id="input-nama-mapel" placeholder="Contoh: Matematika"></div>
@@ -88,7 +169,6 @@
         <div id="daftar-mapel"></div>
     </div>
 
-    <!-- LAYAR 2 -->
     <div id="layar-kelola-soal" style="display:none;flex-direction:column;gap:16px;">
         <button class="btn-sekunder" onclick="kembaliKeDaftarMapel()">← Kembali</button>
 
@@ -104,7 +184,6 @@
             <button id="tab-btn-kelas" onclick="gantiTabGuru('kelas')">🏫 Edit Kelas</button>
         </div>
 
-        <!-- TAB SOAL -->
         <div id="tab-soal" style="display:flex;flex-direction:column;gap:16px;">
             <div id="peringatan-aktif" style="display:none;">
                 <div class="peringatan-kunci">
@@ -129,7 +208,6 @@
             <div id="daftar-soal"></div>
         </div>
 
-        <!-- TAB NILAI -->
         <div id="tab-nilai" style="display:none;flex-direction:column;gap:12px;">
             <div class="card">
                 <b style="font-size:14px;color:#0f172a;">Nilai Siswa</b>
@@ -139,7 +217,6 @@
             <div id="daftar-nilai-siswa"></div>
         </div>
 
-        <!-- TAB KELAS -->
         <div id="tab-kelas" style="display:none;flex-direction:column;gap:12px;">
             <div class="card">
                 <b style="font-size:14px;color:#0f172a;">Kelas untuk Mapel Ini</b>
@@ -149,12 +226,10 @@
             </div>
         </div>
 
-        <!-- Tombol Hasil per kelas -->
         <button class="btn-sekunder" onclick="lihatHasilPerKelas()">📸 Hasil Ujian per Kelas (untuk screenshot)</button>
     </div>
 </div>
 
-<!-- POPUP FORM SOAL -->
 <div class="popup-overlay" id="popup-form-soal">
     <div class="popup-box">
         <h3 id="judul-popup-soal">Tambah Soal</h3>
@@ -184,7 +259,6 @@
     </div>
 </div>
 
-<!-- POPUP IMPORT CSV -->
 <div class="popup-overlay" id="popup-import">
     <div class="popup-box">
         <h3>Import Soal dari Excel / CSV</h3>
@@ -205,7 +279,6 @@
     </div>
 </div>
 
-<!-- POPUP TEMPLATE -->
 <div class="popup-overlay" id="popup-template">
     <div class="popup-box">
         <h3>Template CSV</h3>
@@ -217,7 +290,6 @@
     </div>
 </div>
 
-<!-- POPUP NILAI ESSAY -->
 <div class="popup-overlay" id="popup-nilai-essay">
     <div class="popup-box">
         <h3 id="judul-nilai-essay">Periksa Essay</h3>
@@ -229,7 +301,6 @@
     </div>
 </div>
 
-<!-- POPUP HASIL PER KELAS -->
 <div class="popup-overlay" id="popup-hasil-kelas">
     <div class="popup-box" style="background:#fff;">
         <h3 id="judul-hasil-kelas">Hasil Ujian</h3>
@@ -242,7 +313,6 @@
     </div>
 </div>
 
-<!-- POPUP KONFIRMASI -->
 <div class="popup-overlay" id="popup-konfirmasi">
     <div class="popup-box" style="text-align:center;">
         <h3 id="judul-konfirmasi">Konfirmasi</h3>
@@ -257,16 +327,6 @@
 <script>
     const FIREBASE_URL = "https://admin-ffded-default-rtdb.firebaseio.com";
 
-    // ============================================================
-    // STRUKTUR DATA (Langkah 2)
-    //   /soal/{id}   → soal tanpa kunci  (untuk siswa & ditampilkan)
-    //   /kunci/{id}  → kunci PG + essay  (hanya guru/admin)
-    //   /mapel/{id}  → info mapel
-    //   /draft_soal  → draft guru (lengkap dengan kunci)
-    // Fallback: /mapel/{id}/soal (format lama) → tetap didukung
-    // ============================================================
-
-    // Soal siswa (tanpa kunci) — untuk menampilkan di daftar soal
     async function ambilSoalSiswa(id) {
         const r = await fetch(`${FIREBASE_URL}/soal/${id}.json`);
         let sumber = await r.json();
@@ -278,16 +338,11 @@
         const bersih = {};
         for (const sid in sumber) {
             const s = sumber[sid];
-            bersih[sid] = {
-                tipe: s.tipe === 'essay' ? 'essay' : 'pg',
-                pertanyaan: s.pertanyaan || '',
-                pilihan: s.pilihan || []
-            };
+            bersih[sid] = { tipe: s.tipe === 'essay' ? 'essay' : 'pg', pertanyaan: s.pertanyaan || '', pilihan: s.pilihan || [] };
         }
         return bersih;
     }
 
-    // Kunci dari /kunci/{id} — untuk guru hitung nilai
     async function ambilKunci(id) {
         const r = await fetch(`${FIREBASE_URL}/kunci/${id}.json`);
         let sumber = await r.json();
@@ -305,7 +360,6 @@
         return kunci;
     }
 
-    // Gabung soal + kunci → untuk layar kelola soal guru
     async function ambilSoalDenganKunci(id) {
         const [soal, kunci] = await Promise.all([ambilSoalSiswa(id), ambilKunci(id)]);
         if (!soal) return null;
@@ -322,7 +376,6 @@
         return gabung;
     }
 
-    // Hitung nilai PG dari kunci + jawaban siswa
     function hitungNilaiDariJawaban(kunci, hasil) {
         const jp = hasil.jawaban_pg || {};
         let benar = 0, total = 0;
@@ -337,9 +390,7 @@
         const te = hasil.total_essay || 0;
         const ne = (hasil.nilai_essay != null) ? hasil.nilai_essay : null;
         let nilai_akhir = null;
-        if (ne != null) {
-            nilai_akhir = (total + te) === 0 ? 0 : Math.round((nilai_pg * total + ne * te) / (total + te));
-        }
+        if (ne != null) nilai_akhir = (total + te) === 0 ? 0 : Math.round((nilai_pg * total + ne * te) / (total + te));
         return { benar_pg: benar, total_pg: total, nilai_pg, nilai_akhir };
     }
 
@@ -387,17 +438,17 @@
         const p = new URLSearchParams(window.location.search);
         usernameGuru = (p.get('username') || '').trim().toLowerCase();
         namaGuru = p.get('nama') || '';
-        if (!usernameGuru) { usernameGuru = (prompt('Testing: username guru') || '').trim().toLowerCase(); namaGuru = usernameGuru; }
+        if (!usernameGuru) { return; }
         document.getElementById('info-guru').textContent = 'Selamat datang, ' + (namaGuru || usernameGuru);
     }
     function tampilkanStatus(p, j) {
         j = j || 'info';
         const k = document.getElementById('pesan-status');
+        if (!k) return;
         k.textContent = p; k.className = 'pesan-status tampil ' + j;
         setTimeout(() => k.classList.remove('tampil'), 3500);
     }
 
-    // ============ MUAT KELAS & MAPEL ============
     async function muatDaftarKelas() {
         try {
             const r = await fetch(`${FIREBASE_URL}/daftar_kelas.json`);
@@ -460,10 +511,7 @@
         try {
             await fetch(`${FIREBASE_URL}/mapel.json`, {
                 method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({
-                    nama_mapel: nama, kelas: kelasChecked, guru: usernameGuru,
-                    status_aktif: false, token: "", jumlah_pg: 0, jumlah_essay: 0
-                })
+                body: JSON.stringify({ nama_mapel: nama, kelas: kelasChecked, guru: usernameGuru, status_aktif: false, token: "", jumlah_pg: 0, jumlah_essay: 0 })
             });
             document.getElementById('input-nama-mapel').value = '';
             document.querySelectorAll('.kelas-cb-baru').forEach(cb => cb.checked = false);
@@ -476,7 +524,6 @@
         const ya = await konfirmasi(`Hapus mapel "${nama}"?`, 'Hapus', 'Ya, Hapus');
         if (!ya) return;
         try {
-            // Hapus semua terkait termasuk /soal dan /kunci (Langkah 2)
             const urls = [
                 `${FIREBASE_URL}/mapel/${id}.json`,
                 `${FIREBASE_URL}/hasil_ujian/${id}.json`,
@@ -491,14 +538,12 @@
         } catch (e) { tampilkanStatus('Gagal menghapus.', 'gagal'); }
     }
 
-    // ============ KELOLA SOAL ============
     async function bukaKelolaSoal(mapelId, namaMapel) {
         mapelAktifId = mapelId; namaMapelAktif = namaMapel;
         document.getElementById('judul-mapel-aktif').textContent = namaMapel;
         document.getElementById('layar-daftar-mapel').style.display = 'none';
         document.getElementById('layar-kelola-soal').style.display = 'flex';
 
-        // Load info mapel terbaru
         let mapelData = null;
         try {
             const r = await fetch(`${FIREBASE_URL}/mapel/${mapelId}.json`);
@@ -509,29 +554,20 @@
         const kelasList = parseKelasList(mapelData ? mapelData.kelas : []);
         document.getElementById('info-kelas-mapel').textContent = 'Kelas: ' + (kelasList.join(', ') || '-');
 
-        // Load draft dari server
         let draftServer = null;
         try {
             const r = await fetch(`${FIREBASE_URL}/draft_soal/${mapelId}.json`);
             draftServer = await r.json();
         } catch (e) {}
 
-        // Load soal + kunci yang sudah dirilis
         let soalServer = {};
-        try {
-            soalServer = await ambilSoalDenganKunci(mapelId) || {};
-        } catch (e) {}
+        try { soalServer = await ambilSoalDenganKunci(mapelId) || {}; } catch (e) {}
 
         const draftArr = [];
-        if (draftServer && typeof draftServer === 'object') {
-            for (const sid in draftServer) draftArr.push({ id: sid, ...draftServer[sid] });
-        }
+        if (draftServer && typeof draftServer === 'object') for (const sid in draftServer) draftArr.push({ id: sid, ...draftServer[sid] });
         const soalArr = [];
-        if (soalServer && typeof soalServer === 'object') {
-            for (const sid in soalServer) soalArr.push({ id: sid, ...soalServer[sid] });
-        }
+        if (soalServer && typeof soalServer === 'object') for (const sid in soalServer) soalArr.push({ id: sid, ...soalServer[sid] });
 
-        // Prioritas: draft server kalau ada isi, kalau tidak pakai soal server
         daftarSoal = draftArr.length > 0 ? draftArr : soalArr;
         renderDaftarSoal();
 
@@ -618,9 +654,7 @@
         k.innerHTML = daftarSoal.map((s, i) => {
             const tipe = s.tipe === 'essay' ? 'essay' : 'pg';
             const label = tipe === 'essay' ? '<span class="tag-tipe tag-essay">Essay</span>' : '<span class="tag-tipe tag-pg">PG</span>';
-            const info = tipe === 'essay'
-                ? (s.kunci_essay ? `Kunci: ${escapeHtml(s.kunci_essay)}` : 'Tanpa kunci')
-                : `Jawaban: ${s.jawaban_benar}`;
+            const info = tipe === 'essay' ? (s.kunci_essay ? `Kunci: ${escapeHtml(s.kunci_essay)}` : 'Tanpa kunci') : `Jawaban: ${s.jawaban_benar}`;
             const aksi = mapelAktifStatus ? '' : `
                 <div class="baris-tombol">
                     <button class="btn-sekunder" onclick="editSoalLokal('${s.id}')">Edit</button>
@@ -702,7 +736,6 @@
         renderDaftarSoal();
     }
 
-    // ============ TEMPLATE & IMPORT ============
     function lihatTemplateCSV() {
         const c = [
             ['Tipe','Pertanyaan','Pilihan A','Pilihan B','Pilihan C','Pilihan D','Pilihan E','Jawaban Benar','Kunci Essay'],
@@ -749,8 +782,6 @@
         else tampilkanStatus(`${ok} soal diimport${skip ? `, ${skip} dilewati` : ''}.`, 'sukses');
     }
 
-    // ============ RILIS SOAL ============
-    // Soal dipecah DUA: /soal/{id} tanpa kunci, /kunci/{id} hanya kunci
     async function rilisSoal() {
         if (!mapelAktifId) return;
         if (mapelAktifStatus) { alert('Mapel aktif. Minta admin menonaktifkan dulu.'); return; }
@@ -779,7 +810,6 @@
             });
             if (r1.ok) {
                 suksesSoal = true;
-                // Bersihkan salinan lama di /mapel/{id}/soal (kalau ada)
                 try { await fetch(`${FIREBASE_URL}/mapel/${mapelAktifId}/soal.json`, { method: 'DELETE' }); } catch (e) {}
             }
         } catch (e) {}
@@ -797,20 +827,13 @@
             });
             if (r3.ok) suksesMeta = true;
         } catch (e) {}
-        try {
-            await fetch(`${FIREBASE_URL}/draft_soal/${mapelAktifId}.json`, { method: 'DELETE' });
-        } catch (e) {}
+        try { await fetch(`${FIREBASE_URL}/draft_soal/${mapelAktifId}.json`, { method: 'DELETE' }); } catch (e) {}
 
-        if (suksesSoal && suksesKunci) {
-            tampilkanStatus(`✅ ${pg} PG + ${essay} Essay dirilis (soal & kunci terpisah).`, 'sukses');
-        } else if (suksesSoal) {
-            tampilkanStatus(`⚠️ Soal tersimpan, tapi kunci gagal. Coba lagi.`, 'gagal');
-        } else {
-            tampilkanStatus('❌ Gagal merilis. Coba lagi.', 'gagal');
-        }
+        if (suksesSoal && suksesKunci) tampilkanStatus(`✅ ${pg} PG + ${essay} Essay dirilis (soal & kunci terpisah).`, 'sukses');
+        else if (suksesSoal) tampilkanStatus(`⚠️ Soal tersimpan, tapi kunci gagal. Coba lagi.`, 'gagal');
+        else tampilkanStatus('❌ Gagal merilis. Coba lagi.', 'gagal');
     }
 
-    // ============ NILAI SISWA ============
     async function muatNilaiMapel() {
         const k = document.getElementById('daftar-nilai-siswa');
         k.innerHTML = '<p class="kosong">Memuat nilai...</p>';
@@ -835,7 +858,6 @@
         } catch (e) { k.innerHTML = '<p class="kosong">Gagal memuat.</p>'; }
     }
 
-    // Simpan nilai PG (dan akhir) untuk SEMUA siswa — pengganti "Hitung Nilai"
     async function hitungUlangSemuaPG() {
         if (!mapelAktifId) return;
         const ya = await konfirmasi('Hitung ulang nilai PG untuk semua siswa dari kunci? Nilai lama akan ditimpa.', 'Hitung Ulang', 'Ya');
@@ -853,18 +875,10 @@
             for (const nis in data) {
                 const h = data[nis];
                 const hitung = hitungNilaiDariJawaban(kunci, h);
-                const status = (h.total_essay || 0) > 0
-                    ? (h.nilai_essay != null ? 'dinilai_guru' : 'menunggu_penilaian')
-                    : 'selesai';
+                const status = (h.total_essay || 0) > 0 ? (h.nilai_essay != null ? 'dinilai_guru' : 'menunggu_penilaian') : 'selesai';
                 tasks.push(fetch(`${FIREBASE_URL}/hasil_ujian/${mapelAktifId}/${nis}.json`, {
                     method: 'PATCH', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({
-                        benar_pg: hitung.benar_pg,
-                        total_pg: hitung.total_pg,
-                        nilai_pg: hitung.nilai_pg,
-                        nilai_akhir: hitung.nilai_akhir,
-                        status
-                    })
+                    body: JSON.stringify({ benar_pg: hitung.benar_pg, total_pg: hitung.total_pg, nilai_pg: hitung.nilai_pg, nilai_akhir: hitung.nilai_akhir, status })
                 }).then(res => res.ok ? ok++ : gagal++).catch(() => gagal++));
             }
             await Promise.all(tasks);
@@ -946,7 +960,6 @@
                 ambilKunci(mapelId)
             ]);
             const h = await r.json() || {};
-            // Hitung ulang pakai kunci, bukan nilai tersimpan
             const hitung = hitungNilaiDariJawaban(kunci, { ...h, nilai_essay: nilai });
             await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`, {
                 method: 'PATCH', headers: {'Content-Type':'application/json'},
@@ -966,7 +979,6 @@
         } catch (e) { alert('Gagal.'); }
     }
 
-    // ============ HASIL PER KELAS (untuk screenshot) ============
     async function lihatHasilPerKelas() {
         const k = document.getElementById('isi-hasil-kelas');
         k.innerHTML = '<p class="kosong">Memuat...</p>';
@@ -977,10 +989,7 @@
                 ambilKunci(mapelAktifId)
             ]);
             const data = await r.json();
-            if (!data || Object.keys(data).length === 0) {
-                k.innerHTML = '<p class="kosong">Belum ada nilai.</p>';
-                return;
-            }
+            if (!data || Object.keys(data).length === 0) { k.innerHTML = '<p class="kosong">Belum ada nilai.</p>'; return; }
             const list = Object.keys(data).map(nis => {
                 const h = data[nis];
                 const hitung = hitungNilaiDariJawaban(kunci, h);
@@ -1018,7 +1027,6 @@
                 </div>`).join('')}`;
     }
 
-    // ============ INIT ============
     ambilParamAtauTanya();
     Promise.all([muatDaftarKelas(), muatDaftarMapel()]);
 </script>
