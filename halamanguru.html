@@ -72,6 +72,8 @@
     .progress-bar { height: 8px; background: rgba(27,94,32,0.15); border-radius: 999px; overflow: hidden; }
     .progress-bar div { height: 100%; background: #1b5e20; transition: width 0.3s ease; }
     .info-lock { background: rgba(254,226,226,0.85); border: 1px solid #b91c1c; color: #7f1d1d; padding: 10px 12px; border-radius: 10px; font-size: 12px; line-height: 1.5; }
+    .info-box { background: rgba(219,234,254,0.6); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #1e40af; line-height: 1.5; }
+    .field-readonly input { background: rgba(241,245,249,0.9); color: #64748b; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -86,7 +88,10 @@
 
     <!-- LAYAR 1: DAFTAR MAPEL -->
     <div id="layar-daftar-mapel" style="display:flex;flex-direction:column;gap:16px;">
-        <button class="btn-sekunder" onclick="bukaKoreksiBersama()">🤝 Koreksi Bersama (Kolaborasi Antar Guru)</button>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="bukaKoreksiBersama()">🤝 Koreksi Bersama</button>
+            <button class="btn-sekunder" onclick="bukaPengaturanAkun()">⚙️ Akun Saya</button>
+        </div>
 
         <div class="card">
             <div class="field"><label>Nama Mapel</label><input type="text" id="input-nama-mapel" placeholder="Contoh: Matematika"></div>
@@ -165,6 +170,43 @@
         </div>
 
         <button class="btn-sekunder" onclick="lihatHasilPerKelas()">📸 Hasil Ujian per Kelas (untuk screenshot)</button>
+    </div>
+</div>
+
+<!-- POPUP PENGATURAN AKUN GURU (BARU) -->
+<div class="popup-overlay" id="popup-akun-saya">
+    <div class="popup-box">
+        <h3>⚙️ Pengaturan Akun Saya</h3>
+        <div class="info-box">
+            ℹ️ Anda bisa mengubah <b>nama lengkap</b> dan <b>password</b> sendiri. Username tidak bisa diubah karena terhubung ke data mapel & kolaborasi.
+        </div>
+        <div class="field field-readonly">
+            <label>Username (tidak bisa diubah)</label>
+            <input type="text" id="akun-username" readonly>
+        </div>
+        <div class="field">
+            <label>Nama Lengkap</label>
+            <input type="text" id="akun-nama" placeholder="Nama lengkap Anda">
+        </div>
+        <div class="field">
+            <label>Password Lama (wajib untuk verifikasi)</label>
+            <input type="text" id="akun-pass-lama" placeholder="Masukkan password lama">
+        </div>
+        <div class="field">
+            <label>Password Baru (kosongkan jika tidak ingin ganti)</label>
+            <input type="text" id="akun-pass-baru" placeholder="Password baru">
+        </div>
+        <div class="field">
+            <label>Konfirmasi Password Baru</label>
+            <input type="text" id="akun-pass-konfirmasi" placeholder="Ulangi password baru">
+        </div>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupPopup('popup-akun-saya')">Batal</button>
+            <button class="btn-utama" onclick="simpanPerubahanAkun()">💾 Simpan</button>
+        </div>
+        <p style="font-size:11px;color:#475569;text-align:center;">
+            ⓘ Setelah ganti password, gunakan password baru saat login berikutnya.
+        </p>
     </div>
 </div>
 
@@ -358,7 +400,7 @@
     let daftarMapel = [], daftarKelas = [], daftarSoal = [], daftarNilaiMapel = [];
     let mapelAktifId = null, namaMapelAktif = "", mapelAktifStatus = false;
     let soalSedangDiedit = null;
-    let modeAksesMapel = 'owner'; // 'owner' = guru pemilik, 'helper' = guru yang membantu koreksi
+    let modeAksesMapel = 'owner';
     let tabKolaborasi = 'saya';
 
     let konteksEssay = {
@@ -417,6 +459,102 @@
         const k = document.getElementById('pesan-status');
         k.textContent = p; k.className = 'pesan-status tampil ' + j;
         setTimeout(() => k.classList.remove('tampil'), 3500);
+    }
+
+    // ============================================================
+    // PENGATURAN AKUN GURU (BARU)
+    // ============================================================
+    async function bukaPengaturanAkun() {
+        document.getElementById('akun-username').value = usernameGuru;
+        document.getElementById('akun-nama').value = '';
+        document.getElementById('akun-pass-lama').value = '';
+        document.getElementById('akun-pass-baru').value = '';
+        document.getElementById('akun-pass-konfirmasi').value = '';
+        document.getElementById('popup-akun-saya').classList.add('tampil');
+        try {
+            const r = await fetch(`${FIREBASE_URL}/guru_akun/${usernameGuru}.json`);
+            const data = await r.json();
+            if (data) {
+                document.getElementById('akun-nama').value = data.nama || '';
+            }
+        } catch (e) {}
+    }
+
+    async function simpanPerubahanAkun() {
+        const namaBaru = document.getElementById('akun-nama').value.trim();
+        const passLama = document.getElementById('akun-pass-lama').value;
+        const passBaru = document.getElementById('akun-pass-baru').value;
+        const passKonfirm = document.getElementById('akun-pass-konfirmasi').value;
+
+        if (!namaBaru) { alert('Nama tidak boleh kosong.'); return; }
+        if (!passLama) { alert('Masukkan password lama untuk verifikasi.'); return; }
+
+        // Ambil data akun saat ini
+        let dataAkun = null;
+        try {
+            const r = await fetch(`${FIREBASE_URL}/guru_akun/${usernameGuru}.json`);
+            dataAkun = await r.json();
+        } catch (e) {}
+        if (!dataAkun) { alert('Data akun tidak ditemukan.'); return; }
+
+        // Verifikasi password lama
+        if (dataAkun.password !== passLama) {
+            alert('Password lama salah. Periksa kembali.');
+            return;
+        }
+
+        // Validasi password baru
+        let passwordFinal = dataAkun.password;
+        if (passBaru || passKonfirm) {
+            if (passBaru !== passKonfirm) {
+                alert('Konfirmasi password baru tidak cocok.');
+                return;
+            }
+            if (passBaru.length < 4) {
+                alert('Password baru minimal 4 karakter.');
+                return;
+            }
+            passwordFinal = passBaru;
+        }
+
+        // Cek apakah ada perubahan
+        const namaBerubah = namaBaru !== (dataAkun.nama || '');
+        const passwordBerubah = passwordFinal !== dataAkun.password;
+        if (!namaBerubah && !passwordBerubah) {
+            alert('Tidak ada perubahan yang perlu disimpan.');
+            return;
+        }
+
+        // Konfirmasi
+        let pesan = 'Simpan perubahan akun?';
+        if (namaBerubah && passwordBerubah) pesan = `Ubah nama menjadi "${namaBaru}" dan ganti password?`;
+        else if (namaBerubah) pesan = `Ubah nama menjadi "${namaBaru}"?`;
+        else pesan = 'Ganti password akun?';
+
+        const ya = await konfirmasi(pesan + (passwordBerubah ? '\n\nSetelah ganti password, gunakan password baru untuk login berikutnya.' : ''), 'Simpan Akun', 'Ya, Simpan');
+        if (!ya) return;
+
+        try {
+            const dataUpdate = {
+                username: usernameGuru,
+                nama: namaBaru,
+                password: passwordFinal
+            };
+            const r = await fetch(`${FIREBASE_URL}/guru_akun/${usernameGuru}.json`, {
+                method: 'PUT', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(dataUpdate)
+            });
+            if (!r.ok) throw new Error('fail');
+
+            // Update variabel global supaya nama di header langsung berubah
+            namaGuru = namaBaru;
+            document.getElementById('info-guru').textContent = 'Selamat datang, ' + namaBaru;
+
+            tutupPopup('popup-akun-saya');
+            tampilkanStatus('✅ Akun berhasil diperbarui.', 'sukses');
+        } catch (e) {
+            alert('Gagal menyimpan. Periksa koneksi internet.');
+        }
     }
 
     async function muatDaftarKelas() {
@@ -781,7 +919,6 @@
         document.getElementById('info-kelas-mapel').textContent =
             'Kelas: ' + (kelasList.join(', ') || '-') + ' · Guru Pemilik: ' + guruPemilik;
 
-        // Sembunyikan tab Soal & Edit Kelas — helper hanya bisa akses Nilai
         document.getElementById('tab-btn-soal').style.display = 'none';
         document.getElementById('tab-btn-kelas').style.display = 'none';
         document.getElementById('tab-btn-nilai').style.display = 'block';
