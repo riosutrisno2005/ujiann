@@ -94,6 +94,14 @@
     .overlay-cetak-header .btn-print { background: #f59e0b; color: #fff; }
     .overlay-cetak-header .btn-close { background: rgba(255,255,255,0.2); color: #fff; }
     .overlay-cetak iframe { flex: 1; border: 0; width: 100%; }
+    #konten-cetak-print { display: none; padding: 15px; background: #fff; overflow-y: auto; flex: 1; }
+    @media print {
+        body > *:not(.overlay-cetak) { display: none !important; }
+        .overlay-cetak { position: static !important; display: block !important; }
+        .overlay-cetak-header { display: none !important; }
+        .overlay-cetak iframe { display: none !important; }
+        #konten-cetak-print { display: block !important; padding: 10px; }
+    }
 </style>
 </head>
 <body>
@@ -323,6 +331,8 @@
             💡 <b>Pilih "Semua Mapel"</b> → tabel 1 kelas × semua mapel (mirip rekap).
             <br>
             💡 <b>Pilih mapel tertentu</b> → tabel detail: Benar PG, Nilai PG, Nilai Essay, Nilai Akhir.
+            <br>
+            💡 Jika data kelas siswa kosong, pilih <b>📋 Semua Siswa (tanpa filter kelas)</b>.
         </div>
         <div class="baris-tombol">
             <button class="btn-sekunder" onclick="tutupPopup('popup-cetak-kelas')">Batal</button>
@@ -353,6 +363,7 @@
         </div>
     </div>
     <iframe id="iframe-cetak"></iframe>
+    <div id="konten-cetak-print"></div>
 </div>
 
 <script>
@@ -1746,18 +1757,16 @@
         const k = document.getElementById('daftar-siswa-transkrip');
         k.innerHTML = '<p class="kosong">Memuat...</p>';
         try {
-            const [rSiswa, rMapel, rHasil, rPub, rKelas] = await Promise.all([
+            const [rSiswa, rMapel, rHasil, rPub] = await Promise.all([
                 fetch(`${FIREBASE_URL}/peserta_ujian.json`),
                 fetch(`${FIREBASE_URL}/mapel.json`),
                 fetch(`${FIREBASE_URL}/hasil_ujian.json`),
-                fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`),
-                fetch(`${FIREBASE_URL}/daftar_kelas.json`).catch(() => null)
+                fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`)
             ]);
             const dSiswa = await rSiswa.json() || {};
             const dMapel = await rMapel.json() || {};
             const dHasil = await rHasil.json() || {};
             const dPub = await rPub.json();
-            const dKelas = rKelas ? (await rKelas.json() || {}) : {};
 
             semuaSiswaGlobal = Object.keys(dSiswa).map(kunci => ({ kunci, ...dSiswa[kunci] }));
             semuaMapelGlobal = Object.keys(dMapel).map(id => ({ id, ...dMapel[id] }));
@@ -1765,17 +1774,25 @@
 
             updateStatusPublikasi(dPub === true);
 
+            // Ambil kelas UNIK dari data siswa (bukan dari daftar_kelas)
             const setKelas = new Set();
-            for (const id in dKelas) if (dKelas[id].nama) setKelas.add(dKelas[id].nama);
-            semuaSiswaGlobal.forEach(s => { if (s.kelas) setKelas.add(s.kelas); });
+            semuaSiswaGlobal.forEach(s => {
+                const kls = (s.kelas || '').trim();
+                if (kls && kls !== '-') setKelas.add(kls);
+            });
             const kelasUnik = [...setKelas].sort();
+
+            let opsiKelasCetak = '<option value="">-- Pilih Kelas --</option>';
+            opsiKelasCetak += '<option value="__SEMUA__">📋 Semua Siswa (tanpa filter kelas)</option>';
+            if (kelasUnik.length > 0) {
+                opsiKelasCetak += kelasUnik.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+            }
+            document.getElementById('pilih-kelas-cetak').innerHTML = opsiKelasCetak;
 
             document.getElementById('filter-kelas-transkrip').innerHTML =
                 '<option value="">Semua Kelas</option>' +
                 kelasUnik.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-            document.getElementById('pilih-kelas-cetak').innerHTML =
-                '<option value="">-- Pilih Kelas --</option>' +
-                kelasUnik.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+
             document.getElementById('pilih-mapel-cetak').innerHTML =
                 '<option value="">📚 Semua Mapel (Tabel Lengkap)</option>' +
                 semuaMapelGlobal
@@ -1886,16 +1903,28 @@
         if (!kelas) { alert('Pilih kelas dulu.'); return; }
         tutupPopup('popup-cetak-kelas');
 
-        let siswa = semuaSiswaGlobal.filter(s => (s.kelas || '') === kelas);
+        let siswa;
+        let labelKelas;
+        if (kelas === '__SEMUA__') {
+            siswa = semuaSiswaGlobal.slice();
+            labelKelas = 'Semua Siswa';
+        } else {
+            siswa = semuaSiswaGlobal.filter(s => (s.kelas || '').trim() === kelas.trim());
+            labelKelas = kelas;
+        }
         siswa.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
-        if (siswa.length === 0) { alert('Tidak ada siswa di kelas ini.'); return; }
+
+        if (siswa.length === 0) {
+            alert('Tidak ada siswa di kelas "' + kelas + '".\n\nCoba pilih "Semua Siswa (tanpa filter kelas)".');
+            return;
+        }
 
         if (mapelId) {
             const mapel = semuaMapelGlobal.find(m => m.id === mapelId);
             if (!mapel) { alert('Mapel tidak ditemukan.'); return; }
-            cetakPerKelasPerMapel(kelas, mapel, siswa);
+            cetakPerKelasPerMapel(labelKelas, mapel, siswa);
         } else {
-            cetakPerKelasSemuaMapel(kelas, siswa);
+            cetakPerKelasSemuaMapel(labelKelas, siswa);
         }
     }
 
@@ -1903,22 +1932,61 @@
         document.getElementById('judul-overlay-cetak').textContent = judul || 'Preview Cetak';
         const iframe = document.getElementById('iframe-cetak');
         iframe.srcdoc = htmlIsi;
+        // Simpan isi ke elemen print untuk fallback window.print
+        document.getElementById('konten-cetak-print').innerHTML = htmlIsi;
         document.getElementById('overlay-cetak').classList.add('tampil');
     }
 
     function tutupOverlayCetak() {
         document.getElementById('overlay-cetak').classList.remove('tampil');
         document.getElementById('iframe-cetak').srcdoc = '';
+        document.getElementById('konten-cetak-print').innerHTML = '';
     }
 
     function jalankanPrint() {
-        try {
-            const iframe = document.getElementById('iframe-cetak');
-            iframe.contentWindow.focus();
-            iframe.contentWindow.print();
-        } catch (e) {
-            alert('Print tidak didukung di perangkat ini. Silakan screenshot tampilan cetak.');
+        const iframe = document.getElementById('iframe-cetak');
+        if (!iframe || !iframe.srcdoc) {
+            alert('Konten cetak kosong. Coba tutup dan buka lagi.');
+            return;
         }
+
+        // Metode 1: Print iframe langsung
+        try {
+            const cw = iframe.contentWindow;
+            if (cw && typeof cw.print === 'function') {
+                cw.focus();
+                cw.print();
+                return;
+            }
+        } catch (e) {
+            console.log('Iframe print gagal:', e);
+        }
+
+        // Metode 2: Print via window.open
+        try {
+            const w = window.open('', '_blank');
+            if (w) {
+                w.document.write(iframe.srcdoc);
+                w.document.close();
+                setTimeout(() => {
+                    try { w.focus(); w.print(); } catch (e) {}
+                }, 500);
+                return;
+            }
+        } catch (e) {
+            console.log('Window.open gagal:', e);
+        }
+
+        // Metode 3: Print halaman utama (CSS @media print akan sembunyikan overlay & tampilkan konten)
+        try {
+            window.print();
+            return;
+        } catch (e) {
+            console.log('Window.print gagal:', e);
+        }
+
+        // Metode 4: Fallback pesan
+        alert('⚠️ Print tidak didukung di perangkat ini.\n\nAlternatif:\n• Screenshot tampilan preview langsung dari HP\n• Buka halaman ini di Chrome desktop untuk cetak/PDF\n• Gunakan tombol "Export CSV" untuk data mentah');
     }
 
     function cetakPerKelasSemuaMapel(kelas, siswa) {
