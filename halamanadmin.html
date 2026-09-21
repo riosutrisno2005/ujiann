@@ -4,6 +4,88 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Halaman Admin</title>
+<script>
+(function(){
+  var IZINKAN_BROWSER_UNTUK_UJI = false;
+  var KEY_DATA = 'username';
+  var MAX_TUNGGU_MS = 2500;
+
+  window.__AKSES_DITOLAK = false;
+  window.__AKSES_OK = false;
+  var queue = [];
+  var _fetch = window.fetch ? window.fetch.bind(window) : null;
+
+  window.fetch = function(){
+    if (window.__AKSES_DITOLAK) return Promise.reject(new Error('AKSES_DITOLAK'));
+    if (window.__AKSES_OK && _fetch) return _fetch.apply(null, arguments);
+    var args = arguments;
+    return new Promise(function(res, rej){ queue.push({ a: args, r: res, j: rej }); });
+  };
+  function flush(ok){
+    var q = queue; queue = [];
+    for (var i = 0; i < q.length; i++) {
+      var it = q[i];
+      if (ok && _fetch) { try { it.r(_fetch.apply(null, it.a)); } catch(e) { it.j(e); } }
+      else it.j(new Error('AKSES_DITOLAK'));
+    }
+  }
+  function getData(){
+    try { var p = new URLSearchParams(location.search).get(KEY_DATA); if (p) return p.trim(); } catch(e){}
+    try {
+      if (window.AppInventor && typeof window.AppInventor.getWebViewString === 'function'){
+        var w = window.AppInventor.getWebViewString();
+        if (w) {
+          try { var o = JSON.parse(w); if (o && o[KEY_DATA]) return String(o[KEY_DATA]).trim(); } catch(e){}
+          return String(w).trim();
+        }
+      }
+    } catch(e){}
+    return '';
+  }
+  function isAI(){
+    return !!(window.AppInventor && typeof window.AppInventor.getWebViewString === 'function');
+  }
+  function deny(){
+    if (window.__AKSES_DITOLAK) return;
+    window.__AKSES_DITOLAK = true;
+    flush(false);
+    function apply(){
+      if (document.getElementById('__deny')) return true;
+      if (!document.body) return false;
+      var s = document.createElement('style');
+      s.textContent = 'html,body{overflow:hidden !important;}';
+      document.head.appendChild(s);
+      var d = document.createElement('div');
+      d.id = '__deny';
+      d.style.cssText = 'position:fixed;inset:0;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;z-index:2147483647;font-family:-apple-system,sans-serif;padding:20px;text-align:center;';
+      d.innerHTML = '<div><h1 style="font-size:22px;margin:0 0 8px;">Akses ditolak</h1><p style="color:#999;font-size:14px;margin:0;">Halaman ini hanya bisa dibuka dari dalam aplikasi.</p></div>';
+      document.body.appendChild(d);
+      return true;
+    }
+    if (!apply()) {
+      document.addEventListener('DOMContentLoaded', apply);
+      var iv = setInterval(function(){ if (apply()) clearInterval(iv); }, 50);
+      setTimeout(function(){ clearInterval(iv); }, 5000);
+    }
+  }
+  function ok(){ window.__AKSES_OK = true; flush(true); }
+  function check(){
+    if (IZINKAN_BROWSER_UNTUK_UJI) {
+      if (!getData()) { deny(); return true; }
+      ok(); return true;
+    }
+    if (!isAI()) { deny(); return true; }
+    if (getData()) { ok(); return true; }
+    return false;
+  }
+  if (check()) return;
+  var t0 = Date.now();
+  var iv = setInterval(function(){
+    if (check()) { clearInterval(iv); return; }
+    if (Date.now() - t0 > MAX_TUNGGU_MS) { clearInterval(iv); if (!window.__AKSES_OK) deny(); }
+  }, 100);
+})();
+</script>
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: linear-gradient(135deg, #b9fbc0 0%, #70e000 100%); min-height: 100vh; color: #1C1C1E; padding: 16px; }
@@ -63,11 +145,7 @@
     .petunjuk-csv code { background: #fff; padding: 1px 5px; border-radius: 4px; font-size: 11px; }
     .info-kecil { font-size:11px; color:#475569; }
     .peringatan-box { background: rgba(254,243,199,0.85); border: 1px solid #f59e0b; border-radius: 10px; padding: 10px; font-size: 12px; color: #7c4a03; line-height: 1.5; }
-    .kotak-hapus-semua {
-        background: rgba(254,226,226,0.6); border: 1px solid rgba(185,28,28,0.4);
-        border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;
-        margin-bottom: 10px;
-    }
+    .kotak-hapus-semua { background: rgba(254,226,226,0.6); border: 1px solid rgba(185,28,28,0.4); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
     .kotak-hapus-semua span { font-size: 12px; color: #7f1d1d; }
 </style>
 </head>
@@ -146,7 +224,6 @@
     </div>
 </div>
 
-<!-- POPUP PENGERJAAN (REKAP NILAI) -->
 <div class="popup-overlay" id="popup-pengerjaan">
     <div class="popup-box">
         <h3 id="judul-pengerjaan">Rekap</h3>
@@ -160,7 +237,6 @@
     </div>
 </div>
 
-<!-- POPUP PENGAJUAN -->
 <div class="popup-overlay" id="popup-pengajuan">
     <div class="popup-box">
         <h3 id="judul-pengajuan">Pengajuan Ujian Ulang</h3>
@@ -169,7 +245,6 @@
     </div>
 </div>
 
-<!-- POPUP NILAI ESSAY -->
 <div class="popup-overlay" id="popup-nilai-essay">
     <div class="popup-box">
         <h3 id="judul-nilai-essay">Nilai Essay</h3>
@@ -181,7 +256,6 @@
     </div>
 </div>
 
-<!-- POPUP EXPORT CSV -->
 <div class="popup-overlay" id="popup-export">
     <div class="popup-box">
         <h3 id="judul-export">Export CSV</h3>
@@ -194,7 +268,6 @@
     </div>
 </div>
 
-<!-- POPUP IMPORT AKUN CSV -->
 <div class="popup-overlay" id="popup-import-akun">
     <div class="popup-box">
         <h3>Import Akun dari CSV</h3>
@@ -207,7 +280,6 @@
     </div>
 </div>
 
-<!-- POPUP TEMPLATE AKUN -->
 <div class="popup-overlay" id="popup-template-akun">
     <div class="popup-box">
         <h3>Template CSV Akun</h3>
@@ -219,7 +291,6 @@
     </div>
 </div>
 
-<!-- POPUP EDIT KELAS -->
 <div class="popup-overlay" id="popup-edit-kelas">
     <div class="popup-box">
         <h3>✏️ Edit Nama Kelas</h3>
@@ -240,7 +311,6 @@
     </div>
 </div>
 
-<!-- POPUP KONFIRMASI -->
 <div class="popup-overlay" id="popup-konfirmasi">
     <div class="popup-box" style="text-align:center;">
         <h3 id="judul-konfirmasi">Konfirmasi</h3>
@@ -261,12 +331,6 @@
         siswa: 'peserta_ujian'
     };
 
-    // ============================================================
-    // HELPER SOAL & KUNCI (Langkah 2)
-    //   /soal/{id}  → tanpa kunci
-    //   /kunci/{id} → kunci PG + essay
-    //   Fallback    → /mapel/{id}/soal (format lama)
-    // ============================================================
     async function ambilSoalMapel(id) {
         const r = await fetch(`${FIREBASE_URL}/soal/${id}.json`);
         let sumber = await r.json();
@@ -370,10 +434,10 @@
         const p = new URLSearchParams(window.location.search);
         usernameAdmin = (p.get('username') || '').trim().toLowerCase();
         namaAdmin = p.get('nama') || '';
-        if (!usernameAdmin) { usernameAdmin = (prompt('Testing: username admin') || '').trim().toLowerCase(); namaAdmin = usernameAdmin; }
+        if (!usernameAdmin) { return; }
         document.getElementById('info-admin').textContent = 'Selamat datang, ' + (namaAdmin || usernameAdmin);
     }
-    function tampilkanStatus(p, j) { j = j || 'info'; const k = document.getElementById('pesan-status'); k.textContent = p; k.className = 'pesan-status tampil ' + j; setTimeout(() => k.classList.remove('tampil'), 4000); }
+    function tampilkanStatus(p, j) { j = j || 'info'; const k = document.getElementById('pesan-status'); if (!k) return; k.textContent = p; k.className = 'pesan-status tampil ' + j; setTimeout(() => k.classList.remove('tampil'), 4000); }
     function buatTokenAcak() { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let h = ''; for (let i = 0; i < 6; i++) h += c.charAt(Math.floor(Math.random() * c.length)); return h; }
 
     function gantiTab(tab) {
@@ -385,7 +449,6 @@
         if (tab === 'akun') { muatAkunAll(); isiSelectKelasAkun(); }
     }
 
-    // ============ TAB MAPEL ============
     async function muatDaftarMapel() {
         try {
             const [r1, r2, r3] = await Promise.all([
@@ -403,11 +466,7 @@
                     const u = dataUlang ? dataUlang[id] : null;
                     let menunggu = 0;
                     if (u) for (const nis in u) if (u[nis].status === 'menunggu') menunggu++;
-                    daftarMapel.push({
-                        id, ...data[id],
-                        jumlah_hasil: h ? Object.keys(h).length : 0,
-                        jumlah_pengajuan_menunggu: menunggu
-                    });
+                    daftarMapel.push({ id, ...data[id], jumlah_hasil: h ? Object.keys(h).length : 0, jumlah_pengajuan_menunggu: menunggu });
                 }
             }
             renderDaftarMapel();
@@ -496,7 +555,6 @@
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
-    // ============ REKAP NILAI ============
     async function lihatRekapNilai(mapelId, namaMapel) {
         document.getElementById('judul-pengerjaan').textContent = 'Rekap: ' + namaMapel;
         const k = document.getElementById('daftar-pengerjaan');
@@ -669,7 +727,6 @@
         muatDaftarMapel();
     }
 
-    // ============ NILAI ESSAY ============
     async function bukaNilaiEssay(mapelId, nisn) {
         konteksNilaiEssay = { mapelId, nisn };
         document.getElementById('judul-nilai-essay').textContent = 'Essay — ' + nisn;
@@ -734,7 +791,6 @@
         } catch (e) { alert('Gagal.'); }
     }
 
-    // ============ PENGAJUAN PER MAPEL ============
     async function lihatPengajuan(mapelId, namaMapel) {
         document.getElementById('judul-pengajuan').textContent = 'Pengajuan: ' + namaMapel;
         const k = document.getElementById('daftar-pengajuan');
@@ -850,7 +906,6 @@
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
-    // ============ EXPORT CSV ============
     async function unduhHasil(mapelId, namaMapel) {
         try {
             const [r, kunci] = await Promise.all([
@@ -900,7 +955,6 @@
         document.getElementById('popup-export').classList.add('tampil');
     }
 
-    // ============ TAB KELAS ============
     async function muatKelas() {
         try {
             const r = await fetch(`${FIREBASE_URL}/daftar_kelas.json`);
@@ -948,7 +1002,6 @@
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
-    // ============ EDIT KELAS + CASCADE UPDATE ============
     function bukaPopupEditKelas(id, nama) {
         document.getElementById('edit-kelas-lama').textContent = nama;
         document.getElementById('input-nama-kelas-baru').value = nama;
@@ -975,22 +1028,10 @@
             const dUlang = await rUlang.json() || {};
 
             let nMapel = 0, nSiswa = 0, nHasil = 0, nUlang = 0;
-            for (const id in dMapel) {
-                if (parseKelasList(dMapel[id].kelas).includes(namaLama)) nMapel++;
-            }
-            for (const nisn in dSiswa) {
-                if ((dSiswa[nisn].kelas || '') === namaLama) nSiswa++;
-            }
-            for (const mid in dHasil) {
-                for (const nisn in dHasil[mid]) {
-                    if ((dHasil[mid][nisn].kelas || '') === namaLama) nHasil++;
-                }
-            }
-            for (const mid in dUlang) {
-                for (const nisn in dUlang[mid]) {
-                    if ((dUlang[mid][nisn].kelas || '') === namaLama) nUlang++;
-                }
-            }
+            for (const id in dMapel) if (parseKelasList(dMapel[id].kelas).includes(namaLama)) nMapel++;
+            for (const nisn in dSiswa) if ((dSiswa[nisn].kelas || '') === namaLama) nSiswa++;
+            for (const mid in dHasil) for (const nisn in dHasil[mid]) if ((dHasil[mid][nisn].kelas || '') === namaLama) nHasil++;
+            for (const mid in dUlang) for (const nisn in dUlang[mid]) if ((dUlang[mid][nisn].kelas || '') === namaLama) nUlang++;
             info.innerHTML = `<b>Ditemukan referensi:</b><br>
                 • ${nMapel} mapel memakai kelas ini<br>
                 • ${nSiswa} akun siswa di kelas ini<br>
@@ -1061,25 +1102,9 @@
                 updates[`mapel/${id}/kelas`] = baru;
             }
         }
-        for (const nisn in dSiswa) {
-            if ((dSiswa[nisn].kelas || '') === namaLama) {
-                updates[`peserta_ujian/${nisn}/kelas`] = namaBaru;
-            }
-        }
-        for (const mid in dHasil) {
-            for (const nisn in dHasil[mid]) {
-                if ((dHasil[mid][nisn].kelas || '') === namaLama) {
-                    updates[`hasil_ujian/${mid}/${nisn}/kelas`] = namaBaru;
-                }
-            }
-        }
-        for (const mid in dUlang) {
-            for (const nisn in dUlang[mid]) {
-                if ((dUlang[mid][nisn].kelas || '') === namaLama) {
-                    updates[`pengajuan_ulang/${mid}/${nisn}/kelas`] = namaBaru;
-                }
-            }
-        }
+        for (const nisn in dSiswa) if ((dSiswa[nisn].kelas || '') === namaLama) updates[`peserta_ujian/${nisn}/kelas`] = namaBaru;
+        for (const mid in dHasil) for (const nisn in dHasil[mid]) if ((dHasil[mid][nisn].kelas || '') === namaLama) updates[`hasil_ujian/${mid}/${nisn}/kelas`] = namaBaru;
+        for (const mid in dUlang) for (const nisn in dUlang[mid]) if ((dUlang[mid][nisn].kelas || '') === namaLama) updates[`pengajuan_ulang/${mid}/${nisn}/kelas`] = namaBaru;
 
         const jumlah = Object.keys(updates).length;
         if (jumlah === 0) return 0;
@@ -1093,7 +1118,6 @@
         return jumlah;
     }
 
-    // ============ TAB AKUN ============
     function gantiSubTabAkun(t) {
         subTabAkun = t;
         ['admin','guru','siswa'].forEach(x => {
@@ -1167,11 +1191,8 @@
             const badgeClass = subTabAkun === 'admin' ? 'badge-admin' : (subTabAkun === 'guru' ? 'badge-guru' : 'badge-siswa');
             const badgeLabel = subTabAkun === 'admin' ? 'Admin' : (subTabAkun === 'guru' ? 'Guru' : 'Siswa');
             let detail = '';
-            if (subTabAkun === 'siswa') {
-                detail = `NISN: ${escapeHtml(a.nisn || a.kunci)} · Kelas: ${escapeHtml(a.kelas || '-')}`;
-            } else {
-                detail = `Username: ${escapeHtml(a.username || a.kunci)}`;
-            }
+            if (subTabAkun === 'siswa') detail = `NISN: ${escapeHtml(a.nisn || a.kunci)} · Kelas: ${escapeHtml(a.kelas || '-')}`;
+            else detail = `Username: ${escapeHtml(a.username || a.kunci)}`;
             return `
             <div class="card">
                 <div class="card-header">
@@ -1262,25 +1283,18 @@
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
-    // ============ IMPORT AKUN CSV ============
     function bukaImportAkunCSV() {
         const p = document.getElementById('petunjuk-import-akun');
-        if (subTabAkun === 'siswa') {
-            p.innerHTML = '<b>Format Siswa:</b> <code>Nama, NISN, Kelas</code><br>Baris pertama = header (diabaikan).';
-        } else {
-            p.innerHTML = '<b>Format ' + (subTabAkun === 'admin' ? 'Admin' : 'Guru') + ':</b> <code>Nama, Username, Password</code><br>Baris pertama = header (diabaikan).';
-        }
+        if (subTabAkun === 'siswa') p.innerHTML = '<b>Format Siswa:</b> <code>Nama, NISN, Kelas</code><br>Baris pertama = header (diabaikan).';
+        else p.innerHTML = '<b>Format ' + (subTabAkun === 'admin' ? 'Admin' : 'Guru') + ':</b> <code>Nama, Username, Password</code><br>Baris pertama = header (diabaikan).';
         document.getElementById('input-csv-akun').value = '';
         document.getElementById('popup-import-akun').classList.add('tampil');
     }
 
     function lihatTemplateAkun() {
         let contoh;
-        if (subTabAkun === 'siswa') {
-            contoh = [['Nama','NISN','Kelas'], ['Ahmad Fauzi','12345','X TKJ 1'], ['Rina Wati','12346','X TKJ 1']];
-        } else {
-            contoh = [['Nama','Username','Password'], ['Budi Santoso','budi','budi123'], ['Siti Aminah','siti','siti456']];
-        }
+        if (subTabAkun === 'siswa') contoh = [['Nama','NISN','Kelas'], ['Ahmad Fauzi','12345','X TKJ 1'], ['Rina Wati','12346','X TKJ 1']];
+        else contoh = [['Nama','Username','Password'], ['Budi Santoso','budi','budi123'], ['Siti Aminah','siti','siti456']];
         document.getElementById('isi-template-akun').value = contoh.map(r => r.map(escapeCSV).join(',')).join('\n');
         document.getElementById('popup-template-akun').classList.add('tampil');
     }
@@ -1334,12 +1348,12 @@
         muatAkunAll();
     }
 
-    // ============ INIT ============
     ambilParamAtauTanya();
     muatDaftarMapel();
     muatKelas();
     setTimeout(() => {
-        document.getElementById('peringatan-guru').style.display = 'block';
+        const el = document.getElementById('peringatan-guru');
+        if (el) el.style.display = 'block';
     }, 100);
 </script>
 </body>
