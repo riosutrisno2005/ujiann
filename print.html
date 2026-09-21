@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cetak Hasil Ujian</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        background: #f1f5f9;
+        padding: 20px;
+        color: #000;
+    }
+
+    .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        background: #fff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    /* ============ TOOLBAR (tidak ikut tercetak) ============ */
+    .toolbar {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        padding-bottom: 18px;
+        border-bottom: 2px solid #000;
+        margin-bottom: 22px;
+    }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 12px; font-weight: 700; color: #333; }
+    .field select {
+        padding: 9px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 14px;
+        min-width: 210px;
+        background: #fff;
+        color: #000;
+        outline: none;
+        font-family: inherit;
+    }
+    .field select:focus { border-color: #1e40af; }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        background: #1e40af;
+        color: #fff;
+        font-family: inherit;
+        transition: background 0.15s;
+    }
+    .btn:hover { background: #1e3a8a; }
+    .btn-sekunder { background: #fff; color: #1e40af; border: 1px solid #1e40af; }
+    .btn-sekunder:hover { background: #eff6ff; }
+
+    /* ============ AREA CETAK ============ */
+    #print-area { min-height: 200px; }
+
+    .header-cetak {
+        text-align: center;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #000;
+    }
+    .header-cetak h1 {
+        font-size: 17px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .header-cetak h2 {
+        font-size: 13px;
+        font-weight: 600;
+        margin-top: 3px;
+    }
+    .header-cetak p {
+        font-size: 12px;
+        margin-top: 4px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        margin-bottom: 14px;
+    }
+    th, td {
+        border: 1px solid #000;
+        padding: 6px 8px;
+        vertical-align: middle;
+    }
+    th {
+        background: #e5e5e5;
+        font-weight: 700;
+        text-align: center;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    td { font-size: 12px; }
+    td.no { text-align: center; width: 34px; font-weight: 700; }
+    td.nama { min-width: 160px; }
+    td.nisn { text-align: center; width: 90px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+    td.angka { text-align: center; width: 65px; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; }
+    td.status { text-align: center; width: 110px; font-size: 11px; }
+
+    tbody tr:nth-child(even) { background: #fafafa; }
+
+    .info-total {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 11px;
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid #000;
+    }
+    .info-total b { font-weight: 700; }
+
+    .kosong {
+        text-align: center;
+        padding: 50px 20px;
+        color: #666;
+        font-style: italic;
+        font-size: 13px;
+    }
+
+    .catatan {
+        margin-top: 18px;
+        font-size: 11px;
+        color: #333;
+        font-style: italic;
+    }
+
+    /* ============ PRINT ============ */
+    @media print {
+        body { background: #fff; padding: 0; }
+        .container {
+            box-shadow: none;
+            border-radius: 0;
+            padding: 10mm;
+            max-width: none;
+        }
+        .toolbar { display: none !important; }
+        table { font-size: 11px; }
+        th { background: #eee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        thead { display: table-header-group; }
+        tr { page-break-inside: avoid; }
+        @page { size: A4 portrait; margin: 12mm 10mm; }
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="toolbar">
+        <div class="field">
+            <label>Kelas</label>
+            <select id="pilih-kelas"><option value="">Memuat...</option></select>
+        </div>
+        <div class="field">
+            <label>Mata Pelajaran</label>
+            <select id="pilih-mapel"><option value="">Memuat...</option></select>
+        </div>
+        <button class="btn" onclick="cetakSekarang()">🖨️ Cetak / Simpan PDF</button>
+        <button class="btn btn-sekunder" onclick="muatUlang()">🔄 Refresh Data</button>
+    </div>
+
+    <div id="print-area">
+        <p class="kosong">Memuat data dari server...</p>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    // KONFIGURASI
+    // ============================================================
+    const FIREBASE_URL = "https://admin-ffded-default-rtdb.firebaseio.com";
+    const NAMA_SEKOLAH = "SMK Swasta Nusa Indah Secanggang";   // ← ganti sesuai sekolah
+    const KEPALA_SEKOLAH = "";                                  // ← opsional, isi nama kepala sekolah
+
+    // ============================================================
+    // STATE
+    // ============================================================
+    let dataMapel = {};
+    let dataSiswa = {};
+    let dataHasil = {};
+    let dataKunci = {};
+    let daftarKelas = [];
+
+    // ============================================================
+    // HELPER
+    // ============================================================
+    function esc(t) {
+        const d = document.createElement('div');
+        d.textContent = t == null ? '' : String(t);
+        return d.innerHTML;
+    }
+
+    function parseKelasList(k) {
+        if (!k) return [];
+        if (Array.isArray(k)) return k.filter(x => x && typeof x === 'string');
+        if (typeof k === 'string') return k.split(',').map(s => s.trim()).filter(s => s);
+        if (typeof k === 'object') return Object.values(k).filter(x => typeof x === 'string');
+        return [];
+    }
+
+    function hitungNilaiAkhir(h) {
+        if (!h) return null;
+        const totalPg = h.total_pg || 0;
+        const totalEssay = h.total_essay || 0;
+        const nilaiPg = h.nilai_pg != null ? h.nilai_pg : 0;
+        const nilaiEssay = h.nilai_essay != null ? h.nilai_essay : null;
+
+        // Prioritas: pakai nilai_akhir yang sudah tersimpan
+        if (h.nilai_akhir != null && typeof h.nilai_akhir === 'number') return h.nilai_akhir;
+
+        if (nilaiEssay != null) {
+            if ((totalPg + totalEssay) === 0) return 0;
+            return Math.round((nilaiPg * totalPg + nilaiEssay * totalEssay) / (totalPg + totalEssay));
+        }
+        if (totalPg > 0 && totalEssay === 0) return nilaiPg;
+        return null; // belum dinilai
+    }
+
+    function statusTeks(h) {
+        if (!h) return 'Belum Ujian';
+        if (h.status === 'dinilai_guru') return 'Sudah Dinilai';
+        if (h.status === 'selesai') return 'Selesai';
+        if (h.status === 'menunggu_penilaian' || h.status === 'menunggu_dinilai') return 'Menunggu Essay';
+        return h.status || '-';
+    }
+
+    // ============================================================
+    // MUAT DATA
+    // ============================================================
+    async function muatUlang() {
+        const area = document.getElementById('print-area');
+        area.innerHTML = '<p class="kosong">Memuat data dari server...</p>';
+        try {
+            const [r1, r2, r3, r4] = await Promise.all([
+                fetch(`${FIREBASE_URL}/mapel.json?t=${Date.now()}`).then(r => r.json()),
+                fetch(`${FIREBASE_URL}/peserta_ujian.json?t=${Date.now()}`).then(r => r.json()),
+                fetch(`${FIREBASE_URL}/hasil_ujian.json?t=${Date.now()}`).then(r => r.json()),
+                fetch(`${FIREBASE_URL}/kunci.json?t=${Date.now()}`).then(r => r.json())
+            ]);
+            dataMapel = r1 || {};
+            dataSiswa = r2 || {};
+            dataHasil = r3 || {};
+            dataKunci = r4 || {};
+
+            isiFilter();
+            renderTampilan();
+        } catch (e) {
+            area.innerHTML = '<p class="kosong">❌ Gagal memuat data. Periksa koneksi internet.</p>';
+        }
+    }
+
+    // ============================================================
+    // ISI DROPDOWN FILTER
+    // ============================================================
+    function isiFilter() {
+        // ---- Kelas unik dari data siswa ----
+        const setKelas = new Set();
+        for (const nisn in dataSiswa) {
+            const k = (dataSiswa[nisn].kelas || '').trim();
+            if (k && k !== '-') setKelas.add(k);
+        }
+        daftarKelas = [...setKelas].sort();
+
+        const pKelas = document.getElementById('pilih-kelas');
+        const nilaiKelasLama = pKelas.value;
+        let opsiKelas = '<option value="">-- Pilih Kelas --</option>';
+        opsiKelas += daftarKelas.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('');
+        opsiKelas += '<option value="__SEMUA__">📋 Semua Kelas</option>';
+        pKelas.innerHTML = opsiKelas;
+
+        if (nilaiKelasLama && [...pKelas.options].some(o => o.value === nilaiKelasLama)) {
+            pKelas.value = nilaiKelasLama;
+        } else if (daftarKelas.length > 0) {
+            pKelas.value = daftarKelas[0];
+        }
+
+        // ---- Mapel ----
+        const pMapel = document.getElementById('pilih-mapel');
+        const nilaiMapelLama = pMapel.value;
+        const listMapel = Object.keys(dataMapel).map(id => ({ id, ...dataMapel[id] }));
+        listMapel.sort((a, b) => (a.nama_mapel || '').localeCompare(b.nama_mapel || ''));
+        let opsiMapel = '<option value="">📚 Semua Mapel (Tabel Rekap)</option>';
+        opsiMapel += listMapel.map(m => `<option value="${esc(m.id)}">${esc(m.nama_mapel || '')}</option>`).join('');
+        pMapel.innerHTML = opsiMapel;
+
+        if (nilaiMapelLama && [...pMapel.options].some(o => o.value === nilaiMapelLama)) {
+            pMapel.value = nilaiMapelLama;
+        }
+    }
+
+    document.getElementById('pilih-kelas').addEventListener('change', renderTampilan);
+    document.getElementById('pilih-mapel').addEventListener('change', renderTampilan);
+
+    // ============================================================
+    // RENDER TAMPILAN
+    // ============================================================
+    function renderTampilan() {
+        const area = document.getElementById('print-area');
+        const kelas = document.getElementById('pilih-kelas').value;
+        const mapelId = document.getElementById('pilih-mapel').value;
+
+        if (!kelas) {
+            area.innerHTML = '<p class="kosong">Pilih kelas terlebih dahulu.</p>';
+            return;
+        }
+
+        // Ambil daftar siswa
+        let siswaList = [];
+        for (const nisn in dataSiswa) {
+            const s = dataSiswa[nisn];
+            const kS = (s.kelas || '').trim();
+            if (kelas === '__SEMUA__') {
+                if (kS && kS !== '-') siswaList.push({ nisn, ...s, nisn });
+            } else {
+                if (kS === kelas) siswaList.push({ nisn, ...s, nisn });
+            }
+        }
+        siswaList.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
+
+        if (siswaList.length === 0) {
+            area.innerHTML = '<p class="kosong">Tidak ada siswa di kelas ini.<br>Pastikan admin sudah mengisi kelas pada akun siswa.</p>';
+            return;
+        }
+
+        if (mapelId) {
+            renderPerMapel(kelas, mapelId, siswaList);
+        } else {
+            renderSemuaMapel(kelas, siswaList);
+        }
+    }
+
+    // ============================================================
+    // RENDER: PER KELAS PER MAPEL
+    // ============================================================
+    function renderPerMapel(kelas, mapelId, siswaList) {
+        const mapel = dataMapel[mapelId] || {};
+        const dataHasilMapel = dataHasil[mapelId] || {};
+
+        let html = `
+            <div class="header-cetak">
+                <h1>Daftar Nilai Ujian</h1>
+                <h2>${esc(NAMA_SEKOLAH)}</h2>
+                <p>Mata Pelajaran: <b>${esc(mapel.nama_mapel || '-')}</b></p>
+                <p>Kelas: <b>${esc(kelas === '__SEMUA__' ? 'Semua Kelas' : kelas)}</b>${mapel.guru ? ' · Guru: ' + esc(mapel.guru) : ''}</p>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Nama Siswa</th>
+                        <th>NISN</th>
+                        <th>Benar PG</th>
+                        <th>Nilai PG</th>
+                        <th>Nilai Essay</th>
+                        <th>Nilai Akhir</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        let jmlSudah = 0;
+        let totalNilai = 0;
+        let jmlNilai = 0;
+
+        siswaList.forEach((s, i) => {
+            const h = dataHasilMapel[s.nisn];
+            let benarPg = '-', nilaiPg = '-', nilaiEssay = '-', nilaiAkhir = '-', status = 'Belum Ujian';
+
+            if (h) {
+                const b = h.benar_pg != null ? h.benar_pg : 0;
+                const t = h.total_pg != null ? h.total_pg : 0;
+                benarPg = `${b}/${t}`;
+                nilaiPg = h.nilai_pg != null ? h.nilai_pg : '-';
+                nilaiEssay = h.nilai_essay != null ? h.nilai_essay : '-';
+                const na = hitungNilaiAkhir(h);
+                nilaiAkhir = na != null ? na : '-';
+                status = statusTeks(h);
+                jmlSudah++;
+                if (na != null && typeof na === 'number') { totalNilai += na; jmlNilai++; }
+            }
+
+            html += `<tr>
+                <td class="no">${i + 1}</td>
+                <td class="nama">${esc(s.nama || '-')}</td>
+                <td class="nisn">${esc(s.nisn || '')}</td>
+                <td class="angka">${esc(benarPg)}</td>
+                <td class="angka">${esc(nilaiPg)}</td>
+                <td class="angka">${esc(nilaiEssay)}</td>
+                <td class="angka">${esc(nilaiAkhir)}</td>
+                <td class="status">${esc(status)}</td>
+            </tr>`;
+        });
+
+        html += `</tbody></table>`;
+
+        const rata = jmlNilai > 0 ? Math.round(totalNilai / jmlNilai) : '-';
+        html += `
+            <div class="info-total">
+                <span>Total Siswa: <b>${siswaList.length}</b></span>
+                <span>Sudah Ujian: <b>${jmlSudah}</b></span>
+                <span>Sudah Dinilai: <b>${jmlNilai}</b></span>
+                <span>Rata-rata Nilai: <b>${rata}</b></span>
+                <span>Dicetak: ${new Date().toLocaleString('id-ID')}</span>
+            </div>
+            <p class="catatan">Catatan: Nilai akhir dihitung dari nilai PG dan nilai Essay. Tanda "—" berarti belum ada nilai.</p>
+        `;
+
+        document.getElementById('print-area').innerHTML = html;
+    }
+
+    // ============================================================
+    // RENDER: PER KELAS SEMUA MAPEL
+    // ============================================================
+    function renderSemuaMapel(kelas, siswaList) {
+        const listMapel = Object.keys(dataMapel).map(id => ({ id, ...dataMapel[id] }));
+        listMapel.sort((a, b) => (a.nama_mapel || '').localeCompare(b.nama_mapel || ''));
+
+        // Filter mapel yang mencakup kelas ini
+        let mapelTampil = listMapel;
+        if (kelas !== '__SEMUA__') {
+            mapelTampil = listMapel.filter(m => {
+                const arr = parseKelasList(m.kelas);
+                return arr.includes(kelas);
+            });
+        }
+
+        if (mapelTampil.length === 0) {
+            document.getElementById('print-area').innerHTML =
+                '<p class="kosong">Tidak ada mapel untuk kelas ini.</p>';
+            return;
+        }
+
+        let html = `
+            <div class="header-cetak">
+                <h1>Rekap Nilai Ujian</h1>
+                <h2>${esc(NAMA_SEKOLAH)}</h2>
+                <p>Kelas: <b>${esc(kelas === '__SEMUA__' ? 'Semua Kelas' : kelas)}</b> · ${mapelTampil.length} Mata Pelajaran</p>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Nama Siswa</th>
+                        <th>NISN</th>
+                        ${mapelTampil.map(m => `<th>${esc(m.nama_mapel || '')}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        siswaList.forEach((s, i) => {
+            html += `<tr>
+                <td class="no">${i + 1}</td>
+                <td class="nama">${esc(s.nama || '-')}</td>
+                <td class="nisn">${esc(s.nisn || '')}</td>`;
+            mapelTampil.forEach(m => {
+                const h = dataHasil[m.id] && dataHasil[m.id][s.nisn];
+                const na = hitungNilaiAkhir(h);
+                html += `<td class="angka">${na != null ? na : '-'}</td>`;
+            });
+            html += `</tr>`;
+        });
+
+        html += `</tbody></table>`;
+        html += `
+            <div class="info-total">
+                <span>Total Siswa: <b>${siswaList.length}</b></span>
+                <span>Total Mapel: <b>${mapelTampil.length}</b></span>
+                <span>Dicetak: ${new Date().toLocaleString('id-ID')}</span>
+            </div>
+            <p class="catatan">Catatan: Nilai yang ditampilkan adalah nilai akhir tiap mapel. Tanda "—" berarti belum ada nilai.</p>
+        `;
+
+        document.getElementById('print-area').innerHTML = html;
+    }
+
+    // ============================================================
+    // CETAK
+    // ============================================================
+    function cetakSekarang() {
+        const area = document.getElementById('print-area');
+        if (!area || area.querySelector('.kosong')) {
+            alert('Belum ada data untuk dicetak.');
+            return;
+        }
+        window.print();
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    muatUlang();
+</script>
+</body>
+</html>
