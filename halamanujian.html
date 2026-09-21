@@ -84,6 +84,71 @@
     .legenda { display: flex; gap: 12px; justify-content: center; font-size: 11px; color: #475569; margin-top: 4px; flex-wrap: wrap; }
     .legenda span { display: flex; align-items: center; gap: 4px; }
     .kotak-legenda { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+    .tabel-nilai { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
+    .tabel-nilai thead tr { background: #1b5e20; color: #fff; }
+    .tabel-nilai th, .tabel-nilai td { padding: 8px 6px; border: 1px solid #cbd5e1; text-align: center; }
+    .tabel-nilai th.kiri, .tabel-nilai td.kiri { text-align: left; }
+    .tabel-nilai tbody tr:nth-child(even) { background: rgba(248,250,252,0.6); }
+    .total-box { margin-top: 12px; padding: 12px; background: #dcfce7; border-radius: 10px; text-align: center; color: #166534; font-weight: 700; }
+    .btn-mata {
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        padding: 20px;
+        background: linear-gradient(135deg, #1b5e20, #2e7d32);
+        color: #fff;
+        border: none;
+        border-radius: 18px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 6px 20px rgba(27,94,32,0.3);
+        width: 100%;
+    }
+    .btn-mata svg { width: 28px; height: 28px; }
+    .layar-hasil-detail {
+        position: fixed; inset: 0; background: #fff; z-index: 1500;
+        display: none; flex-direction: column;
+        overflow-y: auto;
+    }
+    .layar-hasil-detail.tampil { display: flex; }
+    .header-hasil {
+        padding: 12px 16px;
+        background: #1b5e20;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    .header-hasil .btn-kembali {
+        background: rgba(255,255,255,0.2);
+        color: #fff;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .header-hasil b { font-size: 15px; flex: 1; }
+    .body-hasil {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        flex: 1;
+    }
+    .info-siswa-box {
+        padding: 12px;
+        background: rgba(241,245,249,0.9);
+        border-radius: 12px;
+        font-size: 12px;
+        color: #475569;
+        line-height: 1.6;
+    }
+    .info-siswa-box b { color: #0f172a; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -91,25 +156,19 @@
 <div class="app-container">
     <header>
         <h1>Ujian</h1>
-        <p id="info-siswa">Selamat mengerjakan</p>
+        <p id="info-siswa">Memuat...</p>
     </header>
 
-    <div class="layar" id="layar-pilih-kelas">
-        <div class="card">
-            <h3 style="color:#0f172a;">Pilih Kelas Kamu</h3>
-            <p style="font-size:13px;color:#475569;">Pilih kelas untuk menampilkan mapel yang sesuai.</p>
-            <div class="field">
-                <label>Kelas</label>
-                <select id="select-kelas-siswa"><option value="">-- Pilih Kelas --</option></select>
+    <div class="layar aktif" id="layar-daftar-mapel">
+        <div class="card" style="padding:12px 14px;">
+            <div style="font-size:12px;color:#475569;">
+                <b id="nama-siswa-header" style="color:#0f172a;font-size:14px;">-</b><br>
+                NISN: <span id="nisn-header">-</span> · Kelas: <span id="kelas-header">-</span>
             </div>
-            <button class="btn-utama" onclick="simpanPilihanKelas()">Lanjut</button>
         </div>
-    </div>
-
-    <div class="layar" id="layar-daftar-mapel">
         <div class="tab-nav">
-            <button id="tab-btn-saya" class="aktif" onclick="gantiTabUjian('saya')">📝 Soal Ujian Saya</button>
-            <button id="tab-btn-semua" onclick="gantiTabUjian('semua')">📚 Seluruh Soal Ujian</button>
+            <button id="tab-btn-saya" class="aktif" onclick="gantiTabUjian('saya')">📝 Ujian Saya</button>
+            <button id="tab-btn-semua" onclick="gantiTabUjian('semua')">📚 Semua Ujian</button>
             <button id="tab-btn-transkrip-siswa" onclick="gantiTabUjian('transkrip')">📊 Hasil Ujian</button>
         </div>
         <div id="daftar-mapel-saya"></div>
@@ -134,7 +193,7 @@
     <div class="layar" id="layar-ujian">
         <div class="progres-bar">
             <div class="progres-info" id="progres-info"></div>
-            <button class="btn-kecil" onclick="bukaSemuaSoal()">📋 Lihat Semua Soal <span id="hitung-terjawab"></span></button>
+            <button class="btn-kecil" onclick="bukaSemuaSoal()">📋 Semua Soal <span id="hitung-terjawab"></span></button>
         </div>
         <div class="card">
             <div id="tag-tipe-soal"></div>
@@ -229,6 +288,14 @@
     </div>
 </div>
 
+<div class="layar-hasil-detail" id="layar-hasil-detail">
+    <div class="header-hasil">
+        <button class="btn-kembali" onclick="tutupDetailHasil()">← Kembali</button>
+        <b id="judul-detail-hasil">Hasil Ujian</b>
+    </div>
+    <div class="body-hasil" id="body-detail-hasil"></div>
+</div>
+
 <div class="kunci-layar" id="kunci-curang">
     <h2 id="judul-kunci">⚠️ Terdeteksi Pelanggaran</h2>
     <p id="pesan-kunci"></p>
@@ -262,7 +329,7 @@
     }
 
     let namaSiswa = "", nisnSiswa = "", kelasSiswa = "";
-    let semuaMapel = [], daftarKelas = [];
+    let semuaMapel = [];
     let mapelDipilih = null, daftarSoal = [], jawabanSiswa = {};
     let indexSoalSekarang = 0, sedangUjian = false;
     let mapelUntukUlang = null, monitorInterval = null, statusInterval = null;
@@ -335,45 +402,50 @@
         const p = new URLSearchParams(window.location.search);
         namaSiswa = p.get('nama') || '';
         nisnSiswa = (p.get('nomor_ujian') || '').trim();
-        kelasSiswa = (p.get('kelas') || '').trim();
+        kelasSiswa = p.get('kelas') || '';
         if (!nisnSiswa) {
             nisnSiswa = (prompt('Testing: NISN') || '').trim();
             namaSiswa = prompt('Testing: nama') || '';
+            kelasSiswa = prompt('Testing: kelas') || '';
         }
-        document.getElementById('info-siswa').textContent = 'Halo, ' + (namaSiswa || nisnSiswa);
     }
+
+    async function validasiDanMuat() {
+        try {
+            const r = await fetch(`${FIREBASE_URL}/peserta_ujian/${nisnSiswa}.json`);
+            const data = await r.json();
+
+            if (!data) {
+                document.getElementById('daftar-mapel-saya').innerHTML =
+                    '<p class="kosong">❌ Data akun tidak ditemukan.<br>Hubungi admin.</p>';
+                return;
+            }
+
+            const kelasDariDB = (data.kelas || '').trim();
+            if (!kelasDariDB || kelasDariDB === '-') {
+                document.getElementById('daftar-mapel-saya').innerHTML =
+                    '<p class="kosong">❌ Akunmu belum memiliki kelas.<br>Hubungi admin untuk melengkapi data.</p>';
+                return;
+            }
+
+            namaSiswa = data.nama || namaSiswa;
+            kelasSiswa = kelasDariDB;
+
+            document.getElementById('info-siswa').textContent = 'Halo, ' + namaSiswa;
+            document.getElementById('nama-siswa-header').textContent = namaSiswa;
+            document.getElementById('nisn-header').textContent = nisnSiswa;
+            document.getElementById('kelas-header').textContent = kelasSiswa;
+
+            await muatSemuaData();
+        } catch (e) {
+            document.getElementById('daftar-mapel-saya').innerHTML =
+                '<p class="kosong">❌ Gagal memuat data.<br>Periksa koneksi internet.</p>';
+        }
+    }
+
     function pindahLayar(id) {
         document.querySelectorAll('.layar').forEach(l => l.classList.remove('aktif'));
         document.getElementById(id).classList.add('aktif');
-    }
-
-    async function muatDaftarKelas() {
-        try {
-            const r = await fetch(`${FIREBASE_URL}/daftar_kelas.json`);
-            const data = await r.json();
-            daftarKelas = [];
-            if (data) for (const id in data) daftarKelas.push({ id, ...data[id] });
-            daftarKelas.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
-            const sel = document.getElementById('select-kelas-siswa');
-            sel.innerHTML = '<option value="">-- Pilih Kelas --</option>' +
-                daftarKelas.map(k => `<option value="${escapeHtml(k.nama)}">${escapeHtml(k.nama)}</option>`).join('');
-            if (kelasSiswa && daftarKelas.some(k => k.nama === kelasSiswa)) {
-                sel.value = kelasSiswa;
-                pindahLayar('layar-daftar-mapel');
-                muatSemuaData();
-            } else {
-                pindahLayar('layar-pilih-kelas');
-            }
-        } catch (e) {
-            document.getElementById('select-kelas-siswa').innerHTML = '<option>Gagal memuat kelas</option>';
-        }
-    }
-    function simpanPilihanKelas() {
-        const k = document.getElementById('select-kelas-siswa').value;
-        if (!k) { alert('Pilih kelas kamu dulu.'); return; }
-        kelasSiswa = k;
-        pindahLayar('layar-daftar-mapel');
-        muatSemuaData();
     }
 
     async function muatSemuaData() {
@@ -872,7 +944,7 @@
     }
 
     // ============================================================
-    // TRANSKRIP / HASIL UJIAN
+    // HASIL UJIAN SISWA — tombol mata, tanpa tombol cetak
     // ============================================================
     async function cekPublikasiNilai() {
         try {
@@ -888,10 +960,8 @@
         const k = document.getElementById('transkrip-siswa-container');
         k.innerHTML = '<div class="card"><p class="kosong">Memuat...</p></div>';
 
-        // Cek ulang status publikasi dari server (jangan pakai cache)
         await cekPublikasiNilai();
 
-        // Jika belum dipublikasikan → tampilkan pesan tunggu
         if (!nilaiDipublikasikan) {
             k.innerHTML = `<div class="card" style="text-align:center;padding:30px 20px;">
                 <div style="font-size:48px;margin-bottom:12px;">⏳</div>
@@ -906,7 +976,26 @@
             return;
         }
 
-        // Jika sudah dipublikasikan → tampilkan transkrip
+        k.innerHTML = `<div class="card" style="text-align:center;padding:24px 20px;">
+            <div style="font-size:14px;color:#475569;margin-bottom:16px;">
+                Nilai ujian kamu sudah tersedia.<br>
+                Klik tombol di bawah untuk melihatnya.
+            </div>
+            <button class="btn-mata" onclick="bukaDetailHasil()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                Lihat Hasil Ujian
+            </button>
+        </div>`;
+    }
+
+    async function bukaDetailHasil() {
+        const body = document.getElementById('body-detail-hasil');
+        body.innerHTML = '<p class="kosong">Memuat...</p>';
+        document.getElementById('layar-hasil-detail').classList.add('tampil');
+
         try {
             const [rMapel, rHasil] = await Promise.all([
                 fetch(`${FIREBASE_URL}/mapel.json`),
@@ -918,138 +1007,73 @@
             const listMapel = Object.keys(dMapel).map(id => ({ id, ...dMapel[id] }))
                 .sort((a, b) => (a.nama_mapel || '').localeCompare(b.nama_mapel || ''));
 
-            function hitungNilai(h) {
-                if (!h) return null;
-                const nilaiPg = h.nilai_pg != null ? h.nilai_pg : 0;
-                const nilaiEssay = h.nilai_essay != null ? h.nilai_essay : null;
-                const totalPg = h.total_pg || 0;
-                const totalEssay = h.total_essay || 0;
-                if (nilaiEssay != null) {
-                    return (totalPg + totalEssay) === 0 ? 0 : Math.round((nilaiPg * totalPg + nilaiEssay * totalEssay) / (totalPg + totalEssay));
-                }
-                if (totalPg > 0 && totalEssay === 0) return nilaiPg;
-                return null;
-            }
+            let html = `<div class="info-siswa-box">
+                <b>${escapeHtml(namaSiswa)}</b><br>
+                NISN: ${escapeHtml(nisnSiswa)}<br>
+                Kelas: ${escapeHtml(kelasSiswa)}
+            </div>
+            <div style="overflow-x:auto;">
+            <table class="tabel-nilai">
+                <thead>
+                    <tr>
+                        <th style="width:25px;">No</th>
+                        <th class="kiri">Mata Pelajaran</th>
+                        <th style="width:60px;">Benar PG</th>
+                        <th style="width:50px;">Nilai PG</th>
+                        <th style="width:55px;">Nilai Essay</th>
+                        <th style="width:55px;">Nilai Akhir</th>
+                    </tr>
+                </thead>
+                <tbody>`;
 
-            let html = `<div class="card">
-                <h3 style="color:#0f172a;font-size:16px;margin-bottom:8px;">📊 Hasil Ujian</h3>
-                <div style="font-size:13px;color:#475569;margin-bottom:8px;">
-                    <b>${escapeHtml(namaSiswa)}</b><br>
-                    NISN: ${escapeHtml(nisnSiswa)} · Kelas: ${escapeHtml(kelasSiswa)}
-                </div>
-                <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:13px;">
-                    <thead>
-                        <tr style="background:#1b5e20;color:#fff;">
-                            <th style="padding:8px;border:1px solid #1b5e20;width:30px;">No</th>
-                            <th style="padding:8px;border:1px solid #1b5e20;text-align:left;">Mata Pelajaran</th>
-                            <th style="padding:8px;border:1px solid #1b5e20;width:60px;">Nilai</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-
-            let total = 0, jml = 0;
+            let totalNilai = 0, jmlNilai = 0;
             listMapel.forEach((m, i) => {
                 const h = dHasil[m.id] && dHasil[m.id][nisnSiswa];
-                const nilai = hitungNilai(h);
-                if (typeof nilai === 'number') { total += nilai; jml++; }
-                const display = nilai != null ? nilai : '-';
+                let benarPg = '-', nilaiPg = '-', nilaiEssay = '-', nilaiAkhir = '-';
+                if (h) {
+                    const benar = h.benar_pg != null ? h.benar_pg : 0;
+                    const total = h.total_pg != null ? h.total_pg : 0;
+                    benarPg = `${benar}/${total}`;
+                    nilaiPg = h.nilai_pg != null ? h.nilai_pg : '-';
+                    nilaiEssay = h.nilai_essay != null ? h.nilai_essay : '-';
+                    const nilaiPgNum = h.nilai_pg != null ? h.nilai_pg : 0;
+                    const nilaiEssayNum = h.nilai_essay != null ? h.nilai_essay : null;
+                    const totalPg = h.total_pg || 0;
+                    const totalEssay = h.total_essay || 0;
+                    if (nilaiEssayNum != null) {
+                        nilaiAkhir = (totalPg + totalEssay) === 0 ? 0 : Math.round((nilaiPgNum * totalPg + nilaiEssayNum * totalEssay) / (totalPg + totalEssay));
+                    } else if (totalPg > 0 && totalEssay === 0) {
+                        nilaiAkhir = nilaiPgNum;
+                    }
+                    if (typeof nilaiAkhir === 'number') { totalNilai += nilaiAkhir; jmlNilai++; }
+                }
                 html += `<tr>
-                    <td style="padding:8px;border:1px solid #cbd5e1;text-align:center;">${i+1}</td>
-                    <td style="padding:8px;border:1px solid #cbd5e1;">${escapeHtml(m.nama_mapel || '')}</td>
-                    <td style="padding:8px;border:1px solid #cbd5e1;text-align:center;font-weight:700;">${display}</td>
+                    <td>${i+1}</td>
+                    <td class="kiri">${escapeHtml(m.nama_mapel || '')}</td>
+                    <td><b>${escapeHtml(benarPg)}</b></td>
+                    <td>${escapeHtml(String(nilaiPg))}</td>
+                    <td>${escapeHtml(String(nilaiEssay))}</td>
+                    <td><b>${escapeHtml(String(nilaiAkhir))}</b></td>
                 </tr>`;
             });
 
-            const rata = jml > 0 ? Math.round(total / jml) : '-';
-            html += `</tbody></table>
-                <div style="margin-top:12px;padding:12px;background:#dcfce7;border-radius:10px;text-align:center;color:#166534;font-weight:700;">
-                    Rata-rata Nilai: ${rata}
-                </div>
-                <div class="baris-tombol" style="margin-top:12px;">
-                    <button class="btn-utama" onclick="cetakTranskripSiswaSendiri()">🖨️ Cetak / Simpan PDF</button>
-                </div>
-                <p style="font-size:11px;color:#64748b;text-align:center;margin-top:8px;">
-                    Jika ingin simpan sebagai PDF, pilih <b>"Save as PDF"</b> saat muncul dialog cetak.
-                </p>
-            </div>`;
+            const rata = jmlNilai > 0 ? Math.round(totalNilai / jmlNilai) : '-';
+            html += `</tbody></table></div>
+                <div class="total-box">Rata-rata Nilai Akhir: ${rata} dari ${jmlNilai} mapel</div>`;
 
-            k.innerHTML = html;
+            body.innerHTML = html;
         } catch (e) {
-            k.innerHTML = '<div class="card"><p class="kosong">Gagal memuat nilai.</p></div>';
+            body.innerHTML = '<p class="kosong">Gagal memuat nilai.</p>';
         }
     }
 
-    async function cetakTranskripSiswaSendiri() {
-        try {
-            const [rMapel, rHasil] = await Promise.all([
-                fetch(`${FIREBASE_URL}/mapel.json`),
-                fetch(`${FIREBASE_URL}/hasil_ujian.json`)
-            ]);
-            const dMapel = await rMapel.json() || {};
-            const dHasil = await rHasil.json() || {};
-            const listMapel = Object.keys(dMapel).map(id => ({ id, ...dMapel[id] }))
-                .sort((a, b) => (a.nama_mapel || '').localeCompare(b.nama_mapel || ''));
-
-            function hitungNilai(h) {
-                if (!h) return null;
-                const nilaiPg = h.nilai_pg != null ? h.nilai_pg : 0;
-                const nilaiEssay = h.nilai_essay != null ? h.nilai_essay : null;
-                const totalPg = h.total_pg || 0;
-                const totalEssay = h.total_essay || 0;
-                if (nilaiEssay != null) {
-                    return (totalPg + totalEssay) === 0 ? 0 : Math.round((nilaiPg * totalPg + nilaiEssay * totalEssay) / (totalPg + totalEssay));
-                }
-                if (totalPg > 0 && totalEssay === 0) return nilaiPg;
-                return null;
-            }
-
-            let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Hasil Ujian - ${escapeHtml(namaSiswa)}</title>
-<style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; padding: 30px; font-size: 13px; }
-    h2 { text-align: center; margin-bottom: 20px; font-size: 16px; }
-    .info-box { margin-bottom: 20px; padding: 12px; background: #f8f9fa; border-radius: 6px; }
-    .info-row { margin: 4px 0; }
-    .info-row b { display: inline-block; width: 80px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #333; padding: 8px 12px; font-size: 12px; }
-    th { background: #f0f0f0; }
-    td.no { text-align: center; width: 40px; }
-    td.nilai { text-align: center; width: 80px; font-weight: bold; }
-    .summary { margin-top: 15px; padding: 12px; background: #f0f8ff; border-radius: 6px; text-align: center; font-size: 13px; }
-    @media print { body { padding: 15px; } }
-</style></head><body>
-<h2>HASIL UJIAN</h2>
-<div class="info-box">
-    <div class="info-row"><b>Nama</b> : ${escapeHtml(namaSiswa || '-')}</div>
-    <div class="info-row"><b>NISN</b> : ${escapeHtml(nisnSiswa || '-')}</div>
-    <div class="info-row"><b>Kelas</b> : ${escapeHtml(kelasSiswa || '-')}</div>
-</div>
-<table><thead><tr><th>No</th><th>Mata Pelajaran</th><th>Nilai</th></tr></thead><tbody>`;
-
-            let total = 0, jml = 0;
-            listMapel.forEach((m, i) => {
-                const h = dHasil[m.id] && dHasil[m.id][nisnSiswa];
-                const nilai = hitungNilai(h);
-                if (typeof nilai === 'number') { total += nilai; jml++; }
-                html += `<tr><td class="no">${i+1}</td><td>${escapeHtml(m.nama_mapel || '')}</td><td class="nilai">${nilai != null ? nilai : '-'}</td></tr>`;
-            });
-            const rata = jml > 0 ? Math.round(total / jml) : '-';
-            html += `</tbody></table>
-<div class="summary"><b>Rata-rata Nilai: ${rata}</b> dari ${jml} mapel</div>
-<p style="font-size:10px;color:#666;margin-top:20px;text-align:right;">Dicetak: ${new Date().toLocaleString('id-ID')}</p>
-<script>window.onload = () => { setTimeout(() => window.print(), 300); };<\/script>
-</body></html>`;
-
-            const w = window.open('', '_blank');
-            w.document.write(html);
-            w.document.close();
-        } catch (e) { alert('Gagal menyiapkan cetak.'); }
+    function tutupDetailHasil() {
+        document.getElementById('layar-hasil-detail').classList.remove('tampil');
     }
 
     // ============ INIT ============
     ambilParamAtauTanya();
-    muatDaftarKelas();
+    validasiDanMuat();
 </script>
 </body>
 </html>
