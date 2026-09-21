@@ -69,7 +69,6 @@
     .item-nilai span { font-size: 11px; color: #475569; }
     .statistik { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; color: #14532d; }
     .statistik span { background: rgba(255,255,255,0.85); padding: 3px 9px; border-radius: 8px; }
-    /* Baru: progress soal essay */
     .progress-bar { height: 8px; background: rgba(27,94,32,0.15); border-radius: 999px; overflow: hidden; }
     .progress-bar div { height: 100%; background: #1b5e20; transition: width 0.3s ease; }
     .info-lock { background: rgba(254,226,226,0.85); border: 1px solid #b91c1c; color: #7f1d1d; padding: 10px 12px; border-radius: 10px; font-size: 12px; line-height: 1.5; }
@@ -280,7 +279,7 @@
 
 <script>
     const FIREBASE_URL = "https://admin-ffded-default-rtdb.firebaseio.com";
-    const INTERVAL_POLL_LOCK_MS = 8000; // polling lock tiap 8 detik saat essay terbuka
+    const INTERVAL_POLL_LOCK_MS = 8000;
 
     async function ambilSoalSiswa(id) {
         const r = await fetch(`${FIREBASE_URL}/soal/${id}.json`);
@@ -335,7 +334,6 @@
         return gabung;
     }
 
-    // Hitung nilai PG saja. Untuk essay per soal, hitung rata-rata dari nilaiPerSoal.
     function hitungNilaiDariJawaban(kunci, hasil, nilaiEssayFinal) {
         const jp = hasil.jawaban_pg || {};
         let benar = 0, total = 0;
@@ -360,17 +358,17 @@
     let daftarMapel = [], daftarKelas = [], daftarSoal = [], daftarNilaiMapel = [];
     let mapelAktifId = null, namaMapelAktif = "", mapelAktifStatus = false;
     let soalSedangDiedit = null;
+    let modeAksesMapel = 'owner'; // 'owner' = guru pemilik, 'helper' = guru yang membantu koreksi
     let tabKolaborasi = 'saya';
 
-    // Konteks essay per soal
     let konteksEssay = {
         mapelId: null, nisn: null, namaSiswa: '',
-        soalEssay: [],      // array { id, pertanyaan, kunci_essay }
+        soalEssay: [],
         indexEssay: 0,
-        nilaiPerSoal: {},   // { soalId: number }
+        nilaiPerSoal: {},
         hasilSiswa: null,
         lockInterval: null,
-        namaPemilikMapel: ''  // untuk cek apakah saya pemilik atau helper
+        namaPemilikMapel: ''
     };
 
     let resolveKonfirmasi = null;
@@ -668,15 +666,29 @@
             for (const mapelId in data) {
                 const c = data[mapelId];
                 if (c.status !== 'aktif') continue;
-                if (c.pemilik === usernameGuru) continue; // skip punya sendiri
-                if (c.helper && c.helper[usernameGuru]) continue; // sudah pernah ajukan
-                list.push({ mapelId, ...c });
+                if (c.pemilik === usernameGuru) continue;
+                const helperSaya = c.helper ? c.helper[usernameGuru] : null;
+                if (helperSaya && helperSaya.status === 'disetujui') continue;
+                list.push({ mapelId, ...c, helperSaya });
             }
+
             if (list.length === 0) {
                 k.innerHTML = '<p class="kosong">Belum ada guru lain yang minta bantuan.</p>';
                 return;
             }
-            k.innerHTML = list.map(c => `
+
+            k.innerHTML = list.map(c => {
+                let tombol = '';
+                if (c.helperSaya) {
+                    if (c.helperSaya.status === 'menunggu') {
+                        tombol = `<button class="btn-sekunder" disabled>⏳ Menunggu Persetujuan Pemilik</button>`;
+                    } else if (c.helperSaya.status === 'ditolak') {
+                        tombol = `<button class="btn-bahaya" disabled>❌ Pengajuan Ditolak</button>`;
+                    }
+                } else {
+                    tombol = `<button class="btn-utama" onclick="ajukanBantu('${c.mapelId}')">🤝 Ajukan Bantu Koreksi</button>`;
+                }
+                return `
                 <div class="item-mapel">
                     <div class="item-mapel-info">
                         <b>${escapeHtml(c.nama_mapel)}</b>
@@ -684,8 +696,9 @@
                         <span>Kelas: ${(c.kelas || []).map(escapeHtml).join(', ') || '-'}</span>
                         <span style="font-size:11px;">Diminta: ${escapeHtml(c.waktu_minta || '-')}</span>
                     </div>
-                    <button class="btn-utama" onclick="ajukanBantu('${c.mapelId}')">🤝 Ajukan Bantu Koreksi</button>
-                </div>`).join('');
+                    ${tombol}
+                </div>`;
+            }).join('');
         } catch (e) { k.innerHTML = '<p class="kosong">Gagal memuat.</p>'; }
     }
 
@@ -727,6 +740,9 @@
                 const statusBadge = c.status === 'selesai'
                     ? '<span class="badge badge-aktif">Selesai</span>'
                     : '<span class="badge badge-info">Masih Berjalan</span>';
+                const tombolKoreksi = c.status !== 'selesai'
+                    ? `<button class="btn-utama" onclick="bukaKoreksiMapelHelper('${c.mapelId}', '${escapeHtml(c.nama_mapel)}')">✏️ Buka Koreksi Essay</button>`
+                    : '';
                 return `<div class="item-mapel">
                     <div class="item-mapel-info">
                         <b>${escapeHtml(c.nama_mapel)}</b> ${statusBadge}
@@ -734,16 +750,67 @@
                         <span>Kelas: ${(c.kelas || []).map(escapeHtml).join(', ') || '-'}</span>
                         <span style="font-size:11px;">Diminta: ${escapeHtml(c.waktu_minta || '-')}</span>
                     </div>
+                    ${tombolKoreksi}
                 </div>`;
             }).join('');
         } catch (e) { k.innerHTML = '<p class="kosong">Gagal memuat.</p>'; }
     }
 
     // ============================================================
-    // KELOLA SOAL (sama seperti sebelumnya)
+    // BUKA KOREKSI UNTUK HELPER
+    // ============================================================
+    async function bukaKoreksiMapelHelper(mapelId, namaMapel) {
+        modeAksesMapel = 'helper';
+        mapelAktifId = mapelId;
+        namaMapelAktif = namaMapel;
+
+        document.getElementById('judul-mapel-aktif').textContent = namaMapel + ' (Koreksi Bersama)';
+        document.getElementById('layar-daftar-mapel').style.display = 'none';
+        document.getElementById('layar-koreksi-bersama').style.display = 'none';
+        document.getElementById('layar-kelola-soal').style.display = 'flex';
+
+        let mapelData = null;
+        try {
+            const r = await fetch(`${FIREBASE_URL}/mapel/${mapelId}.json`);
+            mapelData = await r.json();
+        } catch (e) {}
+
+        mapelAktifStatus = !!(mapelData && mapelData.status_aktif);
+        const kelasList = parseKelasList(mapelData ? mapelData.kelas : []);
+        const guruPemilik = mapelData ? mapelData.guru : '-';
+        document.getElementById('info-kelas-mapel').textContent =
+            'Kelas: ' + (kelasList.join(', ') || '-') + ' · Guru Pemilik: ' + guruPemilik;
+
+        // Sembunyikan tab Soal & Edit Kelas — helper hanya bisa akses Nilai
+        document.getElementById('tab-btn-soal').style.display = 'none';
+        document.getElementById('tab-btn-kelas').style.display = 'none';
+        document.getElementById('tab-btn-nilai').style.display = 'block';
+
+        let soalServer = {};
+        try { soalServer = await ambilSoalDenganKunci(mapelId) || {}; } catch (e) {}
+        const soalArr = [];
+        if (soalServer && typeof soalServer === 'object') {
+            for (const sid in soalServer) soalArr.push({ id: sid, ...soalServer[sid] });
+        }
+        daftarSoal = soalArr;
+        const { pg, essay } = hitungJumlahSoal();
+        document.getElementById('ringkasan-soal').innerHTML =
+            `<span>Total: ${daftarSoal.length}</span><span>PG: ${pg}</span><span>Essay: ${essay}</span>`;
+
+        gantiTabGuru('nilai');
+        muatNilaiMapel();
+    }
+
+    // ============================================================
+    // KELOLA SOAL
     // ============================================================
     async function bukaKelolaSoal(mapelId, namaMapel) {
         mapelAktifId = mapelId; namaMapelAktif = namaMapel;
+        modeAksesMapel = 'owner';
+        document.getElementById('tab-btn-soal').style.display = 'block';
+        document.getElementById('tab-btn-kelas').style.display = 'block';
+        document.getElementById('tab-btn-nilai').style.display = 'block';
+
         document.getElementById('judul-mapel-aktif').textContent = namaMapel;
         document.getElementById('layar-daftar-mapel').style.display = 'none';
         document.getElementById('layar-kelola-soal').style.display = 'flex';
@@ -817,9 +884,21 @@
     }
 
     function kembaliKeDaftarMapel() {
-        mapelAktifId = null; daftarSoal = [];
+        mapelAktifId = null;
+        daftarSoal = [];
+        modeAksesMapel = 'owner';
+
         document.getElementById('layar-kelola-soal').style.display = 'none';
         document.getElementById('layar-daftar-mapel').style.display = 'flex';
+
+        document.getElementById('tab-btn-soal').style.display = 'block';
+        document.getElementById('tab-btn-nilai').style.display = 'block';
+        document.getElementById('tab-btn-kelas').style.display = 'block';
+
+        document.getElementById('tab-btn-soal').classList.add('aktif');
+        document.getElementById('tab-btn-nilai').classList.remove('aktif');
+        document.getElementById('tab-btn-kelas').classList.remove('aktif');
+
         muatDaftarMapel();
     }
 
@@ -1115,7 +1194,6 @@
     // KOREKSI ESSAY PER SOAL (dengan lock)
     // ============================================================
     async function bukaKoreksiEssay(nisn) {
-        // Cek lock dulu
         try {
             const rLock = await fetch(`${FIREBASE_URL}/koreksi_lock/${mapelAktifId}/${nisn}.json`);
             const lock = await rLock.json();
@@ -1154,7 +1232,6 @@
             konteksEssay.hasilSiswa = hasil || {};
             konteksEssay.namaSiswa = (hasil && hasil.nama) || nisn;
 
-            // Ambil hanya soal essay
             const listEssay = [];
             for (const sid in soal) {
                 if (soal[sid].tipe !== 'essay') continue;
@@ -1171,7 +1248,6 @@
                 return;
             }
 
-            // Ambil nilai per soal yang sudah ada (jika ada)
             try {
                 const rNilai = await fetch(`${FIREBASE_URL}/nilai_essay/${mapelAktifId}/${nisn}.json`);
                 const dataNilai = await rNilai.json();
@@ -1183,7 +1259,6 @@
                 }
             } catch (e) {}
 
-            // Buat lock
             await fetch(`${FIREBASE_URL}/koreksi_lock/${mapelAktifId}/${nisn}.json`, {
                 method: 'PUT', headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({
@@ -1193,7 +1268,6 @@
                 })
             });
 
-            // Mulai polling lock tiap 8 detik
             konteksEssay.lockInterval = setInterval(async () => {
                 try {
                     const r = await fetch(`${FIREBASE_URL}/koreksi_lock/${mapelAktifId}/${nisn}.json`);
@@ -1243,7 +1317,6 @@
             </div>
         `;
 
-        // Autosave nilai ke state saat diinput
         const inp = document.getElementById('input-nilai-soal');
         inp.addEventListener('input', (e) => {
             const v = parseInt(e.target.value, 10);
@@ -1281,7 +1354,6 @@
     }
 
     async function tutupNilaiEssay() {
-        // Lepas lock
         if (konteksEssay.mapelId && konteksEssay.nisn) {
             try {
                 await fetch(`${FIREBASE_URL}/koreksi_lock/${konteksEssay.mapelId}/${konteksEssay.nisn}.json`, { method: 'DELETE' });
@@ -1297,7 +1369,6 @@
         const { mapelId, nisn, soalEssay, nilaiPerSoal } = konteksEssay;
         if (!mapelId || !nisn) return;
 
-        // Cek: apakah semua soal sudah dinilai?
         const belum = soalEssay.filter(s => nilaiPerSoal[s.id] == null);
         if (belum.length > 0) {
             const ya = await konfirmasi(
@@ -1307,7 +1378,6 @@
             if (!ya) return;
         }
 
-        // Hitung rata-rata
         let total = 0, jml = 0;
         for (const s of soalEssay) {
             const v = nilaiPerSoal[s.id];
@@ -1315,7 +1385,6 @@
         }
         const nilaiRata = jml > 0 ? Math.round(total / jml) : null;
 
-        // Siapkan data untuk Firebase
         const dataNilai = {
             guru: usernameGuru,
             nama_guru: namaGuru || usernameGuru,
@@ -1327,13 +1396,11 @@
         }
 
         try {
-            // Simpan nilai per soal
             await fetch(`${FIREBASE_URL}/nilai_essay/${mapelId}/${nisn}.json`, {
                 method: 'PUT', headers: {'Content-Type':'application/json'},
                 body: JSON.stringify(dataNilai)
             });
 
-            // Update hasil_ujian
             const [rHasil, kunci] = await Promise.all([
                 fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`),
                 ambilKunci(mapelId)
@@ -1353,7 +1420,6 @@
                 })
             });
 
-            // Lepas lock
             try { await fetch(`${FIREBASE_URL}/koreksi_lock/${mapelId}/${nisn}.json`, { method: 'DELETE' }); } catch (e) {}
             if (konteksEssay.lockInterval) { clearInterval(konteksEssay.lockInterval); konteksEssay.lockInterval = null; }
 
