@@ -208,6 +208,15 @@
         return d.innerHTML;
     }
 
+    // Sortir abjad: case-insensitive, abaikan spasi, natural numeric
+    function urutkanAbjad(arr, key) {
+        return arr.slice().sort((a, b) => {
+            const va = (a[key] || '').toString().trim();
+            const vb = (b[key] || '').toString().trim();
+            return va.localeCompare(vb, 'id', { sensitivity: 'base', numeric: true });
+        });
+    }
+
     function parseKelasList(k) {
         if (!k) return [];
         if (Array.isArray(k)) return k.filter(x => x && typeof x === 'string');
@@ -277,7 +286,9 @@
             const k = (dataSiswa[nisn].kelas || '').trim();
             if (k && k !== '-') setKelas.add(k);
         }
-        daftarKelas = [...setKelas].sort();
+        daftarKelas = [...setKelas].sort((a, b) =>
+            a.localeCompare(b, 'id', { sensitivity: 'base', numeric: true })
+        );
 
         const pKelas = document.getElementById('pilih-kelas');
         const nilaiKelasLama = pKelas.value;
@@ -295,8 +306,8 @@
         // ---- Mapel ----
         const pMapel = document.getElementById('pilih-mapel');
         const nilaiMapelLama = pMapel.value;
-        const listMapel = Object.keys(dataMapel).map(id => ({ id, ...dataMapel[id] }));
-        listMapel.sort((a, b) => (a.nama_mapel || '').localeCompare(b.nama_mapel || ''));
+        let listMapel = Object.keys(dataMapel).map(id => ({ id, ...dataMapel[id] }));
+        listMapel = urutkanAbjad(listMapel, 'nama_mapel');
         let opsiMapel = '<option value="">📚 Semua Mapel (Tabel Rekap)</option>';
         opsiMapel += listMapel.map(m => `<option value="${esc(m.id)}">${esc(m.nama_mapel || '')}</option>`).join('');
         pMapel.innerHTML = opsiMapel;
@@ -328,12 +339,14 @@
             const s = dataSiswa[nisn];
             const kS = (s.kelas || '').trim();
             if (kelas === '__SEMUA__') {
-                if (kS && kS !== '-') siswaList.push({ nisn, ...s, nisn });
+                if (kS && kS !== '-') siswaList.push({ nisn, ...s });
             } else {
-                if (kS === kelas) siswaList.push({ nisn, ...s, nisn });
+                if (kS === kelas) siswaList.push({ nisn, ...s });
             }
         }
-        siswaList.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
+
+        // ===== SORTIR ABJAD NAMA SISWA =====
+        siswaList = urutkanAbjad(siswaList, 'nama');
 
         if (siswaList.length === 0) {
             area.innerHTML = '<p class="kosong">Tidak ada siswa di kelas ini.<br>Pastikan admin sudah mengisi kelas pada akun siswa.</p>';
@@ -431,8 +444,10 @@
     // RENDER: PER KELAS SEMUA MAPEL
     // ============================================================
     function renderSemuaMapel(kelas, siswaList) {
-        const listMapel = Object.keys(dataMapel).map(id => ({ id, ...dataMapel[id] }));
-        listMapel.sort((a, b) => (a.nama_mapel || '').localeCompare(b.nama_mapel || ''));
+        let listMapel = Object.keys(dataMapel).map(id => ({ id, ...dataMapel[id] }));
+
+        // ===== SORTIR ABJAD MAPEL =====
+        listMapel = urutkanAbjad(listMapel, 'nama_mapel');
 
         // Filter mapel yang mencakup kelas ini
         let mapelTampil = listMapel;
