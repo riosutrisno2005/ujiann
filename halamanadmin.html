@@ -33,6 +33,7 @@
     .btn-bahaya-solid { background: #b91c1c; color: #fff; border: 1px solid #b91c1c; }
     .btn-unlock { background: #f59e0b; color: #fff; border: 1px solid #f59e0b; }
     .btn-edit-kecil { background: rgba(255,255,255,0.85); color: #1b5e20; border: 1px solid #1b5e20; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; flex: 0; }
+    .btn-pindah { background: #7c3aed; color: #fff; border: 1px solid #7c3aed; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; flex: 0; }
     .kosong { text-align: center; font-size: 13px; color: #475569; padding: 20px 0; }
     .pesan-status { display: none; font-size: 13px; padding: 10px 12px; border-radius: 10px; text-align: center; }
     .pesan-status.tampil { display: block; }
@@ -57,9 +58,11 @@
     .item-siswa span { font-size: 12px; color: #475569; }
     .statistik { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; color: #14532d; }
     .statistik span { background: rgba(255,255,255,0.85); padding: 3px 9px; border-radius: 8px; }
-    .kelas-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: rgba(255,255,255,0.6); border-radius: 12px; gap: 8px; margin-bottom: 8px; }
+    .kelas-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: rgba(255,255,255,0.7); border-radius: 12px; gap: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.15s ease; border: 2px solid transparent; }
+    .kelas-item:active { transform: scale(0.98); background: rgba(220,252,231,0.9); border-color: #1b5e20; }
     .kelas-item span { font-size: 14px; color: #0f172a; font-weight: 600; flex: 1; }
     .kelas-item .jumlah { font-size: 12px; color: #166534; background: #dcfce7; padding: 4px 10px; border-radius: 999px; font-weight: 700; }
+    .kelas-item .panah { color: #1b5e20; font-size: 18px; }
     .sub-tab { display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; }
     .sub-tab button { flex:1; min-width:80px; padding:8px; border:1px solid #1b5e20; background:#fff; color:#1b5e20; border-radius:10px; font-weight:600; font-size:13px; cursor:pointer; }
     .sub-tab button.aktif { background:#1b5e20; color:#fff; }
@@ -97,6 +100,12 @@
     #konten-cetak-print { display: none; padding: 15px; background: #fff; overflow-y: auto; flex: 1; }
     .search-akun { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #1b5e20; background: rgba(255,255,255,0.9); font-size: 14px; color: #0f172a; outline: none; font-family: inherit; margin-bottom: 10px; }
     .info-rekap { background: rgba(219,234,254,0.6); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #1e40af; line-height: 1.5; }
+    .siswa-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(241,245,249,0.9); border-radius: 10px; margin-bottom: 8px; }
+    .siswa-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: #1b5e20; flex-shrink: 0; }
+    .siswa-item .info-siswa { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .siswa-item .info-siswa b { font-size: 14px; color: #0f172a; }
+    .siswa-item .info-siswa span { font-size: 11px; color: #475569; }
+    .siswa-item .aksi { flex-shrink: 0; }
     @media print {
         body > *:not(.overlay-cetak) { display: none !important; }
         .overlay-cetak { position: static !important; display: block !important; }
@@ -130,13 +139,13 @@
         <div id="daftar-mapel"></div>
     </div>
 
-    <!-- TAB KELAS (VIEW ONLY) -->
+    <!-- TAB KELAS (dengan detail siswa & pindah kelas) -->
     <div id="tab-kelas" style="display:none;flex-direction:column;gap:16px;">
         <div class="card">
             <b style="font-size:14px;color:#0f172a;">🏫 Rekap Kelas</b>
             <div class="info-rekap">
-                ℹ️ Daftar kelas diambil otomatis dari <b>data akun siswa</b>.<br>
-                Untuk mengelola kelas, edit akun siswa di tab <b>👥 Akun</b>.
+                ℹ️ Klik kelas untuk melihat daftar siswa & memindahkan.<br>
+                Kelas diambil otomatis dari <b>data akun siswa</b>.
             </div>
             <input type="text" class="search-akun" id="input-cari-kelas" placeholder="🔍 Cari kelas..." oninput="renderRekapKelas()">
             <span style="font-size:11px;color:#64748b;" id="info-jumlah-kelas">-</span>
@@ -228,6 +237,50 @@
             <div class="baris-tombol">
                 <button class="print-btn" onclick="bukaCetakPerKelas()">🖨️ Cetak / Simpan PDF Per Kelas</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP DETAIL KELAS (daftar siswa + pindah) -->
+<div class="popup-overlay" id="popup-detail-kelas">
+    <div class="popup-box">
+        <h3 id="judul-detail-kelas">🏫 Kelas</h3>
+        <div id="info-kelas-terpilih" class="info-rekap"></div>
+
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="pilihSemuaSiswaKelas()">☑️ Pilih Semua</button>
+            <button class="btn-sekunder" onclick="kosongkanPilihanSiswa()">☐ Hapus Pilihan</button>
+        </div>
+
+        <button class="btn-pindah" id="btn-pindah-massal" onclick="bukaPindahMassal()" style="display:none;width:100%;padding:12px;">🔄 Pindah Siswa Terpilih</button>
+
+        <div class="field">
+            <input type="text" class="search-akun" id="input-cari-siswa-kelas" placeholder="🔍 Cari siswa..." oninput="renderSiswaKelas()" style="margin-bottom:0;">
+        </div>
+
+        <div id="daftar-siswa-kelas"></div>
+
+        <button class="btn-sekunder" onclick="tutupPopup('popup-detail-kelas')">Tutup</button>
+    </div>
+</div>
+
+<!-- POPUP PINDAH SISWA (individu) -->
+<div class="popup-overlay" id="popup-pindah-siswa">
+    <div class="popup-box">
+        <h3>🔄 Pindahkan Siswa</h3>
+        <div class="info-rekap" id="info-pindah-siswa"></div>
+        <div class="field">
+            <label>Kelas Tujuan</label>
+            <input type="text" id="input-kelas-tujuan" placeholder="Ketik atau pilih kelas" list="daftar-kelas-datalist-2">
+            <datalist id="daftar-kelas-datalist-2"></datalist>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#14532d;font-weight:600;cursor:pointer;padding:10px;background:rgba(219,234,254,0.5);border-radius:10px;">
+            <input type="checkbox" id="cb-update-hasil-ujian" style="width:18px;height:18px;accent-color:#1b5e20;">
+            <span>Update juga kelas di hasil ujian lama siswa ini (opsional)</span>
+        </label>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupPopup('popup-pindah-siswa')">Batal</button>
+            <button class="btn-utama" onclick="prosesPindahSiswa()">🔄 Pindah</button>
         </div>
     </div>
 </div>
@@ -360,12 +413,7 @@
 
 <script>
     const FIREBASE_URL = "https://admin-ffded-default-rtdb.firebaseio.com";
-
-    const PATH_AKUN = {
-        admin: 'admin_akun',
-        guru:  'guru_akun',
-        siswa: 'peserta_ujian'
-    };
+    const PATH_AKUN = { admin: 'admin_akun', guru: 'guru_akun', siswa: 'peserta_ujian' };
 
     async function ambilSoalMapel(id) {
         const r = await fetch(`${FIREBASE_URL}/soal/${id}.json`);
@@ -378,11 +426,7 @@
         const bersih = {};
         for (const sid in sumber) {
             const s = sumber[sid];
-            bersih[sid] = {
-                tipe: s.tipe === 'essay' ? 'essay' : 'pg',
-                pertanyaan: s.pertanyaan || '',
-                pilihan: s.pilihan || []
-            };
+            bersih[sid] = { tipe: s.tipe === 'essay' ? 'essay' : 'pg', pertanyaan: s.pertanyaan || '', pilihan: s.pilihan || [] };
         }
         return bersih;
     }
@@ -418,9 +462,7 @@
         const te = hasil.total_essay || 0;
         const ne = (hasil.nilai_essay != null) ? hasil.nilai_essay : null;
         let nilai_akhir = null;
-        if (ne != null) {
-            nilai_akhir = (total + te) === 0 ? 0 : Math.round((nilai_pg * total + ne * te) / (total + te));
-        }
+        if (ne != null) nilai_akhir = (total + te) === 0 ? 0 : Math.round((nilai_pg * total + ne * te) / (total + te));
         return { benar_pg: benar, total_pg: total, nilai_pg, nilai_akhir };
     }
 
@@ -434,6 +476,8 @@
     let semuaSiswaGlobal = [];
     let semuaMapelGlobal = [];
     let hasilUjianGlobal = {};
+    let konteksPindah = { nisn: null, nama: '', kelasLama: '' };
+    let siswaTerpilih = [];
 
     let resolveKonfirmasi = null;
     function konfirmasi(pesan, judul, labelOk) {
@@ -485,7 +529,7 @@
             document.getElementById('tab-' + t).style.display = t === tab ? 'flex' : 'none';
         });
         if (tab === 'kelas') muatRekapKelas();
-        if (tab === 'akun') { muatAkunAll(); }
+        if (tab === 'akun') muatAkunAll();
         if (tab === 'kolab') muatMonitoringKolaborasi();
         if (tab === 'transkrip') muatTranskrip();
     }
@@ -508,11 +552,7 @@
                     const u = dataUlang ? dataUlang[id] : null;
                     let menunggu = 0;
                     if (u) for (const nis in u) if (u[nis].status === 'menunggu') menunggu++;
-                    daftarMapel.push({
-                        id, ...data[id],
-                        jumlah_hasil: h ? Object.keys(h).length : 0,
-                        jumlah_pengajuan_menunggu: menunggu
-                    });
+                    daftarMapel.push({ id, ...data[id], jumlah_hasil: h ? Object.keys(h).length : 0, jumlah_pengajuan_menunggu: menunggu });
                 }
             }
             renderDaftarMapel();
@@ -524,8 +564,7 @@
         if (daftarMapel.length === 0) { k.innerHTML = '<p class="kosong">Belum ada mapel.</p>'; return; }
         k.innerHTML = daftarMapel.map(m => {
             const kelasList = parseKelasList(m.kelas);
-            return `
-            <div class="card">
+            return `<div class="card">
                 <div class="card-header">
                     <div>
                         <b>${escapeHtml(m.nama_mapel)}</b>
@@ -564,10 +603,7 @@
         const ya = await konfirmasi(`Rilis token baru untuk "${nama}"?\n\nToken: ${token}`, 'Rilis', 'Ya');
         if (!ya) return;
         try {
-            await fetch(`${FIREBASE_URL}/mapel/${id}.json`, {
-                method: 'PATCH', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ status_aktif: true, token })
-            });
+            await fetch(`${FIREBASE_URL}/mapel/${id}.json`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status_aktif: true, token }) });
             tampilkanStatus(`Token: ${token}`, 'sukses');
             muatDaftarMapel();
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
@@ -576,16 +612,13 @@
         const ya = await konfirmasi('Nonaktifkan mapel ini?', 'Nonaktifkan', 'Ya');
         if (!ya) return;
         try {
-            await fetch(`${FIREBASE_URL}/mapel/${id}.json`, {
-                method: 'PATCH', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ status_aktif: false, token: '' })
-            });
+            await fetch(`${FIREBASE_URL}/mapel/${id}.json`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status_aktif: false, token: '' }) });
             tampilkanStatus('Nonaktif.', 'sukses');
             muatDaftarMapel();
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
     async function hapusMapelAdmin(id, nama) {
-        const ya = await konfirmasi(`Hapus mapel "${nama}"? Semua data terkait (soal, kunci, hasil, kolaborasi, lock) juga akan dihapus.`, 'Hapus', 'Ya, Hapus');
+        const ya = await konfirmasi(`Hapus mapel "${nama}"? Semua data terkait juga akan dihapus.`, 'Hapus', 'Ya, Hapus');
         if (!ya) return;
         try {
             await Promise.allSettled([
@@ -605,7 +638,7 @@
     }
 
     // ============================================================
-    // TAB KELAS (VIEW ONLY)
+    // TAB KELAS (VIEW ONLY + DETAIL + PINDAH)
     // ============================================================
     async function muatRekapKelas() {
         const k = document.getElementById('daftar-kelas-rekap');
@@ -614,7 +647,6 @@
             const r = await fetch(`${FIREBASE_URL}/peserta_ujian.json`);
             const dSiswa = await r.json() || {};
 
-            // Hitung jumlah siswa per kelas
             const petaKelas = {};
             let totalTanpaKelas = 0;
             for (const nisn in dSiswa) {
@@ -626,8 +658,6 @@
                     petaKelas[kls].push({ nisn, nama: dSiswa[nisn].nama || '-' });
                 }
             }
-
-            // Simpan ke global
             window._rekapKelasGlobal = { petaKelas, totalTanpaKelas };
             renderRekapKelas();
         } catch (e) {
@@ -646,13 +676,10 @@
         let listKelas = Object.keys(petaKelas).sort();
         if (cari) listKelas = listKelas.filter(kls => kls.toLowerCase().includes(cari));
 
-        // Info jumlah
         const totalSiswa = Object.values(petaKelas).reduce((sum, arr) => sum + arr.length, 0);
         info.textContent = `${Object.keys(petaKelas).length} kelas · ${totalSiswa} siswa`;
 
         let html = '';
-
-        // Info siswa tanpa kelas
         if (totalTanpaKelas > 0) {
             html += `<div class="peringatan-box" style="background: rgba(254,226,226,0.85); border-color: #dc2626; color: #7f1d1d;">
                 ⚠️ <b>${totalTanpaKelas} siswa belum memiliki kelas.</b><br>
@@ -661,26 +688,226 @@
         }
 
         if (listKelas.length === 0) {
-            if (cari) {
-                html += '<p class="kosong">Tidak ada kelas yang cocok dengan pencarian.</p>';
-            } else {
-                html += '<p class="kosong">Belum ada kelas.<br>Isi field Kelas pada akun siswa di tab <b>👥 Akun</b>.</p>';
-            }
+            if (cari) html += '<p class="kosong">Tidak ada kelas yang cocok.</p>';
+            else html += '<p class="kosong">Belum ada kelas.<br>Isi field Kelas pada akun siswa di tab <b>👥 Akun</b>.</p>';
             k.innerHTML = html;
             return;
         }
 
-        // Tampilkan daftar kelas
         html += listKelas.map(kls => {
             const siswaArr = petaKelas[kls];
-            const jml = siswaArr.length;
-            return `<div class="kelas-item">
+            return `<div class="kelas-item" onclick="bukaDetailKelas('${escapeHtml(kls).replace(/'/g, "\\'")}')">
                 <span>${escapeHtml(kls)}</span>
-                <span class="jumlah">${jml} siswa</span>
+                <span class="jumlah">${siswaArr.length} siswa</span>
+                <span class="panah">›</span>
             </div>`;
         }).join('');
 
         k.innerHTML = html;
+    }
+
+    // ============================================================
+    // DETAIL KELAS — daftar siswa + pindah
+    // ============================================================
+    window._kelasAktif = '';
+
+    function bukaDetailKelas(namaKelas) {
+        window._kelasAktif = namaKelas;
+        siswaTerpilih = [];
+        document.getElementById('judul-detail-kelas').textContent = '🏫 ' + namaKelas;
+        document.getElementById('input-cari-siswa-kelas').value = '';
+
+        const { petaKelas } = window._rekapKelasGlobal || { petaKelas: {} };
+        const siswaArr = petaKelas[namaKelas] || [];
+        document.getElementById('info-kelas-terpilih').innerHTML = `
+            Total <b>${siswaArr.length} siswa</b> di kelas ini.<br>
+            Centang siswa lalu klik <b>"Pindah Siswa Terpilih"</b> untuk memindahkan beberapa siswa sekaligus, atau klik tombol <b>Pindah</b> pada masing-masing siswa.
+        `;
+
+        renderSiswaKelas();
+        document.getElementById('popup-detail-kelas').classList.add('tampil');
+    }
+
+    function renderSiswaKelas() {
+        const k = document.getElementById('daftar-siswa-kelas');
+        const cari = (document.getElementById('input-cari-siswa-kelas').value || '').toLowerCase().trim();
+        const namaKelas = window._kelasAktif;
+        const { petaKelas } = window._rekapKelasGlobal || { petaKelas: {} };
+        let siswaArr = (petaKelas[namaKelas] || []).slice();
+
+        if (cari) {
+            siswaArr = siswaArr.filter(s =>
+                (s.nama || '').toLowerCase().includes(cari) ||
+                (s.nisn || '').toLowerCase().includes(cari)
+            );
+        }
+        siswaArr.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
+
+        if (siswaArr.length === 0) {
+            k.innerHTML = '<p class="kosong">Tidak ada siswa.</p>';
+            return;
+        }
+
+        k.innerHTML = siswaArr.map(s => {
+            const checked = siswaTerpilih.includes(s.nisn) ? 'checked' : '';
+            return `<div class="siswa-item">
+                <input type="checkbox" ${checked} onchange="togglePilihSiswa('${escapeHtml(s.nisn)}', this.checked)">
+                <div class="info-siswa">
+                    <b>${escapeHtml(s.nama)}</b>
+                    <span>NISN: ${escapeHtml(s.nisn)}</span>
+                </div>
+                <div class="aksi">
+                    <button class="btn-pindah" onclick="bukaPindahSiswa('${escapeHtml(s.nisn)}', '${escapeHtml(s.nama).replace(/'/g, "\\'")}', '${escapeHtml(namaKelas).replace(/'/g, "\\'")}')">🔄 Pindah</button>
+                </div>
+            </div>`;
+        }).join('');
+
+        updateTombolPindahMassal();
+    }
+
+    function togglePilihSiswa(nisn, checked) {
+        if (checked) {
+            if (!siswaTerpilih.includes(nisn)) siswaTerpilih.push(nisn);
+        } else {
+            siswaTerpilih = siswaTerpilih.filter(x => x !== nisn);
+        }
+        updateTombolPindahMassal();
+    }
+
+    function pilihSemuaSiswaKelas() {
+        const namaKelas = window._kelasAktif;
+        const { petaKelas } = window._rekapKelasGlobal || { petaKelas: {} };
+        const siswaArr = petaKelas[namaKelas] || [];
+        siswaTerpilih = siswaArr.map(s => s.nisn);
+        renderSiswaKelas();
+    }
+
+    function kosongkanPilihanSiswa() {
+        siswaTerpilih = [];
+        renderSiswaKelas();
+    }
+
+    function updateTombolPindahMassal() {
+        const btn = document.getElementById('btn-pindah-massal');
+        if (siswaTerpilih.length > 0) {
+            btn.style.display = 'block';
+            btn.textContent = `🔄 Pindah ${siswaTerpilih.length} Siswa Terpilih`;
+        } else {
+            btn.style.display = 'none';
+        }
+    }
+
+    function bukaPindahSiswa(nisn, nama, kelasLama) {
+        konteksPindah = { nisn, nama, kelasLama };
+        document.getElementById('info-pindah-siswa').innerHTML = `
+            Akan memindahkan:<br>
+            <b>${escapeHtml(nama)}</b><br>
+            NISN: ${escapeHtml(nisn)}<br>
+            Dari kelas: <b>${escapeHtml(kelasLama)}</b>
+        `;
+        document.getElementById('input-kelas-tujuan').value = '';
+        document.getElementById('cb-update-hasil-ujian').checked = false;
+        isiDatalistKelasTujuan();
+        document.getElementById('popup-pindah-siswa').classList.add('tampil');
+    }
+
+    function bukaPindahMassal() {
+        if (siswaTerpilih.length === 0) { alert('Belum ada siswa dipilih.'); return; }
+        const namaKelas = window._kelasAktif;
+        konteksPindah = { nisn: null, nama: `${siswaTerpilih.length} siswa terpilih`, kelasLama: namaKelas };
+        document.getElementById('info-pindah-siswa').innerHTML = `
+            Akan memindahkan:<br>
+            <b>${siswaTerpilih.length} siswa terpilih</b><br>
+            Dari kelas: <b>${escapeHtml(namaKelas)}</b>
+        `;
+        document.getElementById('input-kelas-tujuan').value = '';
+        document.getElementById('cb-update-hasil-ujian').checked = false;
+        isiDatalistKelasTujuan();
+        document.getElementById('popup-pindah-siswa').classList.add('tampil');
+    }
+
+    function isiDatalistKelasTujuan() {
+        const dl = document.getElementById('daftar-kelas-datalist-2');
+        const { petaKelas } = window._rekapKelasGlobal || { petaKelas: {} };
+        dl.innerHTML = Object.keys(petaKelas).sort().map(k => `<option value="${escapeHtml(k)}"></option>`).join('');
+    }
+
+    async function prosesPindahSiswa() {
+        const kelasTujuan = document.getElementById('input-kelas-tujuan').value.trim();
+        const updateHasil = document.getElementById('cb-update-hasil-ujian').checked;
+
+        if (!kelasTujuan) { alert('Kelas tujuan wajib diisi.'); return; }
+        if (kelasTujuan === konteksPindah.kelasLama) { alert('Kelas tujuan sama dengan kelas asal.'); return; }
+
+        // Ambil daftar NISN yang akan dipindah
+        let listNisn = [];
+        if (konteksPindah.nisn) {
+            listNisn = [konteksPindah.nisn];
+        } else {
+            listNisn = siswaTerpilih.slice();
+        }
+        if (listNisn.length === 0) { alert('Tidak ada siswa untuk dipindah.'); return; }
+
+        const ya = await konfirmasi(
+            `Pindahkan ${listNisn.length} siswa ke kelas "${kelasTujuan}"?\n\nDari kelas: ${konteksPindah.kelasLama}${updateHasil ? '\n\nKelas di hasil ujian lama juga akan diupdate.' : ''}`,
+            'Konfirmasi Pindah', 'Ya, Pindah'
+        );
+        if (!ya) return;
+
+        tutupPopup('popup-pindah-siswa');
+        tampilkanStatus('Memindahkan siswa...', 'info');
+
+        let sukses = 0, gagal = 0;
+
+        // Update kelas di peserta_ujian
+        for (const nisn of listNisn) {
+            try {
+                const r = await fetch(`${FIREBASE_URL}/peserta_ujian/${nisn}/kelas.json`, {
+                    method: 'PUT', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(kelasTujuan)
+                });
+                if (r.ok) sukses++; else gagal++;
+            } catch (e) { gagal++; }
+        }
+
+        // Update kelas di hasil_ujian (opsional)
+        if (updateHasil) {
+            try {
+                const r = await fetch(`${FIREBASE_URL}/hasil_ujian.json`);
+                const dHasil = await r.json() || {};
+                const updates = {};
+                for (const mapelId in dHasil) {
+                    for (const nisn of listNisn) {
+                        if (dHasil[mapelId] && dHasil[mapelId][nisn]) {
+                            updates[`hasil_ujian/${mapelId}/${nisn}/kelas`] = kelasTujuan;
+                        }
+                    }
+                }
+                if (Object.keys(updates).length > 0) {
+                    await fetch(`${FIREBASE_URL}/.json`, {
+                        method: 'PATCH', headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify(updates)
+                    });
+                }
+            } catch (e) { console.log('Gagal update hasil ujian:', e); }
+        }
+
+        if (gagal > 0) {
+            tampilkanStatus(`${sukses} berhasil, ${gagal} gagal.`, 'info');
+        } else {
+            tampilkanStatus(`✅ ${sukses} siswa berhasil dipindah ke "${kelasTujuan}".`, 'sukses');
+        }
+
+        // Bersihkan pilihan dan refresh
+        siswaTerpilih = [];
+        await muatRekapKelas();
+        // Kalau kelas asal masih ada isinya, tetap buka popup detail
+        const { petaKelas } = window._rekapKelasGlobal || { petaKelas: {} };
+        if (petaKelas[konteksPindah.kelasLama]) {
+            bukaDetailKelas(konteksPindah.kelasLama);
+        } else {
+            tutupPopup('popup-detail-kelas');
+        }
     }
 
     // ============ REKAP NILAI ============
@@ -712,14 +939,9 @@
                 return { nis, ...h, ...hitung };
             });
             list.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
-            rekapSekarang = {
-                mapelId, namaMapel, semuaData: list, kunciCache: kunci,
-                locks: rLock || {}, nilaiEssayMap: rNilaiEssay || {}, kolab: rKolab || null
-            };
+            rekapSekarang = { mapelId, namaMapel, semuaData: list, kunciCache: kunci, locks: rLock || {}, nilaiEssayMap: rNilaiEssay || {}, kolab: rKolab || null };
             const kelasUnik = [...new Set(list.map(h => h.kelas).filter(Boolean))].sort();
-            document.getElementById('pilih-filter-kelas').innerHTML =
-                '<option value="">Semua Kelas</option>' +
-                kelasUnik.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+            document.getElementById('pilih-filter-kelas').innerHTML = '<option value="">Semua Kelas</option>' + kelasUnik.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
             renderRekapNilai();
         } catch (e) { k.innerHTML = '<p class="kosong">Gagal.</p>'; }
     }
@@ -730,11 +952,7 @@
         const kelasPilih = document.getElementById('pilih-filter-kelas').value;
         const list = rekapSekarang.semuaData.filter(h => !kelasPilih || (h.kelas||'') === kelasPilih);
         const k = document.getElementById('daftar-pengerjaan');
-
-        if (list.length === 0) {
-            k.innerHTML = '<p class="kosong">Kosong.</p>';
-            return;
-        }
+        if (list.length === 0) { k.innerHTML = '<p class="kosong">Kosong.</p>'; return; }
 
         let infoKolab = '';
         if (rekapSekarang.kolab && rekapSekarang.kolab.status === 'aktif') {
@@ -744,20 +962,13 @@
                     if (rekapSekarang.kolab.helper[u].status === 'disetujui') helperDisetujui.push(rekapSekarang.kolab.helper[u].nama || u);
                 }
             }
-            infoKolab = `<div class="info-nilai-tersimpan" style="margin-bottom:8px;">
-                🤝 <b>Kolaborasi Aktif</b> — Pemilik: ${escapeHtml(rekapSekarang.kolab.nama_guru || rekapSekarang.kolab.pemilik)}
-                ${helperDisetujui.length ? `<br>Helper: <b>${helperDisetujui.map(escapeHtml).join(', ')}</b>` : ''}
-            </div>`;
+            infoKolab = `<div class="info-nilai-tersimpan" style="margin-bottom:8px;">🤝 <b>Kolaborasi Aktif</b> — Pemilik: ${escapeHtml(rekapSekarang.kolab.nama_guru || rekapSekarang.kolab.pemilik)}${helperDisetujui.length ? `<br>Helper: <b>${helperDisetujui.map(escapeHtml).join(', ')}</b>` : ''}</div>`;
         }
 
         let html = infoKolab + `
             <div class="kotak-hapus-semua">
                 <b style="font-size:13px;color:#7f1d1d;">🗑️ Hapus Hasil Ujian</b>
-                <span>
-                    ${kelasPilih
-                        ? `Kelas <b>${escapeHtml(kelasPilih)}</b> &mdash; <b>${list.length}</b> siswa akan dihapus`
-                        : `Semua kelas &mdash; <b>${list.length}</b> siswa akan dihapus`}
-                </span>
+                <span>${kelasPilih ? `Kelas <b>${escapeHtml(kelasPilih)}</b> &mdash; <b>${list.length}</b> siswa akan dihapus` : `Semua kelas &mdash; <b>${list.length}</b> siswa akan dihapus`}</span>
                 <button class="btn-bahaya-solid" onclick="hapusHasilSemua()">🗑️ Hapus Semua (${list.length} siswa)</button>
                 <span style="font-size:11px;">Siswa yang hasilnya dihapus akan bisa mengerjakan ulang ujian ini.</span>
             </div>`;
@@ -768,20 +979,15 @@
                 : '<span class="badge badge-info">Menunggu Essay</span>');
             const nisn = h.nisn || h.nis || '';
             const nama = h.nama || '-';
-
             const lock = rekapSekarang.locks ? rekapSekarang.locks[nisn] : null;
-            let badgeLock = '';
-            let tombolUnlock = '';
+            let badgeLock = '', tombolUnlock = '';
             if (lock && lock.guru) {
                 badgeLock = `<span class="badge badge-lock">🔒 Dikoreksi: ${escapeHtml(lock.nama || lock.guru)}</span>`;
                 tombolUnlock = `<button class="btn-unlock" onclick="forceUnlock('${escapeHtml(nisn)}', '${escapeHtml(nama)}')">🔓 Force Unlock</button>`;
             }
-
             const nilaiData = rekapSekarang.nilaiEssayMap ? rekapSekarang.nilaiEssayMap[nisn] : null;
             let infoPenilai = '';
-            if (nilaiData && nilaiData.nama_guru) {
-                infoPenilai = `<span class="badge badge-nilai">✅ Dinilai: ${escapeHtml(nilaiData.nama_guru)}</span>`;
-            }
+            if (nilaiData && nilaiData.nama_guru) infoPenilai = `<span class="badge badge-nilai">✅ Dinilai: ${escapeHtml(nilaiData.nama_guru)}</span>`;
 
             return `<div class="item-siswa">
                 <div><b>${escapeHtml(nama)}</b> ${status} ${badgeLock} ${infoPenilai}</div>
@@ -798,12 +1004,11 @@
                 </div>
             </div>`;
         }).join('');
-
         k.innerHTML = html;
     }
 
     async function forceUnlock(nisn, nama) {
-        const ya = await konfirmasi(`Paksa lepas lock untuk "${nama}"? Guru yang sedang mengoreksi akan terganggu.`, 'Force Unlock', 'Ya, Lepas');
+        const ya = await konfirmasi(`Paksa lepas lock untuk "${nama}"?`, 'Force Unlock', 'Ya, Lepas');
         if (!ya) return;
         try {
             await fetch(`${FIREBASE_URL}/koreksi_lock/${rekapSekarang.mapelId}/${nisn}.json`, { method: 'DELETE' });
@@ -814,14 +1019,11 @@
 
     async function hitungUlangSemuaPG() {
         if (!rekapSekarang.mapelId) return;
-        const ya = await konfirmasi('Hitung ulang nilai PG untuk semua siswa di mapel ini dari kunci? Nilai lama akan ditimpa.', 'Hitung Ulang', 'Ya');
+        const ya = await konfirmasi('Hitung ulang nilai PG untuk semua siswa?', 'Hitung Ulang', 'Ya');
         if (!ya) return;
         tampilkanStatus('Menghitung...', 'info');
         try {
-            const [r, kunci] = await Promise.all([
-                fetch(`${FIREBASE_URL}/hasil_ujian/${rekapSekarang.mapelId}.json`),
-                ambilKunci(rekapSekarang.mapelId)
-            ]);
+            const [r, kunci] = await Promise.all([fetch(`${FIREBASE_URL}/hasil_ujian/${rekapSekarang.mapelId}.json`), ambilKunci(rekapSekarang.mapelId)]);
             const data = await r.json();
             if (!data) { tampilkanStatus('Belum ada jawaban siswa.', 'info'); return; }
             let ok = 0, gagal = 0;
@@ -829,19 +1031,8 @@
             for (const nis in data) {
                 const h = data[nis];
                 const hitung = hitungNilaiDariJawaban(kunci, h);
-                const status = (h.total_essay || 0) > 0
-                    ? (h.nilai_essay != null ? 'dinilai_guru' : 'menunggu_penilaian')
-                    : 'selesai';
-                tasks.push(fetch(`${FIREBASE_URL}/hasil_ujian/${rekapSekarang.mapelId}/${nis}.json`, {
-                    method: 'PATCH', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({
-                        benar_pg: hitung.benar_pg,
-                        total_pg: hitung.total_pg,
-                        nilai_pg: hitung.nilai_pg,
-                        nilai_akhir: hitung.nilai_akhir,
-                        status
-                    })
-                }).then(res => res.ok ? ok++ : gagal++).catch(() => gagal++));
+                const status = (h.total_essay || 0) > 0 ? (h.nilai_essay != null ? 'dinilai_guru' : 'menunggu_penilaian') : 'selesai';
+                tasks.push(fetch(`${FIREBASE_URL}/hasil_ujian/${rekapSekarang.mapelId}/${nis}.json`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ benar_pg: hitung.benar_pg, total_pg: hitung.total_pg, nilai_pg: hitung.nilai_pg, nilai_akhir: hitung.nilai_akhir, status }) }).then(res => res.ok ? ok++ : gagal++).catch(() => gagal++));
             }
             await Promise.all(tasks);
             tampilkanStatus(`Selesai. ${ok} diperbarui${gagal ? `, ${gagal} gagal` : ''}.`, gagal ? 'info' : 'sukses');
@@ -851,10 +1042,7 @@
     }
 
     async function hapusHasilSatu(nisn, nama) {
-        const ya = await konfirmasi(
-            `Hapus hasil ujian "${nama}" (NISN: ${nisn})?\n\nSiswa ini akan bisa mengerjakan ulang ujian ini dari awal.`,
-            'Hapus Hasil', 'Ya, Hapus'
-        );
+        const ya = await konfirmasi(`Hapus hasil ujian "${nama}"?`, 'Hapus Hasil', 'Ya, Hapus');
         if (!ya) return;
         try {
             await Promise.allSettled([
@@ -872,20 +1060,11 @@
     async function hapusHasilSemua() {
         const kelasPilih = document.getElementById('pilih-filter-kelas').value;
         const list = rekapSekarang.semuaData.filter(h => !kelasPilih || (h.kelas||'') === kelasPilih);
-        if (list.length === 0) { alert('Tidak ada data untuk dihapus.'); return; }
-
-        const info = kelasPilih
-            ? `SEMUA hasil ujian kelas "${kelasPilih}" (${list.length} siswa)`
-            : `SEMUA hasil ujian (${list.length} siswa dari semua kelas)`;
-
-        const ya = await konfirmasi(
-            `Hapus ${info}?\n\nTindakan ini tidak dapat dibatalkan.`,
-            'Hapus Semua Hasil', 'Ya, Hapus Semua'
-        );
+        if (list.length === 0) { alert('Tidak ada data.'); return; }
+        const info = kelasPilih ? `SEMUA hasil ujian kelas "${kelasPilih}" (${list.length} siswa)` : `SEMUA hasil ujian (${list.length} siswa)`;
+        const ya = await konfirmasi(`Hapus ${info}?`, 'Hapus Semua Hasil', 'Ya, Hapus Semua');
         if (!ya) return;
-
         tampilkanStatus('Menghapus...', 'info');
-
         let sukses = 0, gagal = 0;
         for (const h of list) {
             const nisn = h.nisn || h.nis || '';
@@ -898,7 +1077,6 @@
                 if (r1.ok) sukses++; else gagal++;
             } catch (e) { gagal++; }
         }
-
         if (gagal > 0) tampilkanStatus(`${sukses} dihapus, ${gagal} gagal.`, 'info');
         else tampilkanStatus(`${sukses} hasil ujian berhasil dihapus.`, 'sukses');
         lihatRekapNilai(rekapSekarang.mapelId, rekapSekarang.namaMapel);
@@ -907,14 +1085,11 @@
 
     // ============ NILAI ESSAY ADMIN ============
     async function bukaNilaiEssay(mapelId, nisn) {
-        konteksNilaiEssay = {
-            mapelId, nisn, soalEssay: [], nilaiPerSoal: {}, hasilSiswa: {}, lock: null, nilaiTersimpan: null
-        };
+        konteksNilaiEssay = { mapelId, nisn, soalEssay: [], nilaiPerSoal: {}, hasilSiswa: {}, lock: null, nilaiTersimpan: null };
         document.getElementById('judul-nilai-essay').textContent = 'Essay — ' + nisn;
         document.getElementById('info-lock-essay-admin').innerHTML = '';
         document.getElementById('isi-nilai-essay').innerHTML = '<p class="kosong">Memuat...</p>';
         document.getElementById('popup-nilai-essay').classList.add('tampil');
-
         try {
             const [soal, hasil, kunci, rLock, rNilai] = await Promise.all([
                 ambilSoalMapel(mapelId),
@@ -924,43 +1099,29 @@
                 fetch(`${FIREBASE_URL}/nilai_essay/${mapelId}/${nisn}.json`).then(x => x.json()).catch(() => null)
             ]);
             if (!soal) { document.getElementById('isi-nilai-essay').innerHTML = '<p class="kosong">Soal tidak ditemukan.</p>'; return; }
-
             konteksNilaiEssay.hasilSiswa = hasil || {};
             konteksNilaiEssay.lock = rLock;
             konteksNilaiEssay.nilaiTersimpan = rNilai;
-
             let infoHtml = '';
             if (rLock && rLock.guru) {
                 infoHtml += `<div class="info-nilai-tersimpan" style="background:rgba(254,243,199,0.9);color:#7c4a03;border:1px solid #f59e0b;">
                     🔒 <b>Sedang dikoreksi</b> oleh <b>${escapeHtml(rLock.nama || rLock.guru)}</b> (${escapeHtml(rLock.waktu || '-')}).
-                    <div style="margin-top:6px;">
-                        <button class="btn-unlock" onclick="forceUnlockEssay('${escapeHtml(nisn)}')" style="padding:6px 12px;font-size:12px;">🔓 Paksa Lepas Lock</button>
-                    </div>
+                    <div style="margin-top:6px;"><button class="btn-unlock" onclick="forceUnlockEssay('${escapeHtml(nisn)}')" style="padding:6px 12px;font-size:12px;">🔓 Paksa Lepas Lock</button></div>
                 </div>`;
             }
             if (rNilai && rNilai.nama_guru) {
-                infoHtml += `<div class="info-nilai-tersimpan">
-                    ✅ Sudah dinilai oleh <b>${escapeHtml(rNilai.nama_guru)}</b> pada ${escapeHtml(rNilai.waktu || '-')}
-                    ${rNilai.nilai_akhir != null ? ` · Nilai rata-rata: <b>${rNilai.nilai_akhir}</b>` : ''}
-                </div>`;
+                infoHtml += `<div class="info-nilai-tersimpan">✅ Sudah dinilai oleh <b>${escapeHtml(rNilai.nama_guru)}</b> pada ${escapeHtml(rNilai.waktu || '-')}${rNilai.nilai_akhir != null ? ` · Nilai rata-rata: <b>${rNilai.nilai_akhir}</b>` : ''}</div>`;
             }
             document.getElementById('info-lock-essay-admin').innerHTML = infoHtml;
-
             const je = (hasil && hasil.jawaban_essay) || {};
             const listEssay = [];
             let no = 0;
             for (const sid in soal) {
                 if (soal[sid].tipe !== 'essay') continue;
                 no++;
-                listEssay.push({
-                    id: sid, nomor: no,
-                    pertanyaan: soal[sid].pertanyaan,
-                    kunci_essay: (kunci[sid] && kunci[sid].kunci_essay) || '',
-                    jawaban: je[sid] || '(kosong)'
-                });
+                listEssay.push({ id: sid, nomor: no, pertanyaan: soal[sid].pertanyaan, kunci_essay: (kunci[sid] && kunci[sid].kunci_essay) || '', jawaban: je[sid] || '(kosong)' });
             }
             konteksNilaiEssay.soalEssay = listEssay;
-
             if (rNilai && typeof rNilai === 'object') {
                 for (const sid in rNilai) {
                     if (sid === 'nilai_akhir' || sid === 'guru' || sid === 'nama_guru' || sid === 'waktu') continue;
@@ -970,12 +1131,7 @@
             if (Object.keys(konteksNilaiEssay.nilaiPerSoal).length === 0 && hasil && hasil.nilai_essay != null) {
                 for (const s of listEssay) konteksNilaiEssay.nilaiPerSoal[s.id] = hasil.nilai_essay;
             }
-
-            if (listEssay.length === 0) {
-                document.getElementById('isi-nilai-essay').innerHTML = '<p class="kosong">Tidak ada soal essay di mapel ini.</p>';
-                return;
-            }
-
+            if (listEssay.length === 0) { document.getElementById('isi-nilai-essay').innerHTML = '<p class="kosong">Tidak ada soal essay.</p>'; return; }
             const html = listEssay.map(s => {
                 const nilaiVal = (konteksNilaiEssay.nilaiPerSoal[s.id] != null) ? konteksNilaiEssay.nilaiPerSoal[s.id] : '';
                 return `<div class="kotak-essay">
@@ -988,25 +1144,16 @@
                         <input type="number" class="input-nilai-essay" data-sid="${s.id}" min="0" max="100" value="${nilaiVal}" placeholder="0-100" oninput="updateNilaiSoal('${s.id}', this.value)">
                     </div>
                 </div>`;
-            }).join('') + `
-                <div class="info-nilai-tersimpan" id="info-rata-rata">
-                    Rata-rata: <b id="rata-rata-teks">-</b>
-                </div>`;
-
+            }).join('') + `<div class="info-nilai-tersimpan" id="info-rata-rata">Rata-rata: <b id="rata-rata-teks">-</b></div>`;
             document.getElementById('isi-nilai-essay').innerHTML = html;
             updateRataRata();
-        } catch (e) {
-            document.getElementById('isi-nilai-essay').innerHTML = '<p class="kosong">Gagal memuat.</p>';
-        }
+        } catch (e) { document.getElementById('isi-nilai-essay').innerHTML = '<p class="kosong">Gagal memuat.</p>'; }
     }
 
     function updateNilaiSoal(sid, value) {
         const v = parseInt(value, 10);
-        if (!isNaN(v) && v >= 0 && v <= 100) {
-            konteksNilaiEssay.nilaiPerSoal[sid] = v;
-        } else if (value === '') {
-            delete konteksNilaiEssay.nilaiPerSoal[sid];
-        }
+        if (!isNaN(v) && v >= 0 && v <= 100) konteksNilaiEssay.nilaiPerSoal[sid] = v;
+        else if (value === '') delete konteksNilaiEssay.nilaiPerSoal[sid];
         updateRataRata();
     }
 
@@ -1027,12 +1174,11 @@
     }
 
     async function forceUnlockEssay(nisn) {
-        const ya = await konfirmasi(`Paksa lepas lock untuk siswa ini? Guru yang sedang mengoreksi akan terganggu.`, 'Force Unlock', 'Ya, Lepas');
+        const ya = await konfirmasi(`Paksa lepas lock untuk siswa ini?`, 'Force Unlock', 'Ya, Lepas');
         if (!ya) return;
         try {
             await fetch(`${FIREBASE_URL}/koreksi_lock/${konteksNilaiEssay.mapelId}/${nisn}.json`, { method: 'DELETE' });
-            document.getElementById('info-lock-essay-admin').innerHTML =
-                `<div class="info-nilai-tersimpan">🔓 Lock berhasil dilepas. Sekarang Anda bisa menyimpan nilai.</div>`;
+            document.getElementById('info-lock-essay-admin').innerHTML = `<div class="info-nilai-tersimpan">🔓 Lock berhasil dilepas.</div>`;
             tampilkanStatus('Lock dilepas.', 'sukses');
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
@@ -1045,66 +1191,32 @@
     async function simpanNilaiEssay() {
         const { mapelId, nisn, soalEssay, nilaiPerSoal } = konteksNilaiEssay;
         if (!mapelId || !nisn) return;
-
         if (soalEssay.length === 0) { alert('Tidak ada essay.'); return; }
         const belum = soalEssay.filter(s => nilaiPerSoal[s.id] == null);
         if (belum.length > 0) {
-            const ya = await konfirmasi(
-                `Masih ada ${belum.length} soal yang belum dinilai. Tetap simpan?`,
-                'Simpan Sebagian', 'Ya, Simpan'
-            );
+            const ya = await konfirmasi(`Masih ada ${belum.length} soal belum dinilai. Tetap simpan?`, 'Simpan Sebagian', 'Ya, Simpan');
             if (!ya) return;
         }
-
         let total = 0, jml = 0;
         for (const s of soalEssay) {
             const v = nilaiPerSoal[s.id];
             if (typeof v === 'number') { total += v; jml++; }
         }
         const nilaiRata = jml > 0 ? Math.round(total / jml) : null;
-
-        const dataNilai = {
-            guru: usernameAdmin,
-            nama_guru: (namaAdmin || usernameAdmin) + ' (Admin)',
-            waktu: new Date().toLocaleString('id-ID'),
-            nilai_akhir: nilaiRata
-        };
+        const dataNilai = { guru: usernameAdmin, nama_guru: (namaAdmin || usernameAdmin) + ' (Admin)', waktu: new Date().toLocaleString('id-ID'), nilai_akhir: nilaiRata };
         for (const s of soalEssay) {
             if (typeof nilaiPerSoal[s.id] === 'number') dataNilai[s.id] = nilaiPerSoal[s.id];
         }
-
         try {
-            await fetch(`${FIREBASE_URL}/nilai_essay/${mapelId}/${nisn}.json`, {
-                method: 'PUT', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify(dataNilai)
-            });
-
-            const [rHasil, kunci] = await Promise.all([
-                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`),
-                ambilKunci(mapelId)
-            ]);
+            await fetch(`${FIREBASE_URL}/nilai_essay/${mapelId}/${nisn}.json`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(dataNilai) });
+            const [rHasil, kunci] = await Promise.all([fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`), ambilKunci(mapelId)]);
             const h = await rHasil.json() || {};
             const hitung = hitungNilaiDariJawaban(kunci, { ...h, nilai_essay: nilaiRata });
-            await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`, {
-                method: 'PATCH', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({
-                    nilai_essay: nilaiRata,
-                    benar_pg: hitung.benar_pg,
-                    total_pg: hitung.total_pg,
-                    nilai_pg: hitung.nilai_pg,
-                    nilai_akhir: hitung.nilai_akhir,
-                    status: 'dinilai_guru',
-                    waktu_nilai_guru: new Date().toLocaleString('id-ID')
-                })
-            });
-
+            await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ nilai_essay: nilaiRata, benar_pg: hitung.benar_pg, total_pg: hitung.total_pg, nilai_pg: hitung.nilai_pg, nilai_akhir: hitung.nilai_akhir, status: 'dinilai_guru', waktu_nilai_guru: new Date().toLocaleString('id-ID') }) });
             try {
                 const rLock = await fetch(`${FIREBASE_URL}/koreksi_lock/${mapelId}/${nisn}.json`).then(x => x.json());
-                if (rLock && rLock.guru === usernameAdmin) {
-                    await fetch(`${FIREBASE_URL}/koreksi_lock/${mapelId}/${nisn}.json`, { method: 'DELETE' });
-                }
+                if (rLock && rLock.guru === usernameAdmin) await fetch(`${FIREBASE_URL}/koreksi_lock/${mapelId}/${nisn}.json`, { method: 'DELETE' });
             } catch (e) {}
-
             tutupPopupNilaiEssay();
             tampilkanStatus(`✅ Nilai essay tersimpan (rata-rata: ${nilaiRata}).`, 'sukses');
             lihatRekapNilai(mapelId, rekapSekarang.namaMapel || 'Mapel');
@@ -1139,22 +1251,14 @@
             let html = '';
             const semuaMenunggu = [];
             const listMapel = Object.keys(data).sort();
-            listMapel.forEach(mid => {
-                for (const nis in data[mid]) if (data[mid][nis].status === 'menunggu') semuaMenunggu.push({ mid, nis });
-            });
-            if (semuaMenunggu.length > 0) {
-                html += `<div class="baris-tombol" style="margin-bottom:10px;">
-                    <button class="btn-utama" onclick="setujuiSemuaGlobal()">✅ Setujui Semua (${semuaMenunggu.length})</button>
-                </div>`;
-            }
+            listMapel.forEach(mid => { for (const nis in data[mid]) if (data[mid][nis].status === 'menunggu') semuaMenunggu.push({ mid, nis }); });
+            if (semuaMenunggu.length > 0) html += `<div class="baris-tombol" style="margin-bottom:10px;"><button class="btn-utama" onclick="setujuiSemuaGlobal()">✅ Setujui Semua (${semuaMenunggu.length})</button></div>`;
             listMapel.forEach(mid => {
                 const mapel = daftarMapel.find(x => x.id === mid);
                 const namaMapel = mapel ? mapel.nama_mapel : '(mapel terhapus)';
                 const list = Object.keys(data[mid]).map(nis => ({ nis, ...data[mid][nis] }));
                 list.sort((a, b) => (a.nama||'').localeCompare(b.nama||''));
-                html += `<div style="margin-top:10px;padding:8px;background:rgba(27,94,32,0.08);border-radius:10px;">
-                    <b style="font-size:13px;color:#14532d;">📚 ${escapeHtml(namaMapel)}</b>
-                </div>`;
+                html += `<div style="margin-top:10px;padding:8px;background:rgba(27,94,32,0.08);border-radius:10px;"><b style="font-size:13px;color:#14532d;">📚 ${escapeHtml(namaMapel)}</b></div>`;
                 html += renderListPengajuan(list, mid, false);
             });
             k.innerHTML = html;
@@ -1167,19 +1271,10 @@
             let b = '', a = '';
             if (p.status === 'menunggu') {
                 b = '<span class="badge badge-info">Menunggu</span>';
-                a = `<div class="baris-tombol">
-                    <button class="btn-bahaya" onclick="putuskanUlang('${mapelId}','${escapeHtml(p.nis)}','ditolak',${!!global})">Tolak</button>
-                    <button class="btn-utama" onclick="putuskanUlang('${mapelId}','${escapeHtml(p.nis)}','disetujui',${!!global})">Setujui</button>
-                </div>`;
+                a = `<div class="baris-tombol"><button class="btn-bahaya" onclick="putuskanUlang('${mapelId}','${escapeHtml(p.nis)}','ditolak',${!!global})">Tolak</button><button class="btn-utama" onclick="putuskanUlang('${mapelId}','${escapeHtml(p.nis)}','disetujui',${!!global})">Setujui</button></div>`;
             } else if (p.status === 'disetujui') b = '<span class="badge badge-aktif">Disetujui</span>';
             else b = '<span class="badge badge-nonaktif">Ditolak</span>';
-            html += `<div class="item-siswa">
-                <div><b>${escapeHtml(p.nama||'-')}</b> ${b}</div>
-                <span>NISN: ${escapeHtml(p.nisn||p.nis||'-')} · ${escapeHtml(p.kelas||'-')}</span>
-                <span>${escapeHtml(p.waktu||'-')}</span>
-                ${p.alasan ? `<span>Alasan: ${escapeHtml(p.alasan)}</span>` : ''}
-                ${a}
-            </div>`;
+            html += `<div class="item-siswa"><div><b>${escapeHtml(p.nama||'-')}</b> ${b}</div><span>NISN: ${escapeHtml(p.nisn||p.nis||'-')} · ${escapeHtml(p.kelas||'-')}</span><span>${escapeHtml(p.waktu||'-')}</span>${p.alasan ? `<span>Alasan: ${escapeHtml(p.alasan)}</span>` : ''}${a}</div>`;
         });
         return html;
     }
@@ -1188,24 +1283,20 @@
         const ya = await konfirmasi(keputusan === 'disetujui' ? 'Setujui?' : 'Tolak?', 'Konfirmasi', 'Ya');
         if (!ya) return;
         try {
-            await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mapelId}/${nisn}.json`, {
-                method: 'PATCH', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ status: keputusan, waktu_keputusan: new Date().toLocaleString('id-ID') })
-            });
+            await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mapelId}/${nisn}.json`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status: keputusan, waktu_keputusan: new Date().toLocaleString('id-ID') }) });
             if (keputusan === 'disetujui') {
                 await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}/${nisn}.json`, { method: 'DELETE' });
                 await fetch(`${FIREBASE_URL}/nilai_essay/${mapelId}/${nisn}.json`, { method: 'DELETE' });
                 await fetch(`${FIREBASE_URL}/koreksi_lock/${mapelId}/${nisn}.json`, { method: 'DELETE' });
             }
             tampilkanStatus('Tersimpan.', 'sukses');
-            if (dariGlobal) lihatSemuaPengajuan();
-            else lihatPengajuan(mapelId, 'Mapel');
+            if (dariGlobal) lihatSemuaPengajuan(); else lihatPengajuan(mapelId, 'Mapel');
             muatDaftarMapel();
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
     }
 
     async function setujuiSemuaGlobal() {
-        const ya = await konfirmasi('Setujui SEMUA pengajuan yang masih menunggu di semua mapel?', 'Setujui Semua', 'Ya');
+        const ya = await konfirmasi('Setujui SEMUA pengajuan?', 'Setujui Semua', 'Ya');
         if (!ya) return;
         try {
             const r = await fetch(`${FIREBASE_URL}/pengajuan_ulang.json`);
@@ -1215,10 +1306,7 @@
             for (const mid in data) {
                 for (const nis in data[mid]) {
                     if (data[mid][nis].status !== 'menunggu') continue;
-                    await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mid}/${nis}.json`, {
-                        method: 'PATCH', headers: {'Content-Type':'application/json'},
-                        body: JSON.stringify({ status: 'disetujui', waktu_keputusan: new Date().toLocaleString('id-ID') })
-                    });
+                    await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mid}/${nis}.json`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status: 'disetujui', waktu_keputusan: new Date().toLocaleString('id-ID') }) });
                     await fetch(`${FIREBASE_URL}/hasil_ujian/${mid}/${nis}.json`, { method: 'DELETE' });
                     await fetch(`${FIREBASE_URL}/nilai_essay/${mid}/${nis}.json`, { method: 'DELETE' });
                     await fetch(`${FIREBASE_URL}/koreksi_lock/${mid}/${nis}.json`, { method: 'DELETE' });
@@ -1242,89 +1330,44 @@
                 fetch(`${FIREBASE_URL}/nilai_essay.json`).then(x => x.json()),
                 fetch(`${FIREBASE_URL}/mapel.json`).then(x => x.json())
             ]);
-
-            const dataKolab = rKolab || {};
-            const dataLock = rLock || {};
-            const dataNilai = rNilai || {};
-            const dataMapel = rMapel || {};
-
+            const dataKolab = rKolab || {}, dataLock = rLock || {}, dataNilai = rNilai || {}, dataMapel = rMapel || {};
             let totalLock = 0;
-            for (const mid in dataLock) {
-                for (const nis in dataLock[mid]) totalLock++;
-            }
-
+            for (const mid in dataLock) for (const nis in dataLock[mid]) totalLock++;
             let html = '';
             const jmlKolabAktif = Object.keys(dataKolab).filter(mid => dataKolab[mid].status === 'aktif').length;
-            html += `<div class="card">
-                <b style="font-size:14px;color:#0f172a;">📊 Ringkasan</b>
-                <div class="statistik">
-                    <span>${jmlKolabAktif} kolaborasi aktif</span>
-                    <span>${totalLock} lock aktif</span>
-                </div>
-            </div>`;
-
+            html += `<div class="card"><b style="font-size:14px;color:#0f172a;">📊 Ringkasan</b><div class="statistik"><span>${jmlKolabAktif} kolaborasi aktif</span><span>${totalLock} lock aktif</span></div></div>`;
             if (jmlKolabAktif === 0 && totalLock === 0) {
                 html += '<p class="kosong">Belum ada aktivitas kolaborasi.</p>';
                 k.innerHTML = html;
                 return;
             }
-
             for (const mid in dataKolab) {
                 const c = dataKolab[mid];
                 const mapel = dataMapel[mid];
                 const namaMapel = mapel ? mapel.nama_mapel : c.nama_mapel || '(mapel terhapus)';
-                const statusBadge = c.status === 'selesai'
-                    ? '<span class="badge badge-nonaktif">Selesai</span>'
-                    : '<span class="badge badge-aktif">Aktif</span>';
-
+                const statusBadge = c.status === 'selesai' ? '<span class="badge badge-nonaktif">Selesai</span>' : '<span class="badge badge-aktif">Aktif</span>';
                 let helperList = '';
                 if (c.helper) {
                     for (const u in c.helper) {
                         const h = c.helper[u];
                         const warna = h.status === 'disetujui' ? 'badge-aktif' : (h.status === 'ditolak' ? 'badge-nonaktif' : 'badge-info');
-                        helperList += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(241,245,249,0.9);border-radius:8px;margin-top:4px;">
-                            <span style="font-size:12px;">${escapeHtml(h.nama || u)}</span>
-                            <span class="badge ${warna}">${escapeHtml(h.status)}</span>
-                        </div>`;
+                        helperList += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:rgba(241,245,249,0.9);border-radius:8px;margin-top:4px;"><span style="font-size:12px;">${escapeHtml(h.nama || u)}</span><span class="badge ${warna}">${escapeHtml(h.status)}</span></div>`;
                     }
                 }
-
                 let lockList = '';
                 if (dataLock[mid]) {
                     const locksArr = [];
                     for (const nis in dataLock[mid]) locksArr.push({ nis, ...dataLock[mid][nis] });
                     if (locksArr.length > 0) {
-                        lockList = `<div style="margin-top:8px;padding:8px;background:rgba(254,243,199,0.6);border-radius:10px;">
-                            <b style="font-size:12px;color:#7c4a03;">🔒 Lock Aktif (${locksArr.length}):</b>
-                            ${locksArr.map(l => `<div style="font-size:11px;color:#7c4a03;margin-top:4px;">
-                                NISN ${escapeHtml(l.nis)} — ${escapeHtml(l.nama || l.guru)} (${escapeHtml(l.waktu || '-')})
-                                <button class="btn-unlock" onclick="adminForceUnlock('${mid}','${escapeHtml(l.nis)}')" style="padding:3px 8px;font-size:11px;margin-left:6px;">🔓</button>
-                            </div>`).join('')}
-                        </div>`;
+                        lockList = `<div style="margin-top:8px;padding:8px;background:rgba(254,243,199,0.6);border-radius:10px;"><b style="font-size:12px;color:#7c4a03;">🔒 Lock Aktif (${locksArr.length}):</b>${locksArr.map(l => `<div style="font-size:11px;color:#7c4a03;margin-top:4px;">NISN ${escapeHtml(l.nis)} — ${escapeHtml(l.nama || l.guru)} (${escapeHtml(l.waktu || '-')})<button class="btn-unlock" onclick="adminForceUnlock('${mid}','${escapeHtml(l.nis)}')" style="padding:3px 8px;font-size:11px;margin-left:6px;">🔓</button></div>`).join('')}</div>`;
                     }
                 }
-
                 let jmlNilai = 0;
                 if (dataNilai[mid]) jmlNilai = Object.keys(dataNilai[mid]).length;
-
-                html += `<div class="card">
-                    <div class="card-header">
-                        <div>
-                            <b>${escapeHtml(namaMapel)}</b> ${statusBadge}
-                            <span>Pemilik: <b>${escapeHtml(c.nama_guru || c.pemilik)}</b></span>
-                            <span>Diminta: ${escapeHtml(c.waktu_minta || '-')}</span>
-                            <span>${jmlNilai} essay sudah dinilai</span>
-                        </div>
-                    </div>
-                    ${helperList ? `<div style="margin-top:6px;"><b style="font-size:12px;color:#14532d;">Helper:</b>${helperList}</div>` : '<div style="font-size:12px;color:#94a3b8;margin-top:4px;">Belum ada guru yang mengajukan.</div>'}
-                    ${lockList}
-                </div>`;
+                html += `<div class="card"><div class="card-header"><div><b>${escapeHtml(namaMapel)}</b> ${statusBadge}<span>Pemilik: <b>${escapeHtml(c.nama_guru || c.pemilik)}</b></span><span>Diminta: ${escapeHtml(c.waktu_minta || '-')}</span><span>${jmlNilai} essay sudah dinilai</span></div></div>${helperList ? `<div style="margin-top:6px;"><b style="font-size:12px;color:#14532d;">Helper:</b>${helperList}</div>` : '<div style="font-size:12px;color:#94a3b8;margin-top:4px;">Belum ada guru yang mengajukan.</div>'}${lockList}</div>`;
             }
-
             k.innerHTML = html;
-        } catch (e) {
-            k.innerHTML = '<p class="kosong">Gagal memuat data kolaborasi.</p>';
-        }
+        } catch (e) { k.innerHTML = '<p class="kosong">Gagal memuat data kolaborasi.</p>'; }
     }
 
     async function adminForceUnlock(mapelId, nisn) {
@@ -1340,24 +1383,14 @@
     // ============ EXPORT CSV ============
     async function unduhHasil(mapelId, namaMapel) {
         try {
-            const [r, kunci] = await Promise.all([
-                fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}.json`),
-                ambilKunci(mapelId)
-            ]);
+            const [r, kunci] = await Promise.all([fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}.json`), ambilKunci(mapelId)]);
             const data = await r.json();
             if (!data || Object.keys(data).length === 0) { tampilkanStatus('Belum ada.', 'gagal'); return; }
             const baris = [];
             for (const nis in data) {
                 const h = data[nis];
                 const hitung = hitungNilaiDariJawaban(kunci, h);
-                baris.push({
-                    'NISN': nis, 'Nama': h.nama||'', 'Kelas': h.kelas||'',
-                    'Benar PG': hitung.benar_pg, 'Total PG': hitung.total_pg, 'Nilai PG': hitung.nilai_pg,
-                    'Total Essay': h.total_essay||0,
-                    'Nilai Essay': h.nilai_essay != null ? h.nilai_essay : '',
-                    'Nilai Akhir': hitung.nilai_akhir != null ? hitung.nilai_akhir : '',
-                    'Status': h.status||'', 'Waktu': h.waktu_kirim||''
-                });
+                baris.push({ 'NISN': nis, 'Nama': h.nama||'', 'Kelas': h.kelas||'', 'Benar PG': hitung.benar_pg, 'Total PG': hitung.total_pg, 'Nilai PG': hitung.nilai_pg, 'Total Essay': h.total_essay||0, 'Nilai Essay': h.nilai_essay != null ? h.nilai_essay : '', 'Nilai Akhir': hitung.nilai_akhir != null ? hitung.nilai_akhir : '', 'Status': h.status||'', 'Waktu': h.waktu_kirim||'' });
             }
             baris.sort((a,b) => (a.Kelas||'').localeCompare(b.Kelas||'') || (a.Nama||'').localeCompare(b.Nama||''));
             const headers = Object.keys(baris[0]);
@@ -1390,9 +1423,7 @@
     // ============ TAB AKUN ============
     function gantiSubTabAkun(t) {
         subTabAkun = t;
-        ['admin','guru','siswa'].forEach(x => {
-            document.getElementById('sub-btn-' + x).classList.toggle('aktif', x === t);
-        });
+        ['admin','guru','siswa'].forEach(x => document.getElementById('sub-btn-' + x).classList.toggle('aktif', x === t));
         document.getElementById('peringatan-guru').style.display = t === 'guru' ? 'block' : 'none';
         document.getElementById('peringatan-siswa').style.display = t === 'siswa' ? 'block' : 'none';
 
@@ -1424,7 +1455,6 @@
         renderAkun();
     }
 
-    // Isi datalist kelas dari data siswa yang ada
     function isiDatalistKelas() {
         const dl = document.getElementById('daftar-kelas-datalist');
         const setKelas = new Set();
@@ -1442,12 +1472,8 @@
                 fetch(`${FIREBASE_URL}/${PATH_AKUN.guru}.json`),
                 fetch(`${FIREBASE_URL}/${PATH_AKUN.siswa}.json`)
             ]);
-            const da = await ra.json();
-            const dg = await rg.json();
-            const ds = await rs.json();
-            daftarAkun.admin = [];
-            daftarAkun.guru = [];
-            daftarAkun.siswa = [];
+            const da = await ra.json(), dg = await rg.json(), ds = await rs.json();
+            daftarAkun.admin = []; daftarAkun.guru = []; daftarAkun.siswa = [];
             if (da) for (const k in da) daftarAkun.admin.push({ kunci: k, ...da[k] });
             if (dg) for (const k in dg) daftarAkun.guru.push({ kunci: k, ...dg[k] });
             if (ds) for (const k in ds) daftarAkun.siswa.push({ kunci: k, ...ds[k] });
@@ -1459,9 +1485,7 @@
     function renderAkun() {
         const k = document.getElementById('daftar-akun');
         const cari = (document.getElementById('input-cari-akun').value || '').toLowerCase().trim();
-
         let list = (daftarAkun[subTabAkun] || []).slice();
-
         if (cari) {
             list = list.filter(a =>
                 (a.nama || '').toLowerCase().includes(cari) ||
@@ -1471,15 +1495,11 @@
             );
         }
         list.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
-
         const infoJumlah = document.getElementById('info-jumlah-akun');
         if (infoJumlah) {
             const total = (daftarAkun[subTabAkun] || []).length;
-            infoJumlah.textContent = cari
-                ? `Menampilkan ${list.length} dari ${total} akun`
-                : `Total: ${total} akun`;
+            infoJumlah.textContent = cari ? `Menampilkan ${list.length} dari ${total} akun` : `Total: ${total} akun`;
         }
-
         const kotakHapus = document.getElementById('kotak-hapus-semua-akun');
         const infoHapus = document.getElementById('info-hapus-semua-akun');
         const btnHapus = document.getElementById('btn-hapus-semua-akun');
@@ -1492,34 +1512,17 @@
         } else {
             kotakHapus.style.display = 'none';
         }
-
         if (list.length === 0) {
-            k.innerHTML = `<p class="kosong">${cari ? 'Tidak ada akun yang cocok dengan pencarian.' : `Belum ada akun ${subTabAkun}.`}</p>`;
+            k.innerHTML = `<p class="kosong">${cari ? 'Tidak ada akun yang cocok.' : `Belum ada akun ${subTabAkun}.`}</p>`;
             return;
         }
-
         k.innerHTML = list.map(a => {
             const badgeClass = subTabAkun === 'admin' ? 'badge-admin' : (subTabAkun === 'guru' ? 'badge-guru' : 'badge-siswa');
             const badgeLabel = subTabAkun === 'admin' ? 'Admin' : (subTabAkun === 'guru' ? 'Guru' : 'Siswa');
             let detail = '';
-            if (subTabAkun === 'siswa') {
-                detail = `NISN: ${escapeHtml(a.nisn || a.kunci)} · Kelas: ${escapeHtml(a.kelas || '-')}`;
-            } else {
-                detail = `Username: ${escapeHtml(a.username || a.kunci)}`;
-            }
-            return `
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <b>${escapeHtml(a.nama || '-')}</b> <span class="badge ${badgeClass}">${badgeLabel}</span>
-                        <span>${detail}</span>
-                    </div>
-                </div>
-                <div class="baris-tombol">
-                    <button class="btn-sekunder" onclick="editAkun('${escapeHtml(a.kunci)}')">Edit</button>
-                    <button class="btn-bahaya" onclick="hapusAkun('${escapeHtml(a.kunci)}')">Hapus</button>
-                </div>
-            </div>`;
+            if (subTabAkun === 'siswa') detail = `NISN: ${escapeHtml(a.nisn || a.kunci)} · Kelas: ${escapeHtml(a.kelas || '-')}`;
+            else detail = `Username: ${escapeHtml(a.username || a.kunci)}`;
+            return `<div class="card"><div class="card-header"><div><b>${escapeHtml(a.nama || '-')}</b> <span class="badge ${badgeClass}">${badgeLabel}</span><span>${detail}</span></div></div><div class="baris-tombol"><button class="btn-sekunder" onclick="editAkun('${escapeHtml(a.kunci)}')">Edit</button><button class="btn-bahaya" onclick="hapusAkun('${escapeHtml(a.kunci)}')">Hapus</button></div></div>`;
         }).join('');
     }
 
@@ -1557,30 +1560,22 @@
         const kunciBaru = document.getElementById('input-username-akun').value.trim();
         const password = document.getElementById('input-password-akun').value.trim();
         const kelas = document.getElementById('input-kelas-akun').value.trim();
-
         if (!nama || !kunciBaru) { tampilkanStatus('Nama & username/NISN wajib diisi.', 'gagal'); return; }
-
         const path = PATH_AKUN[subTabAkun];
         const kunciFinal = subTabAkun === 'siswa' ? kunciBaru : kunciBaru.toLowerCase();
-
         if (subTabAkun === 'siswa' && !kelas) { tampilkanStatus('Kelas wajib diisi.', 'gagal'); return; }
         if (subTabAkun !== 'siswa' && !password) { tampilkanStatus('Password wajib diisi.', 'gagal'); return; }
-
         let dataSimpan;
         if (subTabAkun === 'admin') dataSimpan = { username: kunciFinal, nama, password };
         else if (subTabAkun === 'guru') dataSimpan = { username: kunciFinal, nama, password };
         else dataSimpan = { nisn: kunciFinal, nama, kelas };
-
         try {
             if (sedangEditAkun && sedangEditAkun.kunciLama && sedangEditAkun.kunciLama !== kunciFinal) {
                 await fetch(`${FIREBASE_URL}/${path}/${sedangEditAkun.kunciLama}.json`, { method: 'DELETE' });
             }
-            const r = await fetch(`${FIREBASE_URL}/${path}/${kunciFinal}.json`, {
-                method: 'PUT', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify(dataSimpan)
-            });
+            const r = await fetch(`${FIREBASE_URL}/${path}/${kunciFinal}.json`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(dataSimpan) });
             if (!r.ok) throw new Error('fail');
-            tampilkanStatus('Akun tersimpan. Bisa langsung dipakai login.', 'sukses');
+            tampilkanStatus('Akun tersimpan.', 'sukses');
             resetFormAkun();
             muatAkunAll();
         } catch (e) { tampilkanStatus('Gagal menyimpan akun.', 'gagal'); }
@@ -1599,67 +1594,43 @@
 
     async function hapusSemuaAkun() {
         const list = daftarAkun[subTabAkun] || [];
-        if (list.length === 0) { alert('Tidak ada akun untuk dihapus.'); return; }
-
+        if (list.length === 0) { alert('Tidak ada akun.'); return; }
         const labelTipe = subTabAkun === 'admin' ? 'Admin' : (subTabAkun === 'guru' ? 'Guru' : 'Siswa');
-        const ya1 = await konfirmasi(
-            `Hapus SEMUA ${list.length} akun ${labelTipe}?\n\nTindakan ini TIDAK BISA DIBATALKAN.`,
-            '⚠️ Peringatan', 'Ya, Lanjutkan'
-        );
+        const ya1 = await konfirmasi(`Hapus SEMUA ${list.length} akun ${labelTipe}?\n\nTIDAK BISA DIBATALKAN.`, '⚠️ Peringatan', 'Ya, Lanjutkan');
         if (!ya1) return;
-
-        const ya2 = await konfirmasi(
-            `Konfirmasi terakhir:\n\nYakin ingin menghapus ${list.length} akun ${labelTipe}?`,
-            '⚠️ Konfirmasi Terakhir', 'Ya, Hapus Semua'
-        );
+        const ya2 = await konfirmasi(`Konfirmasi terakhir:\n\nYakin hapus ${list.length} akun ${labelTipe}?`, '⚠️ Konfirmasi Terakhir', 'Ya, Hapus Semua');
         if (!ya2) return;
-
         tampilkanStatus(`Menghapus ${list.length} akun ${labelTipe}...`, 'info');
-
         let sukses = 0, gagal = 0;
         const path = PATH_AKUN[subTabAkun];
-
         for (const a of list) {
             try {
                 const r = await fetch(`${FIREBASE_URL}/${path}/${a.kunci}.json`, { method: 'DELETE' });
                 if (r.ok) sukses++; else gagal++;
             } catch (e) { gagal++; }
         }
-
-        if (gagal > 0) {
-            tampilkanStatus(`${sukses} dihapus, ${gagal} gagal.`, 'info');
-        } else {
-            tampilkanStatus(`✅ ${sukses} akun ${labelTipe} berhasil dihapus.`, 'sukses');
-        }
+        if (gagal > 0) tampilkanStatus(`${sukses} dihapus, ${gagal} gagal.`, 'info');
+        else tampilkanStatus(`✅ ${sukses} akun ${labelTipe} berhasil dihapus.`, 'sukses');
         muatAkunAll();
     }
 
     // ============ IMPORT AKUN CSV ============
     function bukaImportAkunCSV() {
         const p = document.getElementById('petunjuk-import-akun');
-        if (subTabAkun === 'siswa') {
-            p.innerHTML = '<b>Format Siswa:</b> <code>Nama, NISN, Kelas</code><br>Baris pertama = header (diabaikan).';
-        } else {
-            p.innerHTML = '<b>Format ' + (subTabAkun === 'admin' ? 'Admin' : 'Guru') + ':</b> <code>Nama, Username, Password</code><br>Baris pertama = header (diabaikan).';
-        }
+        if (subTabAkun === 'siswa') p.innerHTML = '<b>Format Siswa:</b> <code>Nama, NISN, Kelas</code><br>Baris pertama = header.';
+        else p.innerHTML = '<b>Format ' + (subTabAkun === 'admin' ? 'Admin' : 'Guru') + ':</b> <code>Nama, Username, Password</code><br>Baris pertama = header.';
         document.getElementById('input-csv-akun').value = '';
         document.getElementById('popup-import-akun').classList.add('tampil');
     }
 
     function lihatTemplateAkun() {
         let contoh;
-        if (subTabAkun === 'siswa') {
-            contoh = [['Nama','NISN','Kelas'], ['Ahmad Fauzi','12345','X TKJ 1'], ['Rina Wati','12346','X TKJ 1']];
-        } else {
-            contoh = [['Nama','Username','Password'], ['Budi Santoso','budi','budi123'], ['Siti Aminah','siti','siti456']];
-        }
+        if (subTabAkun === 'siswa') contoh = [['Nama','NISN','Kelas'], ['Ahmad Fauzi','12345','X TKJ 1'], ['Rina Wati','12346','X TKJ 1']];
+        else contoh = [['Nama','Username','Password'], ['Budi Santoso','budi','budi123'], ['Siti Aminah','siti','siti456']];
         document.getElementById('isi-template-akun').value = contoh.map(r => r.map(escapeCSV).join(',')).join('\n');
         document.getElementById('popup-template-akun').classList.add('tampil');
     }
-    function copyTemplateAkun() {
-        const ok = copyTextarea('isi-template-akun');
-        if (ok) tampilkanStatus('Copy berhasil.', 'sukses'); else alert('Tekan lama lalu copy manual.');
-    }
+    function copyTemplateAkun() { const ok = copyTextarea('isi-template-akun'); if (ok) tampilkanStatus('Copy berhasil.', 'sukses'); else alert('Tekan lama lalu copy manual.'); }
 
     async function prosesImportAkunCSV() {
         const teks = document.getElementById('input-csv-akun').value.trim();
@@ -1667,17 +1638,14 @@
         const delim = detectDelimiter(teks);
         const baris = teks.split(/\r?\n/).filter(b => b.trim() !== '');
         if (baris.length < 2) { alert('Minimal header + 1 baris.'); return; }
-
         const path = PATH_AKUN[subTabAkun];
         let ok = 0, skip = 0;
-
         for (let i = 1; i < baris.length; i++) {
             const b = parseBarisCSV(baris[i], delim);
             if (!b || b.length < 3) { skip++; continue; }
             const nama = String(b[0]||'').trim();
             const kunci = String(b[1]||'').trim();
             if (!nama || !kunci) { skip++; continue; }
-
             let data, kunciFinal;
             if (subTabAkun === 'siswa') {
                 const kelas = String(b[2]||'').trim();
@@ -1690,25 +1658,18 @@
                 kunciFinal = kunci.toLowerCase();
                 data = { username: kunciFinal, nama, password };
             }
-
             try {
-                const r = await fetch(`${FIREBASE_URL}/${path}/${kunciFinal}.json`, {
-                    method: 'PUT', headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify(data)
-                });
+                const r = await fetch(`${FIREBASE_URL}/${path}/${kunciFinal}.json`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
                 if (r.ok) ok++; else skip++;
             } catch (e) { skip++; }
         }
-
         tutupPopup('popup-import-akun');
         if (ok === 0) alert('Tidak ada akun berhasil diimport.');
         else tampilkanStatus(`${ok} akun diimport${skip ? `, ${skip} dilewati` : ''}.`, 'sukses');
         muatAkunAll();
     }
 
-    // ============================================================
-    // PUBLIKASI & CETAK
-    // ============================================================
+    // ============ PUBLIKASI & CETAK ============
     async function muatTranskrip() {
         try {
             const [rSiswa, rMapel, rHasil, rPub] = await Promise.all([
@@ -1728,7 +1689,6 @@
 
             updateStatusPublikasi(dPub === true);
 
-            // Kumpulkan kelas dari data siswa
             const setKelas = new Set();
             semuaSiswaGlobal.forEach(s => {
                 const kls = (s.kelas || '').trim();
@@ -1737,17 +1697,13 @@
             const kelasUnik = [...setKelas].sort();
 
             let opsiKelasCetak = '<option value="">-- Pilih Kelas --</option>';
-            if (kelasUnik.length > 0) {
-                opsiKelasCetak += kelasUnik.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-            }
+            if (kelasUnik.length > 0) opsiKelasCetak += kelasUnik.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
             opsiKelasCetak += '<option value="__SEMUA__">📋 Semua Siswa (tanpa filter kelas)</option>';
             document.getElementById('pilih-kelas-cetak').innerHTML = opsiKelasCetak;
 
             document.getElementById('pilih-mapel-cetak').innerHTML =
                 '<option value="">📚 Semua Mapel (Tabel Lengkap)</option>' +
-                semuaMapelGlobal
-                    .sort((a, b) => (a.nama_mapel || '').localeCompare(b.nama_mapel || ''))
-                    .map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.nama_mapel || '')}</option>`).join('');
+                semuaMapelGlobal.sort((a, b) => (a.nama_mapel || '').localeCompare(b.nama_mapel || '')).map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.nama_mapel || '')}</option>`).join('');
         } catch (e) { tampilkanStatus('Gagal memuat data.', 'gagal'); }
     }
 
@@ -1772,20 +1728,11 @@
             const r = await fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`);
             const current = await r.json();
             const next = current !== true;
-            const pesan = next
-                ? 'Kirim semua nilai ke siswa?\n\nSiswa akan bisa melihat transkrip nilai mereka di halaman ujian.'
-                : 'Tarik nilai dari siswa?\n\nSiswa tidak akan bisa melihat nilai lagi sampai dipublikasikan ulang.';
+            const pesan = next ? 'Kirim semua nilai ke siswa?\n\nSiswa akan bisa melihat transkrip nilai mereka.' : 'Tarik nilai dari siswa?';
             const ya = await konfirmasi(pesan, next ? 'Publikasikan' : 'Tarik Nilai', 'Ya');
             if (!ya) return;
-
-            await fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`, {
-                method: 'PUT', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify(next)
-            });
-            await fetch(`${FIREBASE_URL}/pengaturan/waktu_publikasi.json`, {
-                method: 'PUT', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify(next ? new Date().toLocaleString('id-ID') : '')
-            });
+            await fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(next) });
+            await fetch(`${FIREBASE_URL}/pengaturan/waktu_publikasi.json`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(next ? new Date().toLocaleString('id-ID') : '') });
             updateStatusPublikasi(next);
             tampilkanStatus(next ? '✅ Nilai dipublikasikan ke siswa.' : 'Nilai ditarik dari siswa.', 'sukses');
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
@@ -1797,9 +1744,7 @@
         const nilaiEssay = h.nilai_essay != null ? h.nilai_essay : null;
         const totalPg = h.total_pg || 0;
         const totalEssay = h.total_essay || 0;
-        if (nilaiEssay != null) {
-            return (totalPg + totalEssay) === 0 ? 0 : Math.round((nilaiPg * totalPg + nilaiEssay * totalEssay) / (totalPg + totalEssay));
-        }
+        if (nilaiEssay != null) return (totalPg + totalEssay) === 0 ? 0 : Math.round((nilaiPg * totalPg + nilaiEssay * totalEssay) / (totalPg + totalEssay));
         if (totalPg > 0 && totalEssay === 0) return nilaiPg;
         return 'Belum dinilai';
     }
@@ -1815,8 +1760,7 @@
         if (!kelas) { alert('Pilih kelas dulu.'); return; }
         tutupPopup('popup-cetak-kelas');
 
-        let siswa;
-        let labelKelas;
+        let siswa, labelKelas;
         if (kelas === '__SEMUA__') {
             siswa = semuaSiswaGlobal.slice();
             labelKelas = 'Semua Siswa';
@@ -1826,10 +1770,7 @@
         }
         siswa.sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
 
-        if (siswa.length === 0) {
-            alert('Tidak ada siswa di kelas "' + kelas + '".\n\nCoba pilih "Semua Siswa (tanpa filter kelas)".');
-            return;
-        }
+        if (siswa.length === 0) { alert('Tidak ada siswa di kelas ini.'); return; }
 
         if (mapelId) {
             const mapel = semuaMapelGlobal.find(m => m.id === mapelId);
@@ -1856,43 +1797,26 @@
 
     function jalankanPrint() {
         const iframe = document.getElementById('iframe-cetak');
-        if (!iframe || !iframe.srcdoc) {
-            alert('Konten cetak kosong. Coba tutup dan buka lagi.');
-            return;
-        }
-
+        if (!iframe || !iframe.srcdoc) { alert('Konten cetak kosong.'); return; }
         try {
             const cw = iframe.contentWindow;
-            if (cw && typeof cw.print === 'function') {
-                cw.focus();
-                cw.print();
-                return;
-            }
-        } catch (e) { console.log('Iframe print gagal:', e); }
-
+            if (cw && typeof cw.print === 'function') { cw.focus(); cw.print(); return; }
+        } catch (e) {}
         try {
             const w = window.open('', '_blank');
             if (w) {
                 w.document.write(iframe.srcdoc);
                 w.document.close();
-                setTimeout(() => {
-                    try { w.focus(); w.print(); } catch (e) {}
-                }, 500);
+                setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 500);
                 return;
             }
-        } catch (e) { console.log('Window.open gagal:', e); }
-
-        try {
-            window.print();
-            return;
-        } catch (e) { console.log('Window.print gagal:', e); }
-
-        alert('⚠️ Print tidak didukung di perangkat ini.\n\nAlternatif:\n• Screenshot tampilan preview langsung dari HP\n• Buka halaman ini di Chrome desktop untuk cetak/PDF\n• Gunakan tombol "Export CSV" untuk data mentah');
+        } catch (e) {}
+        try { window.print(); return; } catch (e) {}
+        alert('⚠️ Print tidak didukung di perangkat ini.\n\nAlternatif: Screenshot tampilan preview.');
     }
 
     function cetakPerKelasSemuaMapel(kelas, siswa) {
-        let html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-<style>
+        let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; padding: 15px; font-size: 12px; }
     h2 { text-align: center; margin-bottom: 15px; font-size: 15px; }
@@ -1906,12 +1830,8 @@
 </style></head><body>
 <h2>DAFTAR NILAI UJIAN - ${escapeHtml(kelas)}</h2>
 <table><thead><tr><th>No</th><th>Nama Siswa</th><th>NISN</th>`;
-
-        semuaMapelGlobal.forEach(m => {
-            html += `<th>${escapeHtml(m.nama_mapel || '')}</th>`;
-        });
+        semuaMapelGlobal.forEach(m => { html += `<th>${escapeHtml(m.nama_mapel || '')}</th>`; });
         html += `</tr></thead><tbody>`;
-
         siswa.forEach((s, i) => {
             const nisn = s.nisn || s.kunci;
             html += `<tr><td class="no">${i+1}</td><td class="nama">${escapeHtml(s.nama || '-')}</td><td class="nisn">${escapeHtml(nisn || '-')}</td>`;
@@ -1921,19 +1841,13 @@
             });
             html += `</tr>`;
         });
-
-        html += `</tbody></table>
-<p style="font-size:9px;color:#666;margin-top:10px;">Dicetak: ${new Date().toLocaleString('id-ID')}</p>
-</body></html>`;
-
+        html += `</tbody></table><p style="font-size:9px;color:#666;margin-top:10px;">Dicetak: ${new Date().toLocaleString('id-ID')}</p></body></html>`;
         tampilkanOverlayCetak(html, 'Nilai ' + kelas);
     }
 
     function cetakPerKelasPerMapel(kelas, mapel, siswa) {
         const dataHasilMapel = hasilUjianGlobal[mapel.id] || {};
-
-        let html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-<style>
+        let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; padding: 12px; font-size: 11px; }
     h2 { text-align: center; margin-bottom: 4px; font-size: 14px; }
@@ -1951,11 +1865,7 @@
 </style></head><body>
 <h2>DAFTAR NILAI UJIAN</h2>
 <h3>Mapel: <b>${escapeHtml(mapel.nama_mapel || '')}</b> · ${escapeHtml(kelas)}${mapel.guru ? ' · Guru: ' + escapeHtml(mapel.guru) : ''}</h3>
-<table><thead><tr>
-    <th>No</th><th>Nama Siswa</th><th>NISN</th>
-    <th>Benar PG</th><th>Nilai PG</th><th>Nilai Essay</th><th>Nilai Akhir</th><th>Status</th>
-</tr></thead><tbody>`;
-
+<table><thead><tr><th>No</th><th>Nama Siswa</th><th>NISN</th><th>Benar PG</th><th>Nilai PG</th><th>Nilai Essay</th><th>Nilai Akhir</th><th>Status</th></tr></thead><tbody>`;
         siswa.forEach((s, i) => {
             const nisn = s.nisn || s.kunci;
             const h = dataHasilMapel[nisn] || null;
@@ -1972,31 +1882,16 @@
                 else if (h.status === 'menunggu_penilaian') statusTeks = 'Menunggu Essay';
                 else statusTeks = h.status || '-';
             }
-            html += `<tr>
-                <td class="no">${i+1}</td>
-                <td class="nama">${escapeHtml(s.nama || '-')}</td>
-                <td class="nisn">${escapeHtml(nisn || '-')}</td>
-                <td class="benar"><b>${escapeHtml(benarPg)}</b></td>
-                <td class="nilai">${escapeHtml(String(nilaiPg))}</td>
-                <td class="nilai">${escapeHtml(String(nilaiEssay))}</td>
-                <td class="nilai"><b>${escapeHtml(String(nilaiAkhir))}</b></td>
-                <td class="status">${escapeHtml(statusTeks)}</td>
-            </tr>`;
+            html += `<tr><td class="no">${i+1}</td><td class="nama">${escapeHtml(s.nama || '-')}</td><td class="nisn">${escapeHtml(nisn || '-')}</td><td class="benar"><b>${escapeHtml(benarPg)}</b></td><td class="nilai">${escapeHtml(String(nilaiPg))}</td><td class="nilai">${escapeHtml(String(nilaiEssay))}</td><td class="nilai"><b>${escapeHtml(String(nilaiAkhir))}</b></td><td class="status">${escapeHtml(statusTeks)}</td></tr>`;
         });
-
-        html += `</tbody></table>
-<p style="font-size:8px;color:#666;margin-top:8px;">Dicetak: ${new Date().toLocaleString('id-ID')}</p>
-</body></html>`;
-
+        html += `</tbody></table><p style="font-size:8px;color:#666;margin-top:8px;">Dicetak: ${new Date().toLocaleString('id-ID')}</p></body></html>`;
         tampilkanOverlayCetak(html, mapel.nama_mapel + ' - ' + kelas);
     }
 
     // ============ INIT ============
     ambilParamAtauTanya();
     muatDaftarMapel();
-    setTimeout(() => {
-        document.getElementById('peringatan-guru').style.display = 'block';
-    }, 100);
+    setTimeout(() => { document.getElementById('peringatan-guru').style.display = 'block'; }, 100);
 </script>
 </body>
 </html>
