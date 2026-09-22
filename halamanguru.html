@@ -125,6 +125,7 @@
 
     <div class="pesan-status" id="pesan-status"></div>
 
+    <!-- LAYAR 1: DAFTAR MAPEL -->
     <div id="layar-daftar-mapel" style="display:flex;flex-direction:column;gap:16px;">
         <div class="baris-tombol">
             <button class="btn-sekunder" onclick="bukaKoreksiBersama()">🤝 Koreksi Bersama</button>
@@ -142,6 +143,7 @@
         <div id="daftar-mapel"></div>
     </div>
 
+    <!-- LAYAR KOREKSI BERSAMA -->
     <div id="layar-koreksi-bersama" style="display:none;flex-direction:column;gap:16px;">
         <button class="btn-sekunder" onclick="kembaliDariKoreksiBersama()">← Kembali</button>
         <div class="card">
@@ -158,18 +160,22 @@
         <div id="kolab-tab-selesai" style="display:none;"></div>
     </div>
 
+    <!-- LAYAR 2: KELOLA SOAL -->
     <div id="layar-kelola-soal" style="display:none;flex-direction:column;gap:16px;">
         <button class="btn-sekunder" onclick="kembaliKeDaftarMapel()">← Kembali</button>
+
         <div class="card">
             <h3 id="judul-mapel-aktif" style="color:#0f172a;"></h3>
             <div style="font-size:12px;color:#475569;" id="info-kelas-mapel"></div>
             <div class="ringkasan-soal" id="ringkasan-soal"></div>
         </div>
+
         <div class="tab-nav">
             <button id="tab-btn-soal" class="aktif" onclick="gantiTabGuru('soal')">📝 Soal</button>
             <button id="tab-btn-nilai" onclick="gantiTabGuru('nilai')">📊 Nilai</button>
             <button id="tab-btn-kelas" onclick="gantiTabGuru('kelas')">🏫 Edit Kelas</button>
         </div>
+
         <div id="tab-soal" style="display:flex;flex-direction:column;gap:16px;">
             <div id="peringatan-aktif" style="display:none;">
                 <div class="peringatan-kunci">⚠️ <b>Mapel sedang aktif / sedang diujikan.</b> Soal tidak bisa diedit sampai admin menonaktifkannya.</div>
@@ -187,6 +193,7 @@
             </div>
             <div id="daftar-soal"></div>
         </div>
+
         <div id="tab-nilai" style="display:none;flex-direction:column;gap:12px;">
             <div class="card">
                 <b style="font-size:14px;color:#0f172a;">Nilai Siswa</b>
@@ -195,6 +202,7 @@
             </div>
             <div id="daftar-nilai-siswa"></div>
         </div>
+
         <div id="tab-kelas" style="display:none;flex-direction:column;gap:12px;">
             <div class="card">
                 <b style="font-size:14px;color:#0f172a;">Kelas untuk Mapel Ini</b>
@@ -202,19 +210,38 @@
                 <button class="btn-utama" onclick="simpanKelasMapel()">Simpan Perubahan Kelas</button>
             </div>
         </div>
+
         <button class="btn-sekunder" onclick="lihatHasilPerKelas()">📸 Hasil Ujian per Kelas (untuk screenshot)</button>
     </div>
 </div>
 
+<!-- POPUP PENGATURAN AKUN -->
 <div class="popup-overlay" id="popup-akun-saya">
     <div class="popup-box">
         <h3>⚙️ Pengaturan Akun Saya</h3>
-        <div class="info-box">ℹ️ Anda bisa mengubah <b>nama lengkap</b> dan <b>password</b> sendiri. Username tidak bisa diubah.</div>
-        <div class="field field-readonly"><label>Username (tidak bisa diubah)</label><input type="text" id="akun-username" readonly></div>
-        <div class="field"><label>Nama Lengkap</label><input type="text" id="akun-nama" placeholder="Nama lengkap Anda"></div>
-        <div class="field"><label>Password Lama (wajib untuk verifikasi)</label><input type="text" id="akun-pass-lama" placeholder="Masukkan password lama"></div>
-        <div class="field"><label>Password Baru (kosongkan jika tidak ingin ganti)</label><input type="text" id="akun-pass-baru" placeholder="Password baru"></div>
-        <div class="field"><label>Konfirmasi Password Baru</label><input type="text" id="akun-pass-konfirmasi" placeholder="Ulangi password baru"></div>
+        <div class="info-box">
+            ℹ️ Anda bisa mengubah <b>nama lengkap</b> dan <b>password</b> sendiri. Username tidak bisa diubah.
+        </div>
+        <div class="field field-readonly">
+            <label>Username (tidak bisa diubah)</label>
+            <input type="text" id="akun-username" readonly>
+        </div>
+        <div class="field">
+            <label>Nama Lengkap</label>
+            <input type="text" id="akun-nama" placeholder="Nama lengkap Anda">
+        </div>
+        <div class="field">
+            <label>Password Lama (wajib untuk verifikasi)</label>
+            <input type="text" id="akun-pass-lama" placeholder="Masukkan password lama">
+        </div>
+        <div class="field">
+            <label>Password Baru (kosongkan jika tidak ingin ganti)</label>
+            <input type="text" id="akun-pass-baru" placeholder="Password baru">
+        </div>
+        <div class="field">
+            <label>Konfirmasi Password Baru</label>
+            <input type="text" id="akun-pass-konfirmasi" placeholder="Ulangi password baru">
+        </div>
         <div class="baris-tombol">
             <button class="btn-sekunder" onclick="tutupPopup('popup-akun-saya')">Batal</button>
             <button class="btn-utama" onclick="simpanPerubahanAkun()">💾 Simpan</button>
@@ -222,6 +249,7 @@
     </div>
 </div>
 
+<!-- POPUP FORM SOAL -->
 <div class="popup-overlay" id="popup-form-soal">
     <div class="popup-box">
         <h3 id="judul-popup-soal">Tambah Soal</h3>
@@ -250,6 +278,7 @@
     </div>
 </div>
 
+<!-- POPUP IMPORT CSV -->
 <div class="popup-overlay" id="popup-import">
     <div class="popup-box">
         <h3>Import Soal dari Excel / CSV</h3>
@@ -270,6 +299,7 @@
     </div>
 </div>
 
+<!-- POPUP TEMPLATE -->
 <div class="popup-overlay" id="popup-template">
     <div class="popup-box">
         <h3>Template CSV</h3>
@@ -281,6 +311,7 @@
     </div>
 </div>
 
+<!-- POPUP NILAI ESSAY PER SOAL -->
 <div class="popup-overlay" id="popup-nilai-essay">
     <div class="popup-box">
         <h3 id="judul-nilai-essay">Periksa Essay</h3>
@@ -302,6 +333,7 @@
     </div>
 </div>
 
+<!-- POPUP HASIL PER KELAS -->
 <div class="popup-overlay" id="popup-hasil-kelas">
     <div class="popup-box" style="background:#fff;">
         <h3 id="judul-hasil-kelas">Hasil Ujian</h3>
@@ -314,6 +346,7 @@
     </div>
 </div>
 
+<!-- POPUP KONFIRMASI -->
 <div class="popup-overlay" id="popup-konfirmasi">
     <div class="popup-box" style="text-align:center;">
         <h3 id="judul-konfirmasi">Konfirmasi</h3>
@@ -340,7 +373,11 @@
         const bersih = {};
         for (const sid in sumber) {
             const s = sumber[sid];
-            bersih[sid] = { tipe: s.tipe === 'essay' ? 'essay' : 'pg', pertanyaan: s.pertanyaan || '', pilihan: s.pilihan || [] };
+            bersih[sid] = {
+                tipe: s.tipe === 'essay' ? 'essay' : 'pg',
+                pertanyaan: s.pertanyaan || '',
+                pilihan: s.pilihan || []
+            };
         }
         return bersih;
     }
@@ -469,6 +506,9 @@
         setTimeout(() => k.classList.remove('tampil'), 3500);
     }
 
+    // ============================================================
+    // PENGATURAN AKUN GURU
+    // ============================================================
     async function bukaPengaturanAkun() {
         document.getElementById('akun-username').value = usernameGuru;
         document.getElementById('akun-nama').value = '';
@@ -479,7 +519,9 @@
         try {
             const r = await fetch(`${FIREBASE_URL}/guru_akun/${usernameGuru}.json`);
             const data = await r.json();
-            if (data) { document.getElementById('akun-nama').value = data.nama || ''; }
+            if (data) {
+                document.getElementById('akun-nama').value = data.nama || '';
+            }
         } catch (e) {}
     }
 
@@ -493,20 +535,36 @@
         if (!passLama) { alert('Masukkan password lama untuk verifikasi.'); return; }
 
         let dataAkun = null;
-        try { const r = await fetch(`${FIREBASE_URL}/guru_akun/${usernameGuru}.json`); dataAkun = await r.json(); } catch (e) {}
+        try {
+            const r = await fetch(`${FIREBASE_URL}/guru_akun/${usernameGuru}.json`);
+            dataAkun = await r.json();
+        } catch (e) {}
         if (!dataAkun) { alert('Data akun tidak ditemukan.'); return; }
-        if (dataAkun.password !== passLama) { alert('Password lama salah. Periksa kembali.'); return; }
+
+        if (dataAkun.password !== passLama) {
+            alert('Password lama salah. Periksa kembali.');
+            return;
+        }
 
         let passwordFinal = dataAkun.password;
         if (passBaru || passKonfirm) {
-            if (passBaru !== passKonfirm) { alert('Konfirmasi password baru tidak cocok.'); return; }
-            if (passBaru.length < 4) { alert('Password baru minimal 4 karakter.'); return; }
+            if (passBaru !== passKonfirm) {
+                alert('Konfirmasi password baru tidak cocok.');
+                return;
+            }
+            if (passBaru.length < 4) {
+                alert('Password baru minimal 4 karakter.');
+                return;
+            }
             passwordFinal = passBaru;
         }
 
         const namaBerubah = namaBaru !== (dataAkun.nama || '');
         const passwordBerubah = passwordFinal !== dataAkun.password;
-        if (!namaBerubah && !passwordBerubah) { alert('Tidak ada perubahan yang perlu disimpan.'); return; }
+        if (!namaBerubah && !passwordBerubah) {
+            alert('Tidak ada perubahan yang perlu disimpan.');
+            return;
+        }
 
         let pesan = 'Simpan perubahan akun?';
         if (namaBerubah && passwordBerubah) pesan = `Ubah nama menjadi "${namaBaru}" dan ganti password?`;
@@ -517,18 +575,30 @@
         if (!ya) return;
 
         try {
-            const dataUpdate = { username: usernameGuru, nama: namaBaru, password: passwordFinal };
+            const dataUpdate = {
+                username: usernameGuru,
+                nama: namaBaru,
+                password: passwordFinal
+            };
             const r = await fetch(`${FIREBASE_URL}/guru_akun/${usernameGuru}.json`, {
-                method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(dataUpdate)
+                method: 'PUT', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(dataUpdate)
             });
             if (!r.ok) throw new Error('fail');
+
             namaGuru = namaBaru;
             document.getElementById('info-guru').textContent = 'Selamat datang, ' + namaBaru;
+
             tutupPopup('popup-akun-saya');
             tampilkanStatus('✅ Akun berhasil diperbarui.', 'sukses');
-        } catch (e) { alert('Gagal menyimpan. Periksa koneksi internet.'); }
+        } catch (e) {
+            alert('Gagal menyimpan. Periksa koneksi internet.');
+        }
     }
 
+    // ============================================================
+    // MUAT DAFTAR KELAS DARI DATA SISWA
+    // ============================================================
     async function muatDaftarKelas() {
         try {
             const rSiswa = await fetch(`${FIREBASE_URL}/peserta_ujian.json`);
@@ -628,6 +698,9 @@
         } catch (e) { tampilkanStatus('Gagal menghapus.', 'gagal'); }
     }
 
+    // ============================================================
+    // KOREKSI BERSAMA
+    // ============================================================
     function bukaKoreksiBersama() {
         document.getElementById('layar-daftar-mapel').style.display = 'none';
         document.getElementById('layar-koreksi-bersama').style.display = 'flex';
@@ -869,6 +942,9 @@
         } catch (e) { k.innerHTML = '<p class="kosong">Gagal memuat.</p>'; }
     }
 
+    // ============================================================
+    // BUKA KOREKSI UNTUK HELPER
+    // ============================================================
     async function bukaKoreksiMapelHelper(mapelId, namaMapel) {
         modeAksesMapel = 'helper';
         mapelAktifId = mapelId;
@@ -880,7 +956,10 @@
         document.getElementById('layar-kelola-soal').style.display = 'flex';
 
         let mapelData = null;
-        try { const r = await fetch(`${FIREBASE_URL}/mapel/${mapelId}.json`); mapelData = await r.json(); } catch (e) {}
+        try {
+            const r = await fetch(`${FIREBASE_URL}/mapel/${mapelId}.json`);
+            mapelData = await r.json();
+        } catch (e) {}
 
         mapelAktifStatus = !!(mapelData && mapelData.status_aktif);
         const kelasList = parseKelasList(mapelData ? mapelData.kelas : []);
@@ -907,6 +986,9 @@
         muatNilaiMapel();
     }
 
+    // ============================================================
+    // KELOLA SOAL
+    // ============================================================
     async function bukaKelolaSoal(mapelId, namaMapel) {
         mapelAktifId = mapelId; namaMapelAktif = namaMapel;
         modeAksesMapel = 'owner';
@@ -1206,6 +1288,9 @@
         else tampilkanStatus('❌ Gagal merilis.', 'gagal');
     }
 
+    // ============================================================
+    // NILAI SISWA
+    // ============================================================
     async function muatNilaiMapel() {
         const k = document.getElementById('daftar-nilai-siswa');
         k.innerHTML = '<p class="kosong">Memuat nilai...</p>';
@@ -1290,6 +1375,9 @@
         }).join('');
     }
 
+    // ============================================================
+    // KOREKSI ESSAY PER SOAL (dengan lock)
+    // ============================================================
     async function bukaKoreksiEssay(nisn) {
         try {
             const rLock = await fetch(`${FIREBASE_URL}/koreksi_lock/${mapelAktifId}/${nisn}.json`);
@@ -1528,6 +1616,9 @@
         }
     }
 
+    // ============================================================
+    // HASIL PER KELAS
+    // ============================================================
     async function lihatHasilPerKelas() {
         const k = document.getElementById('isi-hasil-kelas');
         k.innerHTML = '<p class="kosong">Memuat...</p>';
@@ -1578,6 +1669,7 @@
                 </div>`).join('')}`;
     }
 
+    // ============ INIT ============
     ambilParamAtauTanya();
     Promise.all([muatDaftarKelas(), muatDaftarMapel()]);
 </script>
