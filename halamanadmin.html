@@ -139,7 +139,6 @@
     .siswa-item .info-siswa span { font-size: 11px; color: #475569; }
     .siswa-item .aksi { flex-shrink: 0; }
 
-    /* ── FITUR JADWAL (RAPI) ── */
     .jdwal-form-card { background: rgba(255, 255, 255, 0.7); border-radius: 16px; padding: 18px 16px; box-shadow: 0 4px 16px rgba(0, 100, 0, 0.08); display: flex; flex-direction: column; gap: 16px; }
     .jdwal-group { display: flex; flex-direction: column; gap: 8px; }
     .jdwal-group label { font-size: 13px; font-weight: 700; color: #14532d; margin-bottom: 2px; }
@@ -160,14 +159,12 @@
     .jadwal-item .aksi { display: flex; gap: 6px; margin-top: 4px; }
     .jadwal-item .aksi button { flex: 1; padding: 8px; font-size: 12px; }
 
-    /* ── APPROVAL BERLAPIS ── */
     .tahap-approval { display: flex; gap: 4px; font-size: 10px; margin: 4px 0; flex-wrap: wrap; }
     .tahap-approval .tahap { padding: 3px 8px; border-radius: 999px; background: #e2e8f0; color: #64748b; font-weight: 600; }
     .tahap-approval .tahap.selesai { background: #dcfce7; color: #166534; }
     .tahap-approval .tahap.aktif { background: #fef3c7; color: #92400e; }
     .tahap-approval .tahap.ditolak { background: #fee2e2; color: #991b1b; }
 
-    /* ── FITUR BARU: FORM MAPEL ── */
     .mapel-check-list { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; max-height: 200px; overflow-y: auto; padding: 8px; }
     .mapel-check-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #fff; border-radius: 8px; margin-bottom: 6px; border: 1px solid transparent; cursor: pointer; transition: all 0.15s; }
     .mapel-check-item:last-child { margin-bottom: 0; }
@@ -334,7 +331,7 @@
     </div>
 </div>
 
-<!-- ═══ POPUP FORM MAPEL (BARU) ═══ -->
+<!-- POPUP FORM MAPEL -->
 <div class="popup-overlay" id="popup-form-mapel">
     <div class="popup-box">
         <h3 id="judul-popup-mapel">Tambah Mapel</h3>
@@ -466,7 +463,7 @@
     </div>
 </div>
 
-<!-- POPUP CETAK -->
+<!-- OVERLAY CETAK -->
 <div class="overlay-cetak" id="overlay-cetak">
     <div class="overlay-cetak-header">
         <b id="judul-overlay-cetak">Cetak Nilai</b>
@@ -667,7 +664,7 @@
                     if (u) {
                         for (const nis in u) {
                             const st = u[nis].status;
-                            if (st === 'menunggu' || st === 'menunggu_admin') menungguAdmin++;
+                            if (st === 'menunggu_admin') menungguAdmin++;
                             else if (st === 'menunggu_pengawas') menungguPengawas++;
                         }
                     }
@@ -725,7 +722,6 @@
         document.getElementById('mp-nama').value = '';
         document.getElementById('mp-token').value = '';
 
-        // Load guru
         let dataGuru = {};
         try {
             const r = await fetch(`${FIREBASE_URL}/guru_akun.json`);
@@ -746,7 +742,6 @@
             }).join('');
         }
 
-        // Load kelas
         await muatDaftarKelasCache();
         const ck = document.getElementById('mp-kelas-container');
         if (daftarKelasCache.length === 0) {
@@ -759,7 +754,6 @@
                 </label>`).join('');
         }
 
-        // Isi data kalau edit
         if (id) {
             const m = daftarMapel.find(x => x.id === id);
             if (m) {
@@ -1518,7 +1512,7 @@
             for (const mid in data) {
                 for (const nis in data[mid]) {
                     const st = data[mid][nis].status;
-                    if (st === 'menunggu' || st === 'menunggu_admin') siapApprove.push({ mid, nis });
+                    if (st === 'menunggu_admin') siapApprove.push({ mid, nis });
                 }
             }
             if (siapApprove.length > 0) {
@@ -1545,7 +1539,7 @@
             let tahapHtml = '<div class="tahap-approval">';
             if (st === 'menunggu_pengawas') {
                 tahapHtml += '<span class="tahap aktif">⏳ Menunggu Pengawas</span><span class="tahap">⏳ Menunggu Admin</span>';
-            } else if (st === 'menunggu' || st === 'menunggu_admin') {
+            } else if (st === 'menunggu_admin') {
                 tahapHtml += '<span class="tahap selesai">✅ Pengawas</span><span class="tahap aktif">⏳ Menunggu Admin</span>';
             } else if (st === 'disetujui') {
                 tahapHtml += '<span class="tahap selesai">✅ Pengawas</span><span class="tahap selesai">✅ Admin</span>';
@@ -1556,7 +1550,7 @@
             }
             tahapHtml += '</div>';
 
-            if (st === 'menunggu' || st === 'menunggu_admin') {
+            if (st === 'menunggu_admin') {
                 b = '<span class="badge badge-info">Siap Approve</span>';
                 a = `<div class="baris-tombol"><button class="btn-bahaya" onclick="putuskanUlang('${mapelId}','${escapeHtml(p.nis)}','ditolak',${!!global})">Tolak</button><button class="btn-utama" onclick="putuskanUlang('${mapelId}','${escapeHtml(p.nis)}','disetujui',${!!global})">Setujui</button></div>`;
             } else if (st === 'menunggu_pengawas') {
@@ -1609,7 +1603,7 @@
             for (const mid in data) {
                 for (const nis in data[mid]) {
                     const st = data[mid][nis].status;
-                    if (st !== 'menunggu' && st !== 'menunggu_admin') { if (st === 'menunggu_pengawas') skip++; continue; }
+                    if (st !== 'menunggu_admin') { if (st === 'menunggu_pengawas') skip++; continue; }
                     await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mid}/${nis}.json`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ status: 'disetujui', waktu_keputusan: new Date().toLocaleString('id-ID'), disetujui_admin: true }) });
                     await fetch(`${FIREBASE_URL}/hasil_ujian/${mid}/${nis}.json`, { method: 'DELETE' });
                     await fetch(`${FIREBASE_URL}/nilai_essay/${mid}/${nis}.json`, { method: 'DELETE' });
@@ -1932,7 +1926,7 @@
     let statusPublikasiSekarang = false;
     async function muatTranskrip() {
         try {
-            const r = await fetch(`${FIREBASE_URL}/pengaturan/nilai_terkirim.json`);
+            const r = await fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`);
             const v = await r.json();
             statusPublikasiSekarang = !!v;
             const el = document.getElementById('status-publikasi');
@@ -1957,7 +1951,7 @@
         const ya = await konfirmasi(statusPublikasiSekarang ? 'Tarik nilai dari siswa? Siswa tidak akan bisa lihat nilai lagi.' : 'Kirim semua nilai ke siswa? Pastikan semua essay sudah dinilai.', 'Konfirmasi', 'Ya');
         if (!ya) return;
         try {
-            await fetch(`${FIREBASE_URL}/pengaturan/nilai_terkirim.json`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(!statusPublikasiSekarang) });
+            await fetch(`${FIREBASE_URL}/pengaturan/nilai_dipublikasikan.json`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(!statusPublikasiSekarang) });
             tampilkanStatus('Tersimpan.', 'sukses');
             muatTranskrip();
         } catch (e) { tampilkanStatus('Gagal.', 'gagal'); }
