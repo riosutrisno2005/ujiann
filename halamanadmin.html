@@ -280,7 +280,7 @@
 
         <div class="card">
             <b style="font-size:14px;color:#0f172a;">⚡ Aktifkan Seluruh Mapel Hari Ini</b>
-            <span style="font-size:12px;color:#475569;">Mengaktifkan semua mapel yang dijadwalkan hari ini (status_aktif = true). Mapel lain yang tidak terjadwal hari ini TIDAK diubah.</span>
+            <span style="font-size:12px;color:#475569;">Mengaktifkan semua mapel yang dijadwalkan hari ini (status_aktif = true) & membuat token otomatis jika belum ada.</span>
             <button class="btn-utama" style="background:#0f6b0f;" onclick="aktifkanSemuaMapelHariIni()">⚡ Aktifkan Semua Mapel Hari Ini</button>
         </div>
 
@@ -1421,8 +1421,9 @@
 
     async function aktifkanSemuaMapelHariIni() {
         const hariIni = tanggalHariIni();
-        const ya = await konfirmasi(`Aktifkan semua mapel yang dijadwalkan hari ini (${formatTanggalIndo(hariIni)})?\n\nMapel lain yang tidak terjadwal hari ini tidak akan diubah.`, 'Aktifkan Massal', 'Ya, Aktifkan');
+        const ya = await konfirmasi(`Aktifkan semua mapel yang dijadwalkan hari ini (${formatTanggalIndo(hariIni)})?\n\nMapel yang belum punya token akan dibuatkan token otomatis.`, 'Aktifkan Massal', 'Ya, Aktifkan');
         if (!ya) return;
+        tampilkanStatus('Mengaktifkan...', 'info');
         try {
             const r = await fetch(`${FIREBASE_URL}/jadwal_ujian.json`);
             const data = await r.json() || {};
@@ -1431,10 +1432,26 @@
                 if (data[id].tanggal === hariIni && data[id].mapel_id) mapelIds.add(data[id].mapel_id);
             }
             if (mapelIds.size === 0) { alert('Tidak ada mapel yang dijadwalkan hari ini.'); return; }
+            
             let ok = 0, gagal = 0;
             const tasks = [];
             for (const mapelId of mapelIds) {
-                tasks.push(fetch(`${FIREBASE_URL}/mapel/${mapelId}/status_aktif.json`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: 'true' }).then(res => res.ok ? ok++ : gagal++).catch(() => gagal++));
+                // Cek token yang ada
+                let tokenLama = '';
+                try {
+                    const rm = await fetch(`${FIREBASE_URL}/mapel/${mapelId}.json`);
+                    const mapelData = await rm.json();
+                    if (mapelData && mapelData.token) tokenLama = mapelData.token;
+                } catch(e) {}
+
+                const finalToken = tokenLama || buatTokenAcak();
+                const payload = { status_aktif: true, token: finalToken };
+
+                tasks.push(fetch(`${FIREBASE_URL}/mapel/${mapelId}.json`, { 
+                    method: 'PATCH', 
+                    headers: {'Content-Type':'application/json'}, 
+                    body: JSON.stringify(payload) 
+                }).then(res => res.ok ? ok++ : gagal++).catch(() => gagal++));
             }
             await Promise.all(tasks);
             tampilkanStatus(`✅ ${ok} mapel diaktifkan${gagal ? `, ${gagal} gagal` : ''}.`, 'sukses');
