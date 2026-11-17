@@ -716,7 +716,6 @@
                     daftarMapel.push({ id, ...data[id], jumlah_hasil: h ? Object.keys(h).length : 0, jumlah_pengajuan_menunggu: menungguAdmin, jumlah_pengajuan_pengawas: menungguPengawas });
                 }
             }
-            // Muat cache guru untuk render nama pengampu
             try {
                 const rG = await fetch(`${FIREBASE_URL}/guru_akun.json`);
                 daftarAkunGuruCache = await rG.json() || {};
@@ -773,12 +772,16 @@
         document.getElementById('mp-nama').value = '';
         document.getElementById('mp-token').value = '';
 
+        // Tampilkan popup terlebih dahulu agar user tidak menunggu
+        document.getElementById('popup-form-mapel').classList.add('tampil');
+
         let dataGuru = {};
         try {
             const r = await fetch(`${FIREBASE_URL}/guru_akun.json`);
             dataGuru = await r.json() || {};
             daftarAkunGuruCache = dataGuru;
-        } catch (e) {}
+        } catch (e) { console.error(e); }
+        
         const cg = document.getElementById('mp-guru-container');
         const keysGuru = Object.keys(dataGuru);
         if (keysGuru.length === 0) {
@@ -793,7 +796,11 @@
             }).join('');
         }
 
-        await muatDaftarKelasCache();
+        // Muat kelas dengan try-catch terpisah
+        try {
+            await muatDaftarKelasCache();
+        } catch (e) { console.error(e); }
+
         const ck = document.getElementById('mp-kelas-container');
         if (daftarKelasCache.length === 0) {
             ck.innerHTML = '<p style="font-size:12px;color:#b91c1c;text-align:center;padding:10px;">Belum ada kelas. Tambah siswa dulu di tab Akun.</p>';
@@ -805,6 +812,7 @@
                 </label>`).join('');
         }
 
+        // Isi data jika sedang edit
         if (id) {
             const m = daftarMapel.find(x => x.id === id);
             if (m) {
@@ -816,8 +824,6 @@
                 document.querySelectorAll('.mp-cb-kelas').forEach(cb => cb.checked = kelasList.includes(cb.value));
             }
         }
-
-        document.getElementById('popup-form-mapel').classList.add('tampil');
     }
 
     async function simpanMapelAdmin() {
@@ -865,7 +871,6 @@
                                 const j = dataJ[jid];
                                 if (j.mapel_id !== mapelSedangDiedit) continue;
                                 const kelasJadwal = arrayDariFirebase(j.kelas);
-                                // Kalau jadwal ini untuk kelas yang dihapus, hapus
                                 if (kelasJadwal.some(k => kelasDihapus.includes(k))) {
                                     hapusTasks.push(fetch(`${FIREBASE_URL}/jadwal_ujian/${jid}.json`, { method: 'DELETE' }));
                                 }
@@ -930,6 +935,28 @@
     // ============================================================
     // MULTI-KELAS SCHEDULER
     // ============================================================
+    async function muatDaftarKelasCache() {
+        try {
+            const rSiswa = await fetch(`${FIREBASE_URL}/peserta_ujian.json`);
+            const dSiswa = await rSiswa.json() || {};
+            const setKelas = new Set();
+            for (const nisn in dSiswa) {
+                const kls = (dSiswa[nisn].kelas || '').trim();
+                if (kls && kls !== '-') setKelas.add(kls);
+            }
+            daftarKelasCache = [...setKelas].sort();
+            
+            // Update datalist jika elemennya ada
+            const dl1 = document.getElementById('daftar-kelas-datalist');
+            const dl2 = document.getElementById('daftar-kelas-datalist-2');
+            const opt = daftarKelasCache.map(k => `<option value="${escapeHtml(k)}">`).join('');
+            if (dl1) dl1.innerHTML = opt;
+            if (dl2) dl2.innerHTML = opt;
+        } catch (e) { 
+            console.error("Gagal memuat cache kelas:", e); 
+        }
+    }
+
     async function muatFormJadwal() {
         jdwState = { mapelId: null, mapelData: null, kelasBelum: [], kelasAktif: null, dataPerKelas: {}, mode: 'tambah', jadwalExisting: {} };
         document.getElementById('judul-form-jadwal').textContent = 'Tambah Jadwal Baru';
@@ -943,10 +970,16 @@
         try {
             const rG = await fetch(`${FIREBASE_URL}/guru_akun.json`);
             daftarAkunGuruCache = await rG.json() || {};
-        } catch (e) {}
+        } catch (e) { console.error("Gagal memuat guru:", e); }
 
-        await muatDaftarKelasCache();
-        await refreshDropdownMapelJadwal();
+        try {
+            await muatDaftarKelasCache();
+        } catch (e) { console.error("Gagal memuat kelas:", e); }
+
+        try {
+            await refreshDropdownMapelJadwal();
+        } catch (e) { console.error("Gagal memuat dropdown mapel:", e); }
+
         muatDaftarJadwalAdmin();
     }
 
