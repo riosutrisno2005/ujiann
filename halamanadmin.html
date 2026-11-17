@@ -159,6 +159,19 @@
     .jadwal-item .aksi { display: flex; gap: 6px; margin-top: 4px; }
     .jadwal-item .aksi button { flex: 1; padding: 8px; font-size: 12px; }
 
+    /* ── CSS BARU: KELOMPOK JADWAL (ACCORDION) ── */
+    .grup-hari { background: rgba(255,255,255,0.7); border-radius: 14px; margin-bottom: 10px; overflow: hidden; border: 1px solid #e2e8f0; }
+    .grup-hari-header { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #fff; transition: background 0.2s; }
+    .grup-hari-header:hover { background: #f0fdf4; }
+    .grup-hari-header.aktif { background: #f0fdf4; border-bottom: 1px solid #e2e8f0; }
+    .grup-hari-info { display: flex; flex-direction: column; gap: 4px; }
+    .grup-hari-info b { font-size: 14px; color: #14532d; }
+    .grup-hari-info span { font-size: 12px; color: #475569; }
+    .grup-hari-arrow { font-size: 18px; color: #1b5e20; transition: transform 0.3s ease; }
+    .grup-hari-header.aktif .grup-hari-arrow { transform: rotate(180deg); }
+    .grup-hari-body { display: none; padding: 12px; background: #f8fafc; }
+    .grup-hari-body.tampil { display: block; }
+
     .tahap-approval { display: flex; gap: 4px; font-size: 10px; margin: 4px 0; flex-wrap: wrap; }
     .tahap-approval .tahap { padding: 3px 8px; border-radius: 999px; background: #e2e8f0; color: #64748b; font-weight: 600; }
     .tahap-approval .tahap.selesai { background: #dcfce7; color: #166534; }
@@ -989,24 +1002,71 @@
             const data = await r.json() || {};
             const list = Object.keys(data).map(id => ({ id, ...data[id] }));
             if (list.length === 0) { k.innerHTML = '<p class="kosong">Belum ada jadwal ujian. Tambah di atas.</p>'; return; }
+            
+            // Urutkan berdasarkan tanggal dan jam
             list.sort((a, b) => (a.tanggal + a.jam_mulai).localeCompare(b.tanggal + b.jam_mulai));
+            
+            // Kelompokkan berdasarkan tanggal
+            const grup = {};
+            list.forEach(j => {
+                if (!grup[j.tanggal]) grup[j.tanggal] = [];
+                grup[j.tanggal].push(j);
+            });
+
             const hariIni = tanggalHariIni();
-            k.innerHTML = `<div class="card" style="background:rgba(255,255,255,0.7);"><b style="font-size:13px;color:#0f172a;">📅 Semua Jadwal (${list.length})</b></div>` + list.map(j => {
-                const kelasList = arrayDariFirebase(j.kelas);
-                const namaPengawas = arrayDariFirebase(j.nama_pengawas);
-                const isHariIni = j.tanggal === hariIni;
-                return `<div class="jadwal-item ${isHariIni ? 'hari-ini' : ''}">
-                    <b>${escapeHtml(j.nama_mapel || '-')} ${isHariIni ? '<span class="badge badge-aktif" style="font-size:10px;">Hari Ini</span>' : ''}</b>
-                    <span>📅 ${formatTanggalIndo(j.tanggal)} · 🕐 ${escapeHtml(j.jam_mulai)}–${escapeHtml(j.jam_selesai)}</span>
-                    <span>🏫 ${kelasList.map(escapeHtml).join(', ') || '-'}</span>
-                    <span>👁️ Pengawas: ${namaPengawas.map(escapeHtml).join(', ') || '-'}</span>
-                    <div class="aksi">
-                        <button class="btn-edit-kecil" onclick="editJadwal('${j.id}')">✏️ Edit</button>
-                        <button class="btn-bahaya" onclick="hapusJadwal('${j.id}', '${escapeHtml(j.nama_mapel || '')}')">🗑️ Hapus</button>
+            let html = '';
+
+            // Render per tanggal
+            Object.keys(grup).sort().forEach((tgl, index) => {
+                const jadwalHariItu = grup[tgl];
+                const isHariIni = tgl === hariIni;
+                const idUnik = 'grup-tgl-' + index;
+                const labelHariIni = isHariIni ? '<span class="badge badge-aktif" style="font-size:10px;margin-left:4px;">Hari Ini</span>' : '';
+
+                html += `
+                <div class="grup-hari">
+                    <div class="grup-hari-header" onclick="toggleGrupJadwal('${idUnik}', this)">
+                        <div class="grup-hari-info">
+                            <b>📅 ${formatTanggalIndo(tgl)} ${labelHariIni}</b>
+                            <span>${jadwalHariItu.length} Mapel diujikan</span>
+                        </div>
+                        <div class="grup-hari-arrow">▼</div>
+                    </div>
+                    <div class="grup-hari-body" id="${idUnik}">
+                        ${jadwalHariItu.map(j => {
+                            const kelasList = arrayDariFirebase(j.kelas);
+                            const namaPengawas = arrayDariFirebase(j.nama_pengawas);
+                            return `<div class="jadwal-item" style="background:#fff;">
+                                <b>${escapeHtml(j.nama_mapel || '-')}</b>
+                                <span>🕐 ${escapeHtml(j.jam_mulai)}–${escapeHtml(j.jam_selesai)}</span>
+                                <span>🏫 ${kelasList.map(escapeHtml).join(', ') || '-'}</span>
+                                <span>👁️ Pengawas: ${namaPengawas.map(escapeHtml).join(', ') || '-'}</span>
+                                <div class="aksi">
+                                    <button class="btn-edit-kecil" onclick="editJadwal('${j.id}')">✏️ Edit</button>
+                                    <button class="btn-bahaya" onclick="hapusJadwal('${j.id}', '${escapeHtml(j.nama_mapel || '')}')">🗑️ Hapus</button>
+                                </div>
+                            </div>`;
+                        }).join('')}
                     </div>
                 </div>`;
-            }).join('');
+            });
+
+            k.innerHTML = html;
         } catch (e) { k.innerHTML = '<p class="kosong">Gagal memuat jadwal.</p>'; }
+    }
+
+    // Fungsi untuk buka/tutup accordion
+    function toggleGrupJadwal(idBody, headerEl) {
+        const body = document.getElementById(idBody);
+        const isAktif = headerEl.classList.contains('aktif');
+        
+        if (isAktif) {
+            headerEl.classList.remove('aktif');
+            body.classList.remove('tampil');
+        } else {
+            headerEl.classList.add('aktif');
+            body.classList.add('tampil');
+        }
     }
 
     async function editJadwal(jadwalId) {
