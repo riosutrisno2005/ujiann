@@ -772,7 +772,8 @@
     async function simpanMapelAdmin() {
         const nama = document.getElementById('mp-nama').value.trim();
         const token = document.getElementById('mp-token').value.trim().toUpperCase();
-        const guruChecked = Array.from(document.querySelectorAll('.mp-cb-guru:checked')).map(cb => cb.value);
+        // ✅ PERBAIKAN: otomatis jadi huruf kecil agar sinkron dengan halaman guru
+        const guruChecked = Array.from(document.querySelectorAll('.mp-cb-guru:checked')).map(cb => cb.value.toLowerCase());
         const kelasChecked = Array.from(document.querySelectorAll('.mp-cb-kelas:checked')).map(cb => cb.value);
 
         if (!nama) { alert('Nama mapel wajib diisi.'); return; }
