@@ -204,6 +204,16 @@
     .btn-salin-semua { background: #7c3aed; color: #fff; border: none; border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 6px; }
     .btn-salin-semua:disabled { background: #cbd5e1; color: #64748b; cursor: not-allowed; }
 
+    /* ── CSS BARU: MAPEL DIKELOMPOK PER TANGGAL ── */
+    .kotak-belum-jadwal { background: #fef2f2; border: 2px solid #ef4444; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .kotak-belum-jadwal-judul { display: flex; flex-direction: column; gap: 2px; }
+    .kotak-belum-jadwal-judul b { font-size: 15px; color: #991b1b; }
+    .kotak-belum-jadwal-judul span { font-size: 12px; color: #b91c1c; }
+    .card.belum-jadwal { border: 1px solid #fca5a5; background: rgba(255,255,255,0.9); }
+    .peringatan-jadwal { background: #fee2e2; color: #991b1b; border-radius: 10px; padding: 8px 10px; font-size: 12px; font-weight: 600; line-height: 1.5; }
+    .info-jadwal-mapel { background: rgba(27,94,32,0.08); border-radius: 10px; padding: 8px 10px; font-size: 12px; color: #14532d; line-height: 1.6; }
+    .badge-lewat { background: #e2e8f0; color: #475569; }
+
     @media print {
         body > *:not(.overlay-cetak) { display: none !important; }
         .overlay-cetak { position: static !important; display: block !important; }
@@ -242,7 +252,7 @@
     <div id="tab-jadwal" style="display:none;flex-direction:column;gap:16px;">
         <div class="card">
             <b style="font-size:14px;color:#0f172a;">📅 Atur Jadwal Ujian</b>
-            <span style="font-size:12px;color:#475569;">Pilih mapel dulu, lalu isi jadwal per kelas. Kelas yang sudah dijadwalkan tidak muncul lagi (kecuali lewat tombol "Kelola Jadwal" di kartu mapel).</span>
+            <span style="font-size:12px;color:#475569;">Pilih mapel dulu, lalu isi jadwal per kelas. Kelas yang sudah dijadwalkan tidak muncul lagi (untuk memperbaiki jadwal yang sudah ada, pakai tombol "✏️ Edit" di daftar jadwal bawah).</span>
         </div>
 
         <div class="card jdwal-form-card">
@@ -268,7 +278,7 @@
 
             <div id="jdw-area-kosong" style="display:none;">
                 <div class="info-rekap" style="background:rgba(254,243,199,0.7);color:#7c4a03;">
-                    ℹ️ Pilih mapel dulu. Kalau semua kelas mapel ini sudah dijadwalkan, tidak ada kartu yang muncul. Gunakan tombol "✏️ Kelola Jadwal" di kartu mapel (tab Mapel) untuk mengedit jadwal yang sudah ada.
+                    ℹ️ Pilih mapel dulu. Kalau semua kelas mapel ini sudah dijadwalkan, tidak ada kartu yang muncul. Untuk memperbaiki jadwal yang sudah dibuat, klik tombol "✏️ Edit" pada daftar jadwal di bawah.
                 </div>
             </div>
 
@@ -384,6 +394,37 @@
         <div class="baris-tombol">
             <button class="btn-sekunder" onclick="tutupPopup('popup-form-mapel')">Batal</button>
             <button class="btn-utama" onclick="simpanMapelAdmin()">💾 Simpan</button>
+        </div>
+    </div>
+</div>
+
+<!-- POPUP EDIT JADWAL -->
+<div class="popup-overlay" id="popup-edit-jadwal">
+    <div class="popup-box">
+        <h3>✏️ Edit Jadwal</h3>
+        <div class="field">
+            <label>Mapel</label>
+            <select id="ej-mapel" onchange="saatMapelEditJadwalBerubah()"></select>
+        </div>
+        <div class="field">
+            <label>Kelas (bisa lebih dari satu)</label>
+            <div id="ej-kelas" class="mapel-check-list"></div>
+        </div>
+        <div class="field">
+            <label>Tanggal</label>
+            <input type="date" id="ej-tanggal">
+        </div>
+        <div style="display:flex;gap:12px;">
+            <div class="field" style="flex:1;"><label>Jam Mulai</label><input type="time" id="ej-mulai"></div>
+            <div class="field" style="flex:1;"><label>Jam Selesai</label><input type="time" id="ej-selesai"></div>
+        </div>
+        <div class="field">
+            <label>Pengawas (bisa lebih dari satu)</label>
+            <div id="ej-pengawas" class="mapel-check-list"></div>
+        </div>
+        <div class="baris-tombol">
+            <button class="btn-sekunder" onclick="tutupPopup('popup-edit-jadwal')">Batal</button>
+            <button class="btn-utama" id="ej-btn-simpan" onclick="simpanEditJadwal()">💾 Simpan Perubahan</button>
         </div>
     </div>
 </div>
@@ -575,6 +616,11 @@
     // ============ STATE ============
     let usernameAdmin = "", namaAdmin = "";
     let daftarMapel = [];
+    let daftarJadwalCache = {};      // mapel_id -> [jadwal, ...]
+    let grupMapelTerbuka = null;     // tanggal yang sedang terbuka di tab Mapel
+    let grupJadwalTerbuka = new Set(); // tanggal yang sedang terbuka di tab Jadwal
+    let promiseMuatJadwal = null;
+    let editJdw = { id: null, mapelMap: {}, mapelAsli: null, kelasAsli: [], namaMapelAsli: '' };
     let daftarAkun = { admin: [], guru: [], siswa: [] };
     let konteksNilaiEssay = { mapelId: null, nisn: null, soalEssay: [], nilaiPerSoal: {}, hasilSiswa: {}, lock: null, nilaiTersimpan: null };
     let rekapSekarang = { mapelId: null, namaMapel: '', semuaData: [], kunciCache: null, locks: {}, nilaiEssayMap: {} };
@@ -682,7 +728,7 @@
             document.getElementById('tab-' + t).style.display = t === tab ? 'flex' : 'none';
         });
         if (tab === 'mapel') muatDaftarMapel();
-        else if (tab === 'jadwal') muatFormJadwal();
+        else if (tab === 'jadwal') { promiseMuatJadwal = muatFormJadwal(); }
         else if (tab === 'kelas') muatRekapKelas();
         else if (tab === 'akun') muatAkunAll();
         else if (tab === 'kolab') muatMonitoringKolaborasi();
@@ -720,25 +766,34 @@
                 const rG = await fetch(`${FIREBASE_URL}/guru_akun.json`);
                 daftarAkunGuruCache = await rG.json() || {};
             } catch (e) {}
+            daftarJadwalCache = {};
+            try {
+                const rJ = await fetch(`${FIREBASE_URL}/jadwal_ujian.json`);
+                const dJ = await rJ.json() || {};
+                for (const jid in dJ) {
+                    const j = dJ[jid];
+                    if (!j || !j.mapel_id) continue;
+                    if (!daftarJadwalCache[j.mapel_id]) daftarJadwalCache[j.mapel_id] = [];
+                    daftarJadwalCache[j.mapel_id].push({ id: jid, ...j });
+                }
+            } catch (e) { console.error('Gagal memuat jadwal untuk tab mapel:', e); }
             renderDaftarMapel();
         } catch (e) { tampilkanStatus('Gagal memuat.', 'gagal'); }
     }
 
-    function renderDaftarMapel() {
-        const k = document.getElementById('daftar-mapel');
-        if (daftarMapel.length === 0) { k.innerHTML = '<p class="kosong">Belum ada mapel. Klik "➕ Tambah Mapel".</p>'; return; }
-        k.innerHTML = daftarMapel.map(m => {
-            const kelasList = parseKelasList(m.kelas);
-            const pengampu = parseGuruPengampu(m);
-            const namaPengampu = pengampu.map(u => {
-                const g = daftarAkunGuruCache[u];
-                return g ? (g.nama || u) : u;
-            });
-            return `<div class="card">
+    function kartuMapelHtml(m, ekstraHtml, belumJadwal) {
+        const kelasList = parseKelasList(m.kelas);
+        const pengampu = parseGuruPengampu(m);
+        const namaPengampu = pengampu.map(u => {
+            const g = daftarAkunGuruCache[u];
+            return g ? (g.nama || u) : u;
+        });
+        return `<div class="card ${belumJadwal ? 'belum-jadwal' : ''}">
                 <div class="card-header">
                     <div><b>${escapeHtml(m.nama_mapel)}</b><span>Guru: ${namaPengampu.map(escapeHtml).join(', ') || '-'}</span><span>Kelas: ${kelasList.length ? kelasList.map(escapeHtml).join(', ') : '-'}</span></div>
                     <span class="badge ${m.status_aktif ? 'badge-aktif' : 'badge-nonaktif'}">${m.status_aktif ? 'Aktif' : 'Nonaktif'}</span>
                 </div>
+                ${ekstraHtml || ''}
                 <div class="statistik">
                     <span>${m.jumlah_pg || 0} PG</span><span>${m.jumlah_essay || 0} Essay</span><span>${m.jumlah_hasil} siswa</span>
                     ${m.jumlah_pengajuan_menunggu > 0 ? `<span class="badge badge-info">${m.jumlah_pengajuan_menunggu} siap approve</span>` : ''}
@@ -763,7 +818,139 @@
                     <button class="btn-bahaya" onclick="hapusMapelAdmin('${m.id}', '${escapeHtml(m.nama_mapel)}')">🗑️ Hapus</button>
                 </div>
             </div>`;
-        }).join('');
+    }
+
+    function renderDaftarMapel() {
+        const k = document.getElementById('daftar-mapel');
+        if (daftarMapel.length === 0) { k.innerHTML = '<p class="kosong">Belum ada mapel. Klik "➕ Tambah Mapel".</p>'; return; }
+
+        const hariIni = tanggalHariIni();
+        const belumList = [];   // mapel yang sama sekali belum punya jadwal
+        const perTanggal = {};  // tanggal -> { mapelId: [jadwal...] }
+
+        daftarMapel.forEach(m => {
+            const jl = (daftarJadwalCache[m.id] || []).filter(j => j.tanggal);
+            if (jl.length === 0) { belumList.push(m); return; }
+            jl.forEach(j => {
+                if (!perTanggal[j.tanggal]) perTanggal[j.tanggal] = {};
+                if (!perTanggal[j.tanggal][m.id]) perTanggal[j.tanggal][m.id] = [];
+                perTanggal[j.tanggal][m.id].push(j);
+            });
+        });
+
+        belumList.sort((a, b) => (a.nama_mapel || '').localeCompare(b.nama_mapel || ''));
+
+        const semuaTgl = Object.keys(perTanggal).sort();
+        const mendatang = semuaTgl.filter(t => t >= hariIni);
+        const lewat = semuaTgl.filter(t => t < hariIni).reverse();
+        const urutanTgl = mendatang.concat(lewat);
+
+        // Tanggal yang terbuka pertama kali: hari ini, atau tanggal terdekat berikutnya
+        if (grupMapelTerbuka === null) {
+            grupMapelTerbuka = new Set();
+            if (mendatang.length > 0) grupMapelTerbuka.add(mendatang[0]);
+        }
+
+        let html = '';
+
+        // ── KOTAK MERAH: MAPEL BELUM ADA JADWAL ──
+        if (belumList.length > 0) {
+            html += `<div class="kotak-belum-jadwal">
+                <div class="kotak-belum-jadwal-judul">
+                    <b>⚠️ Belum Diatur Jadwal (${belumList.length} mapel)</b>
+                    <span>Mapel di bawah ini belum punya tanggal pelaksanaan. Atur jadwalnya dulu.</span>
+                </div>
+                ${belumList.map(m => {
+                    const adaKelas = parseKelasList(m.kelas).length > 0;
+                    const ekstra = adaKelas
+                        ? `<div class="peringatan-jadwal">⚠️ Belum ada jadwal sama sekali.</div>
+                           <div class="baris-tombol"><button class="btn-utama" onclick="aturJadwalMapel('${m.id}')">➕ Atur Jadwal Sekarang</button></div>`
+                        : `<div class="peringatan-jadwal">⚠️ Belum ada jadwal, dan mapel ini belum punya kelas. Klik "Edit Mapel" untuk memilih kelas dulu.</div>`;
+                    return kartuMapelHtml(m, ekstra, true);
+                }).join('')}
+            </div>`;
+        }
+
+        // ── KELOMPOK PER TANGGAL PELAKSANAAN ──
+        urutanTgl.forEach((tgl, index) => {
+            const petaMapel = perTanggal[tgl];
+            const idMapelHariItu = Object.keys(petaMapel);
+            const jamPertama = id => petaMapel[id].map(j => j.jam_mulai || '').sort()[0] || '';
+            idMapelHariItu.sort((a, b) => jamPertama(a).localeCompare(jamPertama(b)));
+
+            const isHariIni = tgl === hariIni;
+            const isLewat = tgl < hariIni;
+            const terbuka = grupMapelTerbuka.has(tgl);
+            const label = isHariIni
+                ? '<span class="badge badge-aktif" style="font-size:10px;margin-left:4px;">Hari Ini</span>'
+                : (isLewat ? '<span class="badge badge-lewat" style="font-size:10px;margin-left:4px;">Sudah lewat</span>' : '');
+            const idUnik = 'grup-mapel-' + index;
+
+            const kartu = idMapelHariItu.map(id => {
+                const m = daftarMapel.find(x => x.id === id);
+                if (!m) return '';
+                const barisJadwal = petaMapel[id]
+                    .slice().sort((a, b) => (a.jam_mulai || '').localeCompare(b.jam_mulai || ''))
+                    .map(j => {
+                        const kls = arrayDariFirebase(j.kelas).map(escapeHtml).join(', ') || '-';
+                        const pgw = arrayDariFirebase(j.nama_pengawas).map(escapeHtml).join(', ') || '-';
+                        return `🕐 ${escapeHtml(j.jam_mulai || '-')}–${escapeHtml(j.jam_selesai || '-')} &nbsp;•&nbsp; 🏫 ${kls}<br>👁️ Pengawas: ${pgw}`;
+                    }).join('<hr style="border:none;border-top:1px dashed #86efac;margin:6px 0;">');
+
+                // Peringatan jika masih ada kelas yang belum dijadwalkan
+                const kelasMapel = parseKelasList(m.kelas);
+                const sudah = new Set();
+                (daftarJadwalCache[id] || []).forEach(j => arrayDariFirebase(j.kelas).forEach(x => sudah.add(x)));
+                const kelasBelum = kelasMapel.filter(x => !sudah.has(x));
+                const peringatan = kelasBelum.length > 0
+                    ? `<div class="peringatan-jadwal">⚠️ Kelas yang belum dijadwalkan: ${kelasBelum.map(escapeHtml).join(', ')}</div>
+                       <div class="baris-tombol"><button class="btn-utama" onclick="aturJadwalMapel('${m.id}')">➕ Atur Kelas yang Belum</button></div>`
+                    : '';
+                return kartuMapelHtml(m, `<div class="info-jadwal-mapel">${barisJadwal}</div>${peringatan}`, false);
+            }).join('');
+
+            html += `
+            <div class="grup-hari">
+                <div class="grup-hari-header ${terbuka ? 'aktif' : ''}" onclick="toggleGrupMapel('${idUnik}', this, '${tgl}')">
+                    <div class="grup-hari-info">
+                        <b>📅 ${formatTanggalIndo(tgl)} ${label}</b>
+                        <span>${idMapelHariItu.length} mapel</span>
+                    </div>
+                    <div class="grup-hari-arrow">▼</div>
+                </div>
+                <div class="grup-hari-body ${terbuka ? 'tampil' : ''}" id="${idUnik}" style="display:${terbuka ? 'flex' : 'none'};flex-direction:column;gap:12px;">
+                    ${kartu}
+                </div>
+            </div>`;
+        });
+
+        k.innerHTML = html;
+    }
+
+    function toggleGrupMapel(idBody, headerEl, tgl) {
+        const body = document.getElementById(idBody);
+        const buka = !headerEl.classList.contains('aktif');
+        headerEl.classList.toggle('aktif', buka);
+        body.classList.toggle('tampil', buka);
+        body.style.display = buka ? 'flex' : 'none';
+        if (grupMapelTerbuka === null) grupMapelTerbuka = new Set();
+        if (buka) grupMapelTerbuka.add(tgl); else grupMapelTerbuka.delete(tgl);
+    }
+
+    // Dari tab Mapel: langsung buka form jadwal baru dengan mapel ini sudah terpilih
+    async function aturJadwalMapel(mapelId) {
+        gantiTab('jadwal');
+        try { if (promiseMuatJadwal) await promiseMuatJadwal; } catch (e) {}
+        const sel = document.getElementById('jdw-mapel');
+        const ada = [...sel.options].some(o => o.value === mapelId);
+        if (!ada) {
+            tampilkanStatus('Mapel ini belum bisa dijadwalkan. Cek dulu kelasnya lewat "Edit Mapel".', 'gagal');
+            return;
+        }
+        jdwState.mode = 'tambah';
+        sel.value = mapelId;
+        await saatMapelJadwalDipilih();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     async function bukaFormMapelAdmin(id) {
@@ -1061,7 +1248,7 @@
                 document.getElementById('jdw-area-kelas').style.display = 'none';
                 document.getElementById('jdw-area-kosong').style.display = 'block';
                 document.getElementById('jdw-area-kosong').querySelector('.info-rekap').innerHTML =
-                    'ℹ️ Semua kelas mapel ini sudah dijadwalkan. Gunakan tombol "✏️ Kelola Jadwal" di kartu mapel (tab Mapel) untuk mengedit.';
+                    'ℹ️ Semua kelas mapel ini sudah dijadwalkan. Untuk memperbaiki jadwal yang sudah dibuat, klik tombol "✏️ Edit" pada daftar jadwal di bawah.';
                 return;
             }
 
@@ -1367,14 +1554,14 @@
 
                 html += `
                 <div class="grup-hari">
-                    <div class="grup-hari-header" onclick="toggleGrupJadwal('${idUnik}', this)">
+                    <div class="grup-hari-header ${grupJadwalTerbuka.has(tgl) ? 'aktif' : ''}" onclick="toggleGrupJadwal('${idUnik}', this, '${tgl}')">
                         <div class="grup-hari-info">
                             <b>📅 ${formatTanggalIndo(tgl)} ${labelHariIni}</b>
                             <span>${jadwalHariItu.length} jadwal</span>
                         </div>
                         <div class="grup-hari-arrow">▼</div>
                     </div>
-                    <div class="grup-hari-body" id="${idUnik}">
+                    <div class="grup-hari-body ${grupJadwalTerbuka.has(tgl) ? 'tampil' : ''}" id="${idUnik}">
                         ${jadwalHariItu.map(j => {
                             const kelasList = arrayDariFirebase(j.kelas);
                             const namaPengawas = arrayDariFirebase(j.nama_pengawas);
@@ -1384,6 +1571,7 @@
                                 <span>🏫 ${kelasList.map(escapeHtml).join(', ') || '-'}</span>
                                 <span>👁️ Pengawas: ${namaPengawas.map(escapeHtml).join(', ') || '-'}</span>
                                 <div class="aksi">
+                                    <button class="btn-sekunder" onclick="bukaEditJadwal('${j.id}')">✏️ Edit</button>
                                     <button class="btn-bahaya" onclick="hapusJadwal('${j.id}', '${escapeHtml(j.nama_mapel || '')}')">🗑️ Hapus</button>
                                 </div>
                             </div>`;
@@ -1396,16 +1584,177 @@
         } catch (e) { k.innerHTML = '<p class="kosong">Gagal memuat jadwal.</p>'; }
     }
 
-    function toggleGrupJadwal(idBody, headerEl) {
+    function toggleGrupJadwal(idBody, headerEl, tgl) {
         const body = document.getElementById(idBody);
         const isAktif = headerEl.classList.contains('aktif');
         if (isAktif) {
             headerEl.classList.remove('aktif');
             body.classList.remove('tampil');
+            if (tgl) grupJadwalTerbuka.delete(tgl);
         } else {
             headerEl.classList.add('aktif');
             body.classList.add('tampil');
+            if (tgl) grupJadwalTerbuka.add(tgl);
         }
+    }
+
+    // ============ EDIT SATU JADWAL ============
+    async function bukaEditJadwal(jid) {
+        try {
+            const [rJ, rM] = await Promise.all([
+                fetch(`${FIREBASE_URL}/jadwal_ujian/${jid}.json`),
+                fetch(`${FIREBASE_URL}/mapel.json`)
+            ]);
+            const j = await rJ.json();
+            if (!j) { alert('Jadwal tidak ditemukan. Mungkin sudah dihapus.'); muatDaftarJadwalAdmin(); return; }
+            editJdw.mapelMap = await rM.json() || {};
+            if (!daftarAkunGuruCache || Object.keys(daftarAkunGuruCache).length === 0) {
+                try { const rG = await fetch(`${FIREBASE_URL}/guru_akun.json`); daftarAkunGuruCache = await rG.json() || {}; } catch (e) {}
+            }
+            editJdw.id = jid;
+            editJdw.mapelAsli = j.mapel_id || '';
+            editJdw.namaMapelAsli = j.nama_mapel || '';
+            editJdw.kelasAsli = arrayDariFirebase(j.kelas);
+
+            // Isi dropdown mapel
+            const sel = document.getElementById('ej-mapel');
+            sel.innerHTML = '';
+            const ids = Object.keys(editJdw.mapelMap).sort((a, b) =>
+                (editJdw.mapelMap[a].nama_mapel || '').localeCompare(editJdw.mapelMap[b].nama_mapel || ''));
+            if (j.mapel_id && !editJdw.mapelMap[j.mapel_id]) {
+                const o = document.createElement('option');
+                o.value = j.mapel_id;
+                o.textContent = (j.nama_mapel || '-') + ' (mapel sudah dihapus)';
+                sel.appendChild(o);
+            }
+            ids.forEach(id => {
+                const m = editJdw.mapelMap[id];
+                const o = document.createElement('option');
+                o.value = id;
+                o.textContent = `${m.nama_mapel || '-'}${m.guru ? ' — ' + m.guru : ''}`;
+                sel.appendChild(o);
+            });
+            sel.value = j.mapel_id || '';
+
+            isiKelasEditJadwal(sel.value, editJdw.kelasAsli);
+
+            document.getElementById('ej-tanggal').value = j.tanggal || '';
+            document.getElementById('ej-mulai').value = j.jam_mulai || '';
+            document.getElementById('ej-selesai').value = j.jam_selesai || '';
+
+            // Pengawas
+            const terpilih = arrayDariFirebase(j.pengawas).map(x => String(x).toLowerCase());
+            const keys = Object.keys(daftarAkunGuruCache);
+            const kontainer = document.getElementById('ej-pengawas');
+            if (keys.length === 0) {
+                kontainer.innerHTML = '<p style="font-size:12px;color:#b91c1c;text-align:center;padding:10px;">Belum ada akun guru.</p>';
+            } else {
+                kontainer.innerHTML = keys.map(u => {
+                    const g = daftarAkunGuruCache[u];
+                    const cek = terpilih.includes(u.toLowerCase()) ? 'checked' : '';
+                    return `<label class="mapel-check-item">
+                        <input type="checkbox" value="${escapeHtml(u)}" ${cek}>
+                        <div><span>${escapeHtml(g.nama || u)}</span><small>(${escapeHtml(u)})</small></div>
+                    </label>`;
+                }).join('');
+            }
+            document.getElementById('popup-edit-jadwal').classList.add('tampil');
+        } catch (e) {
+            console.error(e);
+            tampilkanStatus('Gagal membuka form edit jadwal.', 'gagal');
+        }
+    }
+
+    function isiKelasEditJadwal(mapelId, terpilih) {
+        const m = editJdw.mapelMap[mapelId];
+        const daftar = m ? parseKelasList(m.kelas).slice() : [];
+        if (mapelId === editJdw.mapelAsli) {
+            editJdw.kelasAsli.forEach(k => { if (!daftar.includes(k)) daftar.push(k); });
+        }
+        const kontainer = document.getElementById('ej-kelas');
+        if (daftar.length === 0) {
+            kontainer.innerHTML = '<p style="font-size:12px;color:#b91c1c;text-align:center;padding:10px;">Mapel ini belum punya kelas. Isi dulu lewat "Edit Mapel".</p>';
+            return;
+        }
+        kontainer.innerHTML = daftar.map(k => `<label class="mapel-check-item">
+            <input type="checkbox" value="${escapeHtml(k)}" ${terpilih.includes(k) ? 'checked' : ''}>
+            <div><span>${escapeHtml(k)}</span></div>
+        </label>`).join('');
+    }
+
+    function saatMapelEditJadwalBerubah() {
+        const dipilih = [...document.querySelectorAll('#ej-kelas input:checked')].map(i => i.value);
+        isiKelasEditJadwal(document.getElementById('ej-mapel').value, dipilih);
+    }
+
+    async function simpanEditJadwal() {
+        if (!editJdw.id) return;
+        const mapelId = document.getElementById('ej-mapel').value;
+        const kelas = [...document.querySelectorAll('#ej-kelas input:checked')].map(i => i.value);
+        const tanggal = document.getElementById('ej-tanggal').value;
+        const mulai = document.getElementById('ej-mulai').value;
+        const selesai = document.getElementById('ej-selesai').value;
+        const pengawas = [...document.querySelectorAll('#ej-pengawas input:checked')].map(i => i.value.toLowerCase());
+
+        if (!mapelId) { alert('Pilih mapel dulu.'); return; }
+        if (kelas.length === 0) { alert('Pilih minimal 1 kelas.'); return; }
+        if (!tanggal || !mulai || !selesai) { alert('Tanggal, jam mulai, dan jam selesai wajib diisi.'); return; }
+        if (jamKeMenit(selesai) <= jamKeMenit(mulai)) { alert('Jam selesai harus lebih besar dari jam mulai.'); return; }
+        if (pengawas.length === 0) { alert('Pilih minimal 1 pengawas.'); return; }
+
+        const btn = document.getElementById('ej-btn-simpan');
+        btn.disabled = true;
+        try {
+            // Cegah dobel: mapel + kelas yang sama sudah ada di jadwal lain
+            const rAll = await fetch(`${FIREBASE_URL}/jadwal_ujian.json`);
+            const semua = await rAll.json() || {};
+            for (const jid in semua) {
+                if (jid === editJdw.id) continue;
+                if (semua[jid].mapel_id !== mapelId) continue;
+                const bentrok = arrayDariFirebase(semua[jid].kelas).filter(k => kelas.includes(k));
+                if (bentrok.length > 0) {
+                    alert(`Kelas ${bentrok.join(', ')} sudah punya jadwal lain untuk mapel ini. Edit atau hapus jadwal itu dulu supaya tidak dobel.`);
+                    btn.disabled = false;
+                    return;
+                }
+            }
+
+            const m = editJdw.mapelMap[mapelId];
+            const payload = {
+                tanggal: tanggal,
+                mapel_id: mapelId,
+                kelas: kelas,
+                jam_mulai: mulai,
+                jam_selesai: selesai,
+                pengawas: pengawas,
+                nama_pengawas: pengawas.map(u => {
+                    const key = Object.keys(daftarAkunGuruCache).find(x => x.toLowerCase() === u);
+                    const g = key ? daftarAkunGuruCache[key] : null;
+                    return (g && g.nama) ? g.nama : u;
+                }),
+                waktu_diubah: new Date().toLocaleString('id-ID')
+            };
+            if (m) {
+                payload.nama_mapel = m.nama_mapel || '-';
+                payload.guru_mapel = m.guru || '-';
+            } else {
+                payload.nama_mapel = editJdw.namaMapelAsli || '-';
+            }
+
+            const r = await fetch(`${FIREBASE_URL}/jadwal_ujian/${editJdw.id}.json`, {
+                method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+            });
+            if (!r.ok) throw new Error('gagal');
+
+            grupJadwalTerbuka.add(tanggal);
+            tutupPopup('popup-edit-jadwal');
+            tampilkanStatus('✅ Jadwal diperbarui.', 'sukses');
+            muatDaftarJadwalAdmin();
+            refreshDropdownMapelJadwal();
+        } catch (e) {
+            tampilkanStatus('Gagal menyimpan perubahan jadwal.', 'gagal');
+        }
+        btn.disabled = false;
     }
 
     async function hapusJadwal(jadwalId, namaMapel) {
