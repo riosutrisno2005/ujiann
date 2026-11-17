@@ -111,7 +111,6 @@
     .legenda span { display: flex; align-items: center; gap: 4px; }
     .kotak-legenda { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
 
-    /* DESAIN HASIL UJIAN */
     .hasil-wrapper { display: flex; flex-direction: column; gap: 14px; }
 
     .kartu-identitas {
@@ -339,7 +338,6 @@
     .pesan-tunggu h3 { font-size: 18px; color: #0f172a; margin-bottom: 10px; }
     .pesan-tunggu p { font-size: 13px; color: #475569; line-height: 1.6; margin-bottom: 16px; }
 
-    /* TOMBOL MATA */
     .tombol-mata-wrapper {
         display: flex;
         justify-content: flex-end;
@@ -363,7 +361,6 @@
     .btn-mata-kecil:active { transform: scale(0.95); }
     .btn-mata-kecil svg { width: 18px; height: 18px; }
 
-    /* TABEL REKAP SIMPLE */
     .kartu-tabel-nilai {
         background: #ffffff;
         border-radius: 16px;
@@ -811,6 +808,9 @@
         if (tab === 'transkrip') muatTranskripSiswa();
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // KARTU MAPEL — sudah support 3 tahap status approval
+    // ═══════════════════════════════════════════════════════════
     function buatKartuMapel(m, mode) {
         const jumlahPg = m.jumlah_pg || 0;
         const jumlahEssay = m.jumlah_essay || 0;
@@ -821,8 +821,15 @@
 
         if (m.sudah_selesai && !bolehKerjakanUlang) {
             badge = '<span class="badge badge-selesai">Sudah Dikerjakan</span>';
-            if (statusPengajuan === 'menunggu') tombolAksi = `<button class="btn-sekunder" disabled>⏳ Menunggu Persetujuan</button>`;
-            else tombolAksi = `<button class="btn-bahaya" onclick="bukaPopupUlang('${m.id}')">Ajukan Ujian Ulang</button>`;
+            if (statusPengajuan === 'menunggu_pengawas') {
+                tombolAksi = `<button class="btn-sekunder" disabled>⏳ Menunggu Pengawas</button>`;
+            } else if (statusPengajuan === 'menunggu_admin' || statusPengajuan === 'menunggu') {
+                tombolAksi = `<button class="btn-sekunder" disabled>⏳ Menunggu Admin</button>`;
+            } else if (statusPengajuan === 'ditolak') {
+                tombolAksi = `<button class="btn-bahaya" onclick="bukaPopupUlang('${m.id}')">Ajukan Ulang Lagi</button>`;
+            } else {
+                tombolAksi = `<button class="btn-bahaya" onclick="bukaPopupUlang('${m.id}')">Ajukan Ujian Ulang</button>`;
+            }
         } else if (m.status_aktif || bolehKerjakanUlang) {
             badge = bolehKerjakanUlang ? '<span class="badge badge-aktif">Disetujui Ujian Ulang</span>' : '<span class="badge badge-aktif">Aktif</span>';
             if (m.untuk_kelas_saya) tombolAksi = `<button class="btn-utama" onclick="bukaPopupToken('${m.id}')">Kerjakan Ujian</button>`;
@@ -1110,19 +1117,46 @@
     }
     function kembaliKeDaftarSetelahKirim() { pindahLayar('layar-daftar-mapel'); muatSemuaData(); }
 
+    // ═══════════════════════════════════════════════════════════
+    // PENGAJUAN UJIAN ULANG — 2 TAHAP APPROVAL
+    // ═══════════════════════════════════════════════════════════
     function bukaPopupUlang(mapelId) {
         mapelUntukUlang = semuaMapel.find(m => m.id === mapelId);
-        document.getElementById('teks-popup-ulang').textContent = `Ajukan ujian ulang untuk "${mapelUntukUlang.nama_mapel}"?`;
+        if (!mapelUntukUlang) return;
+        document.getElementById('teks-popup-ulang').innerHTML =
+            `Ajukan ujian ulang untuk <b>"${escapeHtml(mapelUntukUlang.nama_mapel)}"</b>?<br><br>` +
+            `<span style="font-size:12px;color:#7c4a03;background:#fef3c7;padding:8px 12px;border-radius:8px;display:inline-block;line-height:1.6;text-align:left;">` +
+            `⚠️ Pengajuan akan melewati <b>2 tahap persetujuan</b>:<br>` +
+            `1️⃣ <b>Pengawas ujian</b><br>` +
+            `2️⃣ <b>Admin</b><br><br>` +
+            `<span style="font-size:11px;">Pengajuan diproses setelah pengawas & admin menyetujui.</span>` +
+            `</span>`;
         document.getElementById('input-alasan-ulang').value = '';
         document.getElementById('popup-ulang').classList.add('tampil');
     }
+
     async function kirimPengajuanUlang() {
         if (!mapelUntukUlang) return;
-        const data = { nama: namaSiswa, nisn: nisnSiswa, kelas: kelasSiswa, alasan: document.getElementById('input-alasan-ulang').value.trim(), status: 'menunggu', waktu: new Date().toLocaleString('id-ID') };
+        const waktu = new Date().toLocaleString('id-ID');
+        const data = {
+            nama: namaSiswa,
+            nisn: nisnSiswa,
+            kelas: kelasSiswa,
+            alasan: document.getElementById('input-alasan-ulang').value.trim(),
+            status: 'menunggu_pengawas',       // ← tahap 1: pengawas
+            disetujui_pengawas: false,
+            disetujui_admin: false,
+            waktu: waktu,
+            waktu_ajuan: waktu
+        };
         try {
-            await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mapelUntukUlang.id}/${nisnSiswa}.json`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+            await fetch(`${FIREBASE_URL}/pengajuan_ulang/${mapelUntukUlang.id}/${nisnSiswa}.json`, {
+                method: 'PUT',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(data)
+            });
             tutupPopup('popup-ulang');
-            alert('Pengajuan terkirim. Tunggu persetujuan admin.');
+            alert('✅ Pengajuan terkirim.\n\nTahap 1: Menunggu persetujuan Pengawas.\nTahap 2: Setelah pengawas setuju, akan diteruskan ke Admin.');
             muatSemuaData();
         } catch (e) { alert('Gagal mengirim.'); }
     }
@@ -1282,7 +1316,6 @@
                 return;
             }
 
-            // MODE KARTU (DEFAULT)
             let html = `<div class="hasil-wrapper">`;
 
             html += `<div class="kartu-identitas">
