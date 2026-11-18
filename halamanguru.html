@@ -128,7 +128,7 @@
     <!-- LAYAR 1: DAFTAR MAPEL -->
     <div id="layar-daftar-mapel" style="display:flex;flex-direction:column;gap:16px;">
         <div class="baris-tombol">
-            <button class="btn-utama" onclick="bukaMengawas()">👁️ Mengawas Ujian</button>
+            <button class="btn-sekunder" onclick="bukaMengawas()">👁️ Mengawas Ujian</button>
             <button class="btn-sekunder" onclick="bukaJadwalPengawas()">📅 Jadwal Pengawas</button>
         </div>
         <div class="baris-tombol">
@@ -151,7 +151,7 @@
         <button class="btn-sekunder" onclick="kembaliDariMengawas()">← Kembali</button>
         <div class="card">
             <b style="font-size:14px;color:#0f172a;">👁️ Mengawas Ujian</b>
-            <span style="font-size:12px;color:#475569;">Mapel yang Anda awasi hari ini. Token tampil otomatis saat ujian berlangsung atau 15 menit sebelum mulai.</span>
+            <span style="font-size:12px;color:#475569;">Mapel yang Anda awasi hari ini. Token tampil otomatis saat ujian berlangsung atau 15 menit sebelum mulai. <b>Klik kartu mapel</b> untuk melihat siswa yang sudah masuk.</span>
             <div id="jam-server-info" style="font-size:11px;color:#64748b;"></div>
         </div>
         <div id="daftar-mengawas"></div>
@@ -381,6 +381,17 @@
             <button class="btn-sekunder" onclick="tutupKonfirmasi(false)">Batal</button>
             <button class="btn-utama" id="btn-ok-konfirmasi" onclick="tutupKonfirmasi(true)">Ya</button>
         </div>
+    </div>
+</div>
+
+<!-- POPUP DAFTAR SISWA UJIAN (BARU) -->
+<div class="popup-overlay" id="popup-daftar-siswa-ujian">
+    <div class="popup-box">
+        <h3 id="judul-daftar-siswa">Daftar Siswa Ujian</h3>
+        <div id="isi-daftar-siswa-ujian" style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto;">
+            <!-- Daftar siswa dirender di sini -->
+        </div>
+        <button class="btn-sekunder" onclick="tutupPopup('popup-daftar-siswa-ujian')">Tutup</button>
     </div>
 </div>
 
@@ -686,7 +697,6 @@
             if (data) {
                 for (const id in data) {
                     const m = data[id];
-                    // Multi-guru: cek guru_pengampu dulu, fallback ke guru
                     const pengampu = parseGuruPengampu(m);
                     if (pengampu.includes(usernameGuru)) {
                         daftarMapel.push({ id, ...m });
@@ -802,19 +812,111 @@
                 const kelasList = arrayDariFirebase(j.kelas);
                 const namaPengawas = arrayDariFirebase(j.nama_pengawas);
 
-                return `<div class="item-mapel">
+                return `<div class="item-mapel" onclick="bukaDaftarSiswaUjian('${j.mapel_id}', '${escapeHtml(j.nama_mapel || mapel.nama_mapel || '-')}')" style="cursor:pointer;transition:transform 0.1s;" onpointerdown="this.style.transform='scale(0.98)'" onpointerup="this.style.transform='scale(1)'" onpointerleave="this.style.transform='scale(1)'">
                     <div class="item-mapel-info">
                         <b>${escapeHtml(j.nama_mapel || mapel.nama_mapel || '-')}</b>
                         ${statusBadge}
                         <span>🕐 ${escapeHtml(j.jam_mulai)} – ${escapeHtml(j.jam_selesai)}</span>
                         <span>🏫 Kelas: ${kelasList.map(escapeHtml).join(', ') || '-'}</span>
                         <span>👁️ Pengawas: ${namaPengawas.map(escapeHtml).join(', ') || '-'}</span>
+                        <span style="font-size:11px;color:#1b5e20;font-weight:600;margin-top:4px;">👆 Klik untuk lihat siswa yang masuk</span>
                     </div>
                     ${tokenHtml}
                 </div>`;
             }).join('');
         } catch (e) {
             k.innerHTML = '<p class="kosong">Gagal memuat jadwal.</p>';
+        }
+    }
+
+    // ============================================================
+    // FITUR BARU: DAFTAR SISWA UJIAN (KLIK MAPEL DI MENGAWAS)
+    // ============================================================
+    async function bukaDaftarSiswaUjian(mapelId, namaMapel) {
+        document.getElementById('judul-daftar-siswa').textContent = 'Siswa Ujian — ' + namaMapel;
+        const k = document.getElementById('isi-daftar-siswa-ujian');
+        k.innerHTML = '<p class="kosong">Memuat data siswa...</p>';
+        document.getElementById('popup-daftar-siswa-ujian').classList.add('tampil');
+
+        try {
+            // Ambil hasil ujian mapel ini
+            const rHasil = await fetch(`${FIREBASE_URL}/hasil_ujian/${mapelId}.json`);
+            const hasilUjian = await rHasil.json() || {};
+
+            // Ambil data peserta_ujian untuk mencocokkan nama & kelas jika belum ada di hasil
+            let pesertaUjian = {};
+            try {
+                const rPeserta = await fetch(`${FIREBASE_URL}/peserta_ujian.json`);
+                pesertaUjian = await rPeserta.json() || {};
+            } catch (e) {}
+
+            const daftarSiswa = [];
+
+            for (const nisn in hasilUjian) {
+                const h = hasilUjian[nisn];
+                const p = pesertaUjian[nisn] || {};
+                daftarSiswa.push({
+                    nisn: nisn,
+                    nama: h.nama || p.nama || nisn,
+                    kelas: h.kelas || p.kelas || '-',
+                    status: h.status || 'selesai',
+                    waktu: h.waktu_submit || h.waktu_selesai || h.waktu_mulai || '-',
+                    nilai_akhir: h.nilai_akhir
+                });
+            }
+
+            if (daftarSiswa.length === 0) {
+                k.innerHTML = '<p class="kosong">Belum ada siswa yang masuk untuk ujian ini.</p>';
+                return;
+            }
+
+            // Urutkan: yang sudah selesai di bawah? Atau berdasarkan nama.
+            // Di sini kita urutkan berdasarkan status (yang masih mengerjakan di atas biar guru waspada),
+            // lalu berdasarkan nama.
+            const urutanStatus = { 'sedang_mengerjakan': 1, 'menunggu_penilaian': 2, 'selesai': 3, 'dinilai_guru': 4 };
+            daftarSiswa.sort((a, b) => {
+                const sa = urutanStatus[a.status] || 9;
+                const sb = urutanStatus[b.status] || 9;
+                if (sa !== sb) return sa - sb;
+                return (a.nama || '').localeCompare(b.nama || '');
+            });
+
+            k.innerHTML = daftarSiswa.map(s => {
+                let badgeStatus = '';
+                let teksKeterangan = '';
+                let warnaBg = 'rgba(255,255,255,0.8)';
+
+                if (s.status === 'selesai' || s.status === 'dinilai_guru') {
+                    badgeStatus = '<span class="badge badge-aktif" style="background:#dcfce7;color:#166534;">✅ Selesai</span>';
+                    teksKeterangan = 'Siswa tersebut telah selesai ujian.';
+                    warnaBg = 'rgba(220,252,231,0.6)';
+                } else if (s.status === 'menunggu_penilaian') {
+                    badgeStatus = '<span class="badge badge-warn">⏳ Menunggu Penilaian</span>';
+                    teksKeterangan = 'Siswa sudah mengumpulkan, menunggu penilaian essay.';
+                    warnaBg = 'rgba(254,243,199,0.6)';
+                } else {
+                    badgeStatus = '<span class="badge badge-info">📝 Sedang Mengerjakan</span>';
+                    teksKeterangan = 'Siswa sedang mengerjakan ujian.';
+                    warnaBg = 'rgba(219,234,254,0.6)';
+                }
+
+                const nilaiTeks = (s.nilai_akhir != null)
+                    ? `<span style="font-size:11px;color:#166534;font-weight:700;">Nilai Akhir: ${s.nilai_akhir}</span>`
+                    : '';
+
+                return `<div class="item-nilai" style="background:${warnaBg};border-left:4px solid ${s.status === 'selesai' || s.status === 'dinilai_guru' ? '#1b5e20' : (s.status === 'menunggu_penilaian' ? '#f59e0b' : '#3b82f6')};">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                        <b style="font-size:14px;color:#0f172a;">${escapeHtml(s.nama)}</b>
+                        ${badgeStatus}
+                    </div>
+                    <span>NISN: ${escapeHtml(s.nisn)} · Kelas: ${escapeHtml(s.kelas)}</span>
+                    <span style="font-size:11px;color:#475569;">${teksKeterangan}</span>
+                    ${nilaiTeks}
+                </div>`;
+            }).join('');
+
+        } catch (e) {
+            k.innerHTML = '<p class="kosong">Gagal memuat data siswa.</p>';
         }
     }
 
