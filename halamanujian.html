@@ -1205,12 +1205,21 @@
         }
 
         try {
-            const [rMapel, rHasil] = await Promise.all([
-                fetch(`${FIREBASE_URL}/mapel.json`),
-                fetch(`${FIREBASE_URL}/hasil_ujian.json`)
-            ]);
-            const dMapel = await rMapel.json() || {};
-            const dHasil = await rHasil.json() || {};
+            // HEMAT DATA: pakai daftar mapel yang sudah dimuat (kalau ada),
+            // dan ambil hasil milik siswa ini saja (bukan hasil semua siswa).
+            let dMapel = {};
+            if (semuaMapel.length > 0) {
+                semuaMapel.forEach(m => { dMapel[m.id] = m; });
+            } else {
+                const rMapel = await fetch(`${FIREBASE_URL}/mapel.json`);
+                dMapel = await rMapel.json() || {};
+            }
+            const dHasil = {};
+            await Promise.all(Object.keys(dMapel).map(async id => {
+                const rh = await fetch(`${FIREBASE_URL}/hasil_ujian/${id}/${nisnSiswa}.json`);
+                const h = await rh.json();
+                if (h) dHasil[id] = { [nisnSiswa]: h };
+            }));
 
             const listMapel = Object.keys(dMapel).map(id => ({ id, ...dMapel[id] }))
                 .sort((a, b) => (a.nama_mapel || '').localeCompare(b.nama_mapel || ''));
