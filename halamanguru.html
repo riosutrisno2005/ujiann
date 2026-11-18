@@ -738,7 +738,7 @@
         document.getElementById('layar-mengawas').style.display = 'flex';
         muatMengawas();
         if (refreshMengawasTimer) clearInterval(refreshMengawasTimer);
-        refreshMengawasTimer = setInterval(muatMengawas, INTERVAL_REFRESH_MENGAWAS_MS);
+        refreshMengawasTimer = setInterval(() => { if (!document.hidden) muatMengawas(); }, INTERVAL_REFRESH_MENGAWAS_MS);
     }
     function kembaliDariMengawas() {
         if (refreshMengawasTimer) { clearInterval(refreshMengawasTimer); refreshMengawasTimer = null; }
@@ -771,11 +771,17 @@
                 return;
             }
 
+            // HEMAT DATA: ambil hanya token & nama mapel untuk jadwal hari ini (bukan seluruh data mapel)
             let dataMapel = {};
-            try {
-                const rM = await fetch(`${FIREBASE_URL}/mapel.json`);
-                dataMapel = await rM.json() || {};
-            } catch (e) {}
+            await Promise.all(listMengawas.map(async j => {
+                try {
+                    const [rt, rn] = await Promise.all([
+                        fetch(`${FIREBASE_URL}/mapel/${j.mapel_id}/token.json`),
+                        fetch(`${FIREBASE_URL}/mapel/${j.mapel_id}/nama_mapel.json`)
+                    ]);
+                    dataMapel[j.mapel_id] = { token: await rt.json(), nama_mapel: await rn.json() };
+                } catch (e) {}
+            }));
 
             listMengawas.sort((a, b) => jamKeMenit(a.jam_mulai) - jamKeMenit(b.jam_mulai));
             const sekarang = menitSekarang();
